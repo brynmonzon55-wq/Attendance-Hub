@@ -6,36 +6,72 @@
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
-  /* ---- Attendance Hub design system (from Stitch) ---- */
-  --color-cream: #fbf9f5;
-  --color-cream-dim: #efeeea;
-  --color-ink: #1b1c1a;
-  --color-ink-soft: #57423b;
+  /* ---- Attendance Hub design system: "Glass" (default) ----
+     Frosted-glass cards floating over a violet/teal/pink gradient.
+     A dark "Blood Moon" counterpart lives below, scoped to html.dark -
+     both reuse this same token set so every component re-themes for
+     free without needing its own light/dark variant. */
+  --color-cream: rgba(255, 255, 255, 0.62);
+  --color-cream-dim: rgba(255, 255, 255, 0.42);
+  --color-ink: #201a35;
+  --color-ink-soft: #665f80;
 
-  /* Coral / Tangerine - brand + primary actions */
-  --color-coral-50: #fff1ec;
-  --color-coral-100: #ffdbcf;
-  --color-coral-400: #ff9166;
-  --color-coral-500: #ff7f50;
-  --color-coral-600: #e8622f;
-  --color-coral-700: #a43c12;
-  --color-coral-900: #6c2000;
+  /* Coral / Pink - brand + primary actions */
+  --color-coral-50: #fdeef3;
+  --color-coral-100: #fbd3e1;
+  --color-coral-400: #f17fa8;
+  --color-coral-500: #e8567f;
+  --color-coral-600: #c93868;
+  --color-coral-700: #96234c;
+  --color-coral-900: #5c1230;
 
-  /* Teal / Emerald - student contexts */
-  --color-teal-50: #e9fbf9;
-  --color-teal-100: #c9f5ef;
-  --color-teal-400: #48d1cc;
-  --color-teal-500: #20b2aa;
-  --color-teal-600: #0d8b84;
-  --color-teal-700: #006a65;
+  /* Teal - student contexts */
+  --color-teal-50: #e3fbf6;
+  --color-teal-100: #bdf2e6;
+  --color-teal-400: #3fdfc4;
+  --color-teal-500: #1fc3a8;
+  --color-teal-600: #0e9c85;
+  --color-teal-700: #076f5d;
 
-  /* Violet / Indigo - teacher contexts */
-  --color-violet-50: #f5ecff;
-  --color-violet-100: #efdbff;
-  --color-violet-400: #a15be0;
-  --color-violet-500: #8422dc;
-  --color-violet-600: #6d17bc;
-  --color-violet-700: #560097;
+  /* Violet - teacher contexts */
+  --color-violet-50: #f0edfe;
+  --color-violet-100: #ded7fc;
+  --color-violet-400: #9a8af2;
+  --color-violet-500: #7c6bf0;
+  --color-violet-600: #5f4fd1;
+  --color-violet-700: #4738a8;
+}
+
+/* ---- "Blood Moon" (dark) ----
+   Same token names, recolored: crimson replaces coral, ember replaces
+   teal, deep wine replaces violet, against a near-black gradient. */
+html.dark {
+  --color-cream: rgba(30, 14, 14, 0.55);
+  --color-cream-dim: rgba(20, 10, 10, 0.4);
+  --color-ink: #f3e7e3;
+  --color-ink-soft: #b08d89;
+
+  --color-coral-50: rgba(216, 72, 79, 0.14);
+  --color-coral-100: rgba(216, 72, 79, 0.24);
+  --color-coral-400: #e4696e;
+  --color-coral-500: #d8484f;
+  --color-coral-600: #b93940;
+  --color-coral-700: #8c2a30;
+  --color-coral-900: #3a1013;
+
+  --color-teal-50: rgba(230, 150, 60, 0.12);
+  --color-teal-100: rgba(230, 150, 60, 0.22);
+  --color-teal-400: #e6a05a;
+  --color-teal-500: #d98a3d;
+  --color-teal-600: #b36f2c;
+  --color-teal-700: #7c4c1f;
+
+  --color-violet-50: rgba(178, 63, 77, 0.12);
+  --color-violet-100: rgba(178, 63, 77, 0.24);
+  --color-violet-400: #c9636f;
+  --color-violet-500: #b23f4d;
+  --color-violet-600: #8c2e3a;
+  --color-violet-700: #641f28;
 }
 
 /* ---------------------------------------------------------------------
@@ -52,9 +88,33 @@
    page underneath. <html> IS the viewport, so this side effect can't
    happen here.
 --------------------------------------------------------------------- */
-html,
+/* Fixed gradient backdrop the whole app's glass cards float over. Lives
+   on <html> itself (not a wrapper div) for the same reason the old
+   filter approach did: <html> IS the viewport, so it can't be knocked
+   out of place by scroll or become the wrong containing block for
+   position:fixed descendants like modals. */
+html {
+  background-color: #2b2373;
+  background-image:
+    radial-gradient(circle at 15% 12%, rgba(124, 107, 240, 0.55), transparent 45%),
+    radial-gradient(circle at 85% 18%, rgba(31, 195, 168, 0.5), transparent 50%),
+    radial-gradient(circle at 50% 95%, rgba(232, 86, 127, 0.45), transparent 45%),
+    linear-gradient(135deg, #5d4fd6, #1fa08f);
+  background-attachment: fixed;
+  transition: background-color 0.25s ease;
+}
+html.dark {
+  background-color: #0d0908;
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(180, 30, 40, 0.4), transparent 45%),
+    radial-gradient(circle at 85% 15%, rgba(120, 20, 30, 0.32), transparent 50%),
+    radial-gradient(circle at 50% 100%, rgba(60, 10, 20, 0.55), transparent 55%),
+    linear-gradient(135deg, #17100f, #0d0908);
+  background-attachment: fixed;
+}
+
 body {
-  background-color: var(--color-cream); /* warm cream base, avoids sterile white/gray SaaS look */
+  background: transparent;
   overflow-x: hidden;
   max-width: 100vw;
 }
@@ -63,24 +123,44 @@ h1, h2, h3, .font-display {
   font-family: var(--font-display);
 }
 
-/* Soft, tinted "floating" shadows instead of harsh neutral-black ones -
-   each accent color casts a low-opacity shadow of itself. */
-.shadow-coral {
-  box-shadow: 0 8px 24px -6px rgba(255, 127, 80, 0.35);
-}
-.shadow-teal {
-  box-shadow: 0 8px 24px -6px rgba(32, 178, 170, 0.3);
-}
-.shadow-violet {
-  box-shadow: 0 8px 24px -6px rgba(132, 34, 220, 0.3);
+/* Frosted-glass treatment for every card surface in the app. bg-white
+   and the cream tokens are how components mark "this is a card", so
+   recoloring/blurring those two selectors re-skins every dashboard,
+   table, and modal at once without editing each component. */
+.bg-white,
+.bg-cream,
+.bg-cream-dim {
+  background-color: var(--color-cream) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
-/* Large low-opacity mesh/blob background used behind hero + auth screens */
+/* Soft, tinted "floating" shadows instead of harsh neutral-black ones -
+   each accent color casts a low-opacity shadow of itself. Uses the
+   theme's live token values so the glow recolors with the theme too. */
+.shadow-coral {
+  box-shadow: 0 8px 24px -6px color-mix(in srgb, var(--color-coral-500) 45%, transparent);
+}
+.shadow-teal {
+  box-shadow: 0 8px 24px -6px color-mix(in srgb, var(--color-teal-500) 40%, transparent);
+}
+.shadow-violet {
+  box-shadow: 0 8px 24px -6px color-mix(in srgb, var(--color-violet-500) 40%, transparent);
+}
+
+/* Large low-opacity mesh/blob accent used behind hero + auth screens,
+   layered on top of the global gradient for extra depth there. */
 .bg-mesh {
   background-image:
-    radial-gradient(circle at 15% 20%, rgba(255, 127, 80, 0.16), transparent 40%),
-    radial-gradient(circle at 85% 15%, rgba(132, 34, 220, 0.13), transparent 45%),
-    radial-gradient(circle at 50% 90%, rgba(32, 178, 170, 0.14), transparent 45%);
+    radial-gradient(circle at 15% 20%, rgba(124, 107, 240, 0.22), transparent 40%),
+    radial-gradient(circle at 85% 15%, rgba(232, 86, 127, 0.18), transparent 45%),
+    radial-gradient(circle at 50% 90%, rgba(31, 195, 168, 0.2), transparent 45%);
+}
+html.dark .bg-mesh {
+  background-image:
+    radial-gradient(circle at 15% 20%, rgba(216, 72, 79, 0.22), transparent 40%),
+    radial-gradient(circle at 85% 15%, rgba(120, 20, 30, 0.2), transparent 45%),
+    radial-gradient(circle at 50% 90%, rgba(60, 10, 20, 0.25), transparent 45%);
 }
 
 /* Belt-and-suspenders: if any element anywhere still tries to render
@@ -100,45 +180,6 @@ h1, h2, h3, .font-display {
 img,
 svg {
   max-width: 100%;
-}
-
-html.theme-dark,
-html.theme-void,
-html.theme-ghost,
-html.theme-blood-moon {
-  background-color: #000;
-}
-
-html {
-  transition: filter 0.25s ease, background-color 0.25s ease;
-}
-
-html.theme-dark {
-  filter: invert(1) hue-rotate(180deg) brightness(1.05) contrast(0.95);
-}
-html.theme-dark img,
-html.theme-dark video {
-  filter: invert(1) hue-rotate(180deg) brightness(1.05) contrast(0.95);
-}
-
-html.theme-void {
-  filter: invert(1) hue-rotate(180deg) grayscale(0.5) brightness(0.85) contrast(1.2);
-}
-html.theme-void img,
-html.theme-void video {
-  filter: invert(1) hue-rotate(180deg) grayscale(0.5) brightness(0.85) contrast(1.2);
-}
-
-html.theme-ghost {
-  filter: grayscale(0.7) brightness(1.15) contrast(0.9) saturate(0.55);
-}
-
-html.theme-blood-moon {
-  filter: invert(1) hue-rotate(320deg) saturate(2.1) contrast(1.05) brightness(1);
-}
-html.theme-blood-moon img,
-html.theme-blood-moon video {
-  filter: invert(1) hue-rotate(320deg) saturate(2.1) contrast(1.05) brightness(1);
 }
 
 /* Hide scrollbar on horizontally-scrollable elements (mobile tab bars,
@@ -182,4 +223,3 @@ html.theme-blood-moon video {
   background-size: 24px 100%, 24px 100%, 10px 100%, 10px 100%;
   background-attachment: local, local, scroll, scroll;
 }
-
