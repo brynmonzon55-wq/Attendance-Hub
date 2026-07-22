@@ -61,11 +61,8 @@ interface TeacherDashboardProps {
 }
 
 const THEME_OPTIONS: { id: AppTheme; label: string; swatch: string }[] = [
-  { id: "default", label: "Default Mode", swatch: "bg-gradient-to-br from-white to-gray-200 border border-gray-300" },
-  { id: "dark", label: "Dark Mode", swatch: "bg-gradient-to-br from-gray-700 to-gray-900" },
-  { id: "void", label: "Void Mode", swatch: "bg-gradient-to-br from-gray-900 to-black" },
-  { id: "ghost", label: "Ghost Mode", swatch: "bg-gradient-to-br from-slate-200 to-slate-400" },
-  { id: "blood-moon", label: "Blood Moon", swatch: "bg-gradient-to-br from-red-700 to-red-950" },
+  { id: "default", label: "Glass", swatch: "bg-gradient-to-br from-violet-400 via-teal-400 to-coral-400" },
+  { id: "dark", label: "Blood Moon", swatch: "bg-gradient-to-br from-neutral-900 via-red-900 to-black" },
 ];
 
 export default function TeacherDashboard({ user, onLogout, theme, onThemeChange }: TeacherDashboardProps) {
@@ -587,13 +584,17 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
   if (viewingStudent) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-8">
-        <StudentProfile student={viewingStudent} onBack={() => setViewingStudent(null)} />
+        <div className="bg-cream rounded-3xl border border-ink-soft/10 shadow-xl p-4 md:p-8">
+          <StudentProfile student={viewingStudent} onBack={() => setViewingStudent(null)} />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8" id="teacher-dashboard">
+    <>
+    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="bg-cream rounded-3xl border border-ink-soft/10 shadow-xl p-4 md:p-8 space-y-8" id="teacher-dashboard">
       {/* Header Panel */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-ink-soft/10 pb-6">
         <div className="min-w-0">
@@ -1836,8 +1837,14 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
           </motion.div>
         )}
       </div>
+    </div>
+    </div>
 
       {/* MODAL: SELECT TEACHING SUBJECT CLASS */}
+      {/* Rendered outside the glass panel above on purpose - those modals
+          use position:fixed to cover the whole screen, and backdrop-filter
+          on an ancestor (the glass panel's blur) would trap them inside
+          that panel's box instead of the real viewport. */}
       <AnimatePresence>
         {showSubjectModal && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
@@ -2405,6 +2412,6 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
           </div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }
