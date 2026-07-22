@@ -3,12 +3,13 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth, createUserWithEmailAndPassword, signOut } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyACkvCHry2GvoWJie4ZJM_Z5HgfgUQh2DU",
-  authDomain: "my-attendance-hub-project.firebaseapp.com",
-  projectId: "my-attendance-hub-project",
-  storageBucket: "my-attendance-hub-project.firebasestorage.app",
-  messagingSenderId: "120358794691",
-  appId: "1:120358794691:web:9c25a9bf3b1f29ff80f976"
+  apiKey: "AIzaSyCtlb57kP93BsljhENGTa3PqIUxtBu3iAU",
+  authDomain: "attendance-hub-63224.firebaseapp.com",
+  projectId: "attendance-hub-63224",
+  storageBucket: "attendance-hub-63224.firebasestorage.app",
+  messagingSenderId: "229603714382",
+  appId: "1:229603714382:web:08d51076b38ee54998aa1f",
+  measurementId: "G-L7991S8RGF"
 };
 
 // Initialize Firebase
