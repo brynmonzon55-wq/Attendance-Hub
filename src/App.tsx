@@ -14,13 +14,13 @@ import LoginForm from "./components/LoginForm";
 import StudentDashboard from "./components/StudentDashboard";
 import TeacherDashboard from "./components/TeacherDashboard";
 
-export type AppTheme = "default" | "dark" | "void" | "ghost" | "blood-moon";
+export type AppTheme = "default" | "dark";
 
 const THEME_STORAGE_KEY = "attendance_system_theme";
 
 function getStoredTheme(): AppTheme {
   const stored = localStorage.getItem(THEME_STORAGE_KEY);
-  if (stored === "default" || stored === "dark" || stored === "void" || stored === "ghost" || stored === "blood-moon") {
+  if (stored === "default" || stored === "dark") {
     // The person has explicitly picked a theme before - always respect that,
     // even if it happens to be "default" while their system is in dark mode.
     return stored;
@@ -38,17 +38,13 @@ export default function App() {
   const [theme, setTheme] = useState<AppTheme>(getStoredTheme);
 
   useEffect(() => {
-    // Apply the theme filter to <html> itself (not an inner wrapper div).
-    // Applying `filter` to a wrapper makes that wrapper the containing
-    // block for any position:fixed descendants (like modals), which
-    // breaks them the moment the page scrolls horizontally at all - they
-    // drift instead of staying pinned to the real viewport. Putting the
-    // filter on <html> avoids that entirely since it IS the viewport.
-    const root = document.documentElement;
-    root.classList.remove("theme-dark", "theme-void", "theme-ghost", "theme-blood-moon");
-    if (theme !== "default") {
-      root.classList.add(`theme-${theme}`);
-    }
+    // Toggle the real "dark" class on <html> itself (not an inner wrapper
+    // div) - <html> IS the viewport, so it can't become the wrong
+    // containing block for position:fixed descendants like modals the
+    // way a wrapper div could. This class swaps actual CSS custom
+    // property values (see index.css) rather than the old approach of
+    // inverting the whole page with a CSS filter.
+    document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
 
   useEffect(() => {
@@ -110,14 +106,14 @@ export default function App() {
 
   if (checkingSession) {
     return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
-        <div className="text-sm text-coral-700/60 font-semibold font-display">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-sm text-white/70 font-semibold font-display">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-cream text-ink selection:bg-coral-100 selection:text-coral-700 antialiased font-sans flex flex-col justify-between" id="app-root">
+    <div className="min-h-screen text-ink selection:bg-coral-100 selection:text-coral-700 antialiased font-sans flex flex-col justify-between" id="app-root">
       <main className="flex-grow flex flex-col">
         {selectedRole === null && (
           <RoleSelection onSelectRole={(role) => setSelectedRole(role)} />
@@ -140,10 +136,9 @@ export default function App() {
         )}
       </main>
 
-      <footer className="py-6 border-t border-coral-100/60 bg-cream text-center text-xs text-ink-soft/60 font-medium font-sans">
+      <footer className="py-6 border-t border-white/15 text-center text-xs text-white/60 font-medium font-sans">
         &copy; {new Date().getFullYear()} Attendance Hub &bull; Designed by Team ByteForce
       </footer>
     </div>
   );
 }
-
