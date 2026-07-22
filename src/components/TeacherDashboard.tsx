@@ -1,0 +1,2410 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import {
+  LogOut,
+  Users,
+  CheckCircle,
+  XCircle,
+  Search,
+  UserPlus,
+  Trash2,
+  Calendar,
+  AlertCircle,
+  FileSpreadsheet,
+  Edit,
+  Plus,
+  UserCheck,
+  TrendingUp,
+  Filter,
+  Activity,
+  ShieldAlert,
+  Globe,
+  Sliders,
+  BookOpen,
+  UserMinus,
+  Settings as SettingsIcon,
+  ChevronDown,
+  Key,
+  RefreshCw,
+  Clock,
+  Eye
+} from "lucide-react";
+import { User, AttendanceRecord, AttendanceStatus, StudentStats, SecurityLog } from "../types";
+import type { AppTheme } from "../App";
+import StudentProfile from "./StudentProfile";
+import {
+  getUsers,
+  saveUser,
+  deleteUser,
+  getAttendanceRecords,
+  saveAttendanceRecord,
+  deleteAttendanceRecord,
+  calculateStudentStats,
+  formatDate,
+  getSecurityLogs,
+  deleteSecurityLog,
+  deleteOwnAccount,
+  changeOwnPassword,
+  forceReconnect
+} from "../lib/db";
+
+interface TeacherDashboardProps {
+  user: User;
+  onLogout: () => void;
+  theme: AppTheme;
+  onThemeChange: (theme: AppTheme) => void;
+}
+
+const THEME_OPTIONS: { id: AppTheme; label: string; swatch: string }[] = [
+  { id: "default", label: "Default Mode", swatch: "bg-gradient-to-br from-white to-gray-200 border border-gray-300" },
+  { id: "dark", label: "Dark Mode", swatch: "bg-gradient-to-br from-gray-700 to-gray-900" },
+  { id: "void", label: "Void Mode", swatch: "bg-gradient-to-br from-gray-900 to-black" },
+  { id: "ghost", label: "Ghost Mode", swatch: "bg-gradient-to-br from-slate-200 to-slate-400" },
+  { id: "blood-moon", label: "Blood Moon", swatch: "bg-gradient-to-br from-red-700 to-red-950" },
+];
+
+export default function TeacherDashboard({ user, onLogout, theme, onThemeChange }: TeacherDashboardProps) {
+  // DB States
+  const [students, setStudents] = useState<User[]>([]);
+  const [faculty, setFaculty] = useState<User[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  const [dbUser, setDbUser] = useState<User>(user);
+
+  const isApprovedUser = dbUser.isApproved === true || dbUser.id.toLowerCase() === "teacher1";
+
+  // Tab State
+  const [activeTab, setActiveTab] = useState<"roster" | "audit" | "reports" | "security" | "faculty">("roster");
+  const [viewingStudent, setViewingStudent] = useState<User | null>(null);
+
+  // Subject Configuration States
+  const [activeSubject, setActiveSubject] = useState<string>(user.subject || "");
+  const [showSubjectModal, setShowSubjectModal] = useState(!user.subject);
+  const [tempSubject, setTempSubject] = useState(user.subject || "");
+
+  // Security Log State
+  const [securityLogs, setSecurityLogs] = useState<SecurityLog[]>([]);
+
+  // Roster Filters and Form State
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Daily Audit Filters and Manual Log Form State
+  const [selectedDate, setSelectedDate] = useState(formatDate(new Date()));
+  const [statusFilter, setStatusFilter] = useState<"All" | "Present" | "Late" | "Absent">("All");
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [logStudentId, setLogStudentId] = useState("");
+  const [logStatus, setLogStatus] = useState<AttendanceStatus>("Present");
+  const [logNotes, setLogNotes] = useState("");
+  const [logError, setLogError] = useState<string | null>(null);
+
+  // Custom Delete Student Modal state (replacing window.confirm)
+  const [studentToDelete, setStudentToDelete] = useState<{ id: string; name: string } | null>(null);
+
+  // Edit student info modal state
+  const [studentToEdit, setStudentToEdit] = useState<User | null>(null);
+  const [editStudentName, setEditStudentName] = useState("");
+  const [editStudentEmail, setEditStudentEmail] = useState("");
+  const [editStudentLocation, setEditStudentLocation] = useState("");
+  const [editStudentError, setEditStudentError] = useState<string | null>(null);
+  const [isSavingStudent, setIsSavingStudent] = useState(false);
+
+  const openEditStudent = (student: User) => {
+    setStudentToEdit(student);
+    setEditStudentName(student.name);
+    setEditStudentEmail(student.email || "");
+    setEditStudentLocation(student.location || "");
+    setEditStudentError(null);
+  };
+
+  const handleSaveStudentEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!studentToEdit) return;
+    const cleanName = editStudentName.trim();
+    const cleanEmail = editStudentEmail.trim();
+    const cleanLocation = editStudentLocation.trim();
+
+    if (!cleanName) {
+      setEditStudentError("Name cannot be empty.");
+      return;
+    }
+    if (cleanEmail && !/^\S+@\S+\.\S+$/.test(cleanEmail)) {
+      setEditStudentError("Please enter a valid email address.");
+      return;
+    }
+
+    setIsSavingStudent(true);
+    const allUsers = getUsers();
+    const idx = allUsers.findIndex((u) => u.id.toLowerCase() === studentToEdit.id.toLowerCase());
+    if (idx !== -1) {
+      const updated = { ...allUsers[idx], name: cleanName, email: cleanEmail, location: cleanLocation };
+      saveUser(updated);
+      loadDatabase();
+    }
+    setIsSavingStudent(false);
+    setStudentToEdit(null);
+  };
+
+  // Settings modal state (profile edit, sign out, delete account)
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [editNameValue, setEditNameValue] = useState(user.name);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [settingsSuccess, setSettingsSuccess] = useState<string | null>(null);
+  const [isSavingName, setIsSavingName] = useState(false);
+
+  // Danger zone is tucked away and only expands when explicitly opened
+  const [showDangerZone, setShowDangerZone] = useState(false);
+  const [deleteAccountPassword, setDeleteAccountPassword] = useState("");
+  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  const handleSaveName = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSettingsError(null);
+    setSettingsSuccess(null);
+    const cleanName = editNameValue.trim();
+    if (!cleanName) {
+      setSettingsError("Name cannot be empty.");
+      return;
+    }
+    setIsSavingName(true);
+    try {
+      const allUsers = getUsers();
+      const idx = allUsers.findIndex((u) => u.id.toLowerCase() === user.id.toLowerCase());
+      if (idx !== -1) {
+        const updated = { ...allUsers[idx], name: cleanName };
+        allUsers[idx] = updated;
+        localStorage.setItem("attendance_system_users", JSON.stringify(allUsers));
+        saveUser(updated);
+        loadDatabase();
+        setSettingsSuccess("Name updated.");
+      }
+    } finally {
+      setIsSavingName(false);
+    }
+  };
+
+  const handleDeleteOwnAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setDeleteAccountError(null);
+    if (!deleteAccountPassword) {
+      setDeleteAccountError("Please enter your password to confirm.");
+      return;
+    }
+    setIsDeletingAccount(true);
+    try {
+      await deleteOwnAccount(deleteAccountPassword);
+      onLogout();
+    } catch (err: any) {
+      const code = err?.code || err?.message || "";
+      if (code === "auth/invalid-credential" || code === "auth/wrong-password") {
+        setDeleteAccountError("Incorrect password.");
+      } else {
+        setDeleteAccountError("Something went wrong. Please try again.");
+      }
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
+  // Change password state (Settings, separate from delete-account danger zone)
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [currentPasswordInput, setCurrentPasswordInput] = useState("");
+  const [newPasswordInput, setNewPasswordInput] = useState("");
+  const [changePasswordError, setChangePasswordError] = useState<string | null>(null);
+  const [changePasswordSuccess, setChangePasswordSuccess] = useState<string | null>(null);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setChangePasswordError(null);
+    setChangePasswordSuccess(null);
+    if (!currentPasswordInput || !newPasswordInput) {
+      setChangePasswordError("Please fill out both fields.");
+      return;
+    }
+    if (newPasswordInput.length < 6) {
+      setChangePasswordError("New password must be at least 6 characters.");
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      await changeOwnPassword(currentPasswordInput, newPasswordInput);
+      setChangePasswordSuccess("Password updated.");
+      setCurrentPasswordInput("");
+      setNewPasswordInput("");
+    } catch (err: any) {
+      const code = err?.code || err?.message || "";
+      if (code === "auth/invalid-credential" || code === "auth/wrong-password") {
+        setChangePasswordError("Current password is incorrect.");
+      } else if (code === "auth/weak-password") {
+        setChangePasswordError("New password is too weak.");
+      } else {
+        setChangePasswordError("Something went wrong. Please try again.");
+      }
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  // Manual "refresh live connection" fallback, in case the realtime sync
+  // ever silently drops (e.g. a network blip) without needing a full page
+  // reload.
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const [reconnectMessage, setReconnectMessage] = useState<string | null>(null);
+  const handleForceReconnect = () => {
+    setIsReconnecting(true);
+    setReconnectMessage(null);
+    forceReconnect();
+    loadDatabase();
+    setTimeout(() => {
+      setIsReconnecting(false);
+      setReconnectMessage("Connection refreshed.");
+    }, 600);
+  };
+
+  // Load all records
+  const loadDatabase = () => {
+    const allUsers = getUsers();
+    const studentList = allUsers.filter((u) => u.role === "student");
+    setStudents(studentList);
+
+    const facultyList = allUsers.filter((u) => u.role === "teacher");
+    setFaculty(facultyList);
+
+    const records = getAttendanceRecords();
+    setAttendanceRecords(records);
+
+    const logs = getSecurityLogs();
+    setSecurityLogs(logs);
+
+    const freshUser = allUsers.find((u) => u.id.toLowerCase() === user.id.toLowerCase());
+    if (freshUser) {
+      setDbUser(freshUser);
+    }
+  };
+
+  useEffect(() => {
+    loadDatabase();
+    const handleDbUpdate = () => {
+      loadDatabase();
+    };
+    window.addEventListener("db_updated", handleDbUpdate);
+    return () => {
+      window.removeEventListener("db_updated", handleDbUpdate);
+    };
+  }, []);
+
+  // Handler: Remove Student Trigger (using custom modal)
+  const handleRemoveStudent = (id: string, name: string) => {
+    setStudentToDelete({ id, name });
+  };
+
+  const executeRemoveStudent = () => {
+    if (studentToDelete) {
+      const allUsers = getUsers();
+      let changedUser: User | null = null;
+      const updated = allUsers.map((u) => {
+        if (u.id.toLowerCase() === studentToDelete.id.toLowerCase()) {
+          const currentEnrolled = u.enrolledSubjects || [];
+          changedUser = {
+            ...u,
+            enrolledSubjects: currentEnrolled.filter((sub) => sub !== activeSubject)
+          };
+          return changedUser;
+        }
+        return u;
+      });
+      localStorage.setItem("attendance_system_users", JSON.stringify(updated));
+      if (changedUser) saveUser(changedUser);
+      loadDatabase();
+      setStudentToDelete(null);
+    }
+  };
+
+  // Handler: Approve Student Profile
+  const handleApproveStudent = (id: string) => {
+    const allUsers = getUsers();
+    const userIndex = allUsers.findIndex((u) => u.id.toLowerCase() === id.toLowerCase());
+    if (userIndex !== -1) {
+      allUsers[userIndex] = { ...allUsers[userIndex], isApproved: true };
+      localStorage.setItem("attendance_system_users", JSON.stringify(allUsers));
+      saveUser(allUsers[userIndex]);
+      loadDatabase();
+    }
+  };
+
+  // Handler: Approve Student Application for activeSubject
+  const handleApproveApplication = (studentId: string) => {
+    if (!isApprovedUser) return;
+    const allUsers = getUsers();
+    let changedUser: User | null = null;
+    const updated = allUsers.map((u) => {
+      if (u.id.toLowerCase() === studentId.toLowerCase()) {
+        const currentApplied = u.appliedSubjects || [];
+        const currentEnrolled = u.enrolledSubjects || [];
+        changedUser = {
+          ...u,
+          isApproved: true, // also verify their student profile
+          appliedSubjects: currentApplied.filter((sub) => sub !== activeSubject),
+          enrolledSubjects: currentEnrolled.includes(activeSubject)
+            ? currentEnrolled
+            : [...currentEnrolled, activeSubject]
+        };
+        return changedUser;
+      }
+      return u;
+    });
+    localStorage.setItem("attendance_system_users", JSON.stringify(updated));
+    if (changedUser) saveUser(changedUser);
+    loadDatabase();
+  };
+
+  // Handler: Reject Student Application for activeSubject
+  const handleRejectApplication = (studentId: string) => {
+    if (!isApprovedUser) return;
+    const allUsers = getUsers();
+    let changedUser: User | null = null;
+    const updated = allUsers.map((u) => {
+      if (u.id.toLowerCase() === studentId.toLowerCase()) {
+        const currentApplied = u.appliedSubjects || [];
+        changedUser = {
+          ...u,
+          appliedSubjects: currentApplied.filter((sub) => sub !== activeSubject)
+        };
+        return changedUser;
+      }
+      return u;
+    });
+    localStorage.setItem("attendance_system_users", JSON.stringify(updated));
+    if (changedUser) saveUser(changedUser);
+    loadDatabase();
+  };
+
+  // Handler: Approve Faculty Member
+  const handleApproveFaculty = (id: string) => {
+    if (!isApprovedUser) return;
+    const allUsers = getUsers();
+    const userIndex = allUsers.findIndex((u) => u.id.toLowerCase() === id.toLowerCase());
+    if (userIndex !== -1) {
+      allUsers[userIndex] = { ...allUsers[userIndex], isApproved: true };
+      localStorage.setItem("attendance_system_users", JSON.stringify(allUsers));
+      saveUser(allUsers[userIndex]);
+      loadDatabase();
+    }
+  };
+
+  // Handler: Delete Faculty Member
+  const handleDeleteFaculty = (id: string) => {
+    if (!isApprovedUser) return;
+    if (id.toLowerCase() === dbUser.id.toLowerCase()) {
+      alert("Error: You cannot delete your own logged-in account.");
+      return;
+    }
+    if (window.confirm(`Are you sure you want to permanently remove teacher account "${id}"?`)) {
+      deleteUser(id);
+      loadDatabase();
+    }
+  };
+
+  // Handler: Save Teaching Subject Configuration
+  const handleSaveSubject = (selected: string) => {
+    if (!selected.trim()) return;
+    const allUsers = getUsers();
+    const teacherIndex = allUsers.findIndex((u) => u.id.toLowerCase() === user.id.toLowerCase());
+    if (teacherIndex !== -1) {
+      const updatedTeacher = { ...allUsers[teacherIndex], subject: selected.trim() };
+      allUsers[teacherIndex] = updatedTeacher;
+      localStorage.setItem("attendance_system_users", JSON.stringify(allUsers));
+      // Persist to Firestore so it survives re-login and syncs across devices
+      saveUser(updatedTeacher);
+    }
+    setActiveSubject(selected.trim());
+    setShowSubjectModal(false);
+  };
+
+  // Handler: Save Attendance Override / Manual Log
+  const handleSaveAttendanceOverride = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLogError(null);
+
+    if (!logStudentId) {
+      setLogError("Please select a student.");
+      return;
+    }
+
+    const matchedStudent = students.find((s) => s.id === logStudentId);
+    if (!matchedStudent) {
+      setLogError("Invalid student selected.");
+      return;
+    }
+
+    // Check if record for this student and date already exists
+    const existingIndex = attendanceRecords.findIndex(
+      (r) => r.studentId.toLowerCase() === logStudentId.toLowerCase() && r.date === selectedDate && (!activeSubject || r.subject === activeSubject)
+    );
+
+    const recordId = existingIndex !== -1 ? attendanceRecords[existingIndex].id : `rec-${Date.now()}`;
+    const nowTime = new Date().toTimeString().split(" ")[0]; // HH:MM:SS
+
+    const updatedRecord: AttendanceRecord = {
+      id: recordId,
+      studentId: logStudentId,
+      studentName: matchedStudent.name,
+      date: selectedDate,
+      time: logStatus === "Absent" ? "00:00:00" : nowTime,
+      status: logStatus,
+      notes: logNotes.trim() || undefined,
+      subject: activeSubject || "General Class",
+    };
+
+    saveAttendanceRecord(updatedRecord);
+    loadDatabase();
+
+    // Reset
+    setLogStudentId("");
+    setLogNotes("");
+    setShowLogModal(false);
+  };
+
+  // Handler: Quick Override toggle in line - cycles Present -> Late -> Absent -> Present
+  const handleQuickStatusToggle = (record: AttendanceRecord) => {
+    const cycle: Record<AttendanceStatus, AttendanceStatus> = {
+      Present: "Late",
+      Late: "Absent",
+      Absent: "Present",
+    };
+    const nextStatus: AttendanceStatus = cycle[record.status];
+    const nowTime = new Date().toTimeString().split(" ")[0];
+
+    const updated: AttendanceRecord = {
+      ...record,
+      status: nextStatus,
+      time: nextStatus === "Absent" ? "00:00:00" : nowTime,
+      notes: `Toggled by teacher (${user.name})`,
+    };
+
+    saveAttendanceRecord(updated);
+    loadDatabase();
+  };
+
+  // Handler: Create missing attendance directly from row
+  const handleMarkDirect = (student: User, status: AttendanceStatus) => {
+    const nowTime = new Date().toTimeString().split(" ")[0];
+    const newRec: AttendanceRecord = {
+      id: `rec-${Date.now()}`,
+      studentId: student.id,
+      studentName: student.name,
+      date: selectedDate,
+      time: status === "Absent" ? "00:00:00" : nowTime,
+      status,
+      notes: `Recorded by teacher (${user.name})`,
+      subject: activeSubject || "General Class",
+    };
+
+    saveAttendanceRecord(newRec);
+    loadDatabase();
+  };
+
+  // Computations
+  // 1. Statistics for Today
+  const todayDateStr = selectedDate;
+  const todayLogs = attendanceRecords.filter((r) => r.date === todayDateStr && (!activeSubject || r.subject === activeSubject));
+  const presentToday = todayLogs.filter((r) => r.status === "Present").length;
+  const lateToday = todayLogs.filter((r) => r.status === "Late").length;
+  const absentToday = todayLogs.filter((r) => r.status === "Absent").length;
+  const checkedInCount = todayLogs.length;
+  
+  const todayAttendanceRate =
+    checkedInCount > 0 ? Math.round(((presentToday + lateToday) / checkedInCount) * 100) : 0;
+
+  // Students enrolled in activeSubject
+  const enrolledStudents = students.filter((s) => {
+    if (!activeSubject) return true; // show all if no subject configured
+    return (s.enrolledSubjects || []).includes(activeSubject);
+  });
+
+  // Students who have applied for activeSubject but are not enrolled
+  const pendingApplicants = students.filter((s) => {
+    if (!activeSubject) return false;
+    return (s.appliedSubjects || []).includes(activeSubject) && !(s.enrolledSubjects || []).includes(activeSubject);
+  });
+
+  // Filter enrolled students based on search
+  const filteredStudents = enrolledStudents.filter(
+    (s) =>
+      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.id.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Daily Audit Log mapping
+  const dailySheet = enrolledStudents.map((student) => {
+    const log = attendanceRecords.find(
+      (r) => r.studentId.toLowerCase() === student.id.toLowerCase() && r.date === selectedDate && (!activeSubject || r.subject === activeSubject)
+    );
+    return {
+      student,
+      record: log || null,
+    };
+  });
+
+  // Filter Daily sheet based on selected status filter
+  const filteredDailySheet = dailySheet.filter(({ record }) => {
+    if (statusFilter === "All") return true;
+    if (statusFilter === "Present") return record?.status === "Present";
+    if (statusFilter === "Late") return record?.status === "Late";
+    if (statusFilter === "Absent") return record === null || record.status === "Absent";
+    return true;
+  });
+
+  // Historical Attendance Trend for last 5 days (Bar chart calculations)
+  const getTrendData = () => {
+    const days = [4, 3, 2, 1, 0];
+    return days.map((offset) => {
+      const d = new Date();
+      d.setDate(d.getDate() - offset);
+      const dateStr = formatDate(d);
+
+      const logs = attendanceRecords.filter((r) => r.date === dateStr && (!activeSubject || r.subject === activeSubject));
+      const present = logs.filter((r) => r.status === "Present" || r.status === "Late").length;
+      const total = logs.length;
+      const rate = total > 0 ? Math.round((present / total) * 100) : 0;
+
+      return {
+        label: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        rate,
+        present,
+        total,
+      };
+    });
+  };
+
+  const trendData = getTrendData();
+
+  if (viewingStudent) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <StudentProfile student={viewingStudent} onBack={() => setViewingStudent(null)} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8" id="teacher-dashboard">
+      {/* Header Panel */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-ink-soft/10 pb-6">
+        <div className="min-w-0">
+          <span className="px-2.5 py-1 text-xs font-semibold bg-violet-50 text-violet-600 rounded-full border border-violet-100">
+            Teacher Dashboard
+          </span>
+          <h1 className="text-3xl font-black text-ink tracking-tight mt-2 break-words" id="teacher-welcome-title">
+            Welcome, {user.name}
+          </h1>
+          <p className="text-sm text-ink-soft/70 font-sans mt-0.5">
+            Role: <span className="font-semibold text-ink-soft">Teacher</span>
+          </p>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold bg-violet-500 text-white rounded-lg shadow-sm">
+              <BookOpen className="h-3.5 w-3.5" />
+              Active Subject: {activeSubject || "Not Configured"}
+            </span>
+            <button
+              onClick={() => {
+                setTempSubject(activeSubject);
+                setShowSubjectModal(true);
+              }}
+              className="inline-flex items-center gap-1 text-xs font-bold text-violet-500 hover:text-violet-700 hover:bg-violet-50 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
+            >
+              <Sliders className="h-3 w-3" /> Configure Subject
+            </button>
+          </div>
+        </div>
+
+        <div className="self-start md:self-center">
+          <button
+            onClick={() => {
+              setEditNameValue(user.name);
+              setSettingsError(null);
+              setShowSettingsModal(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-ink-soft bg-white border border-ink-soft/15 rounded-xl hover:bg-cream-dim/60 hover:text-ink shadow-sm transition-all cursor-pointer"
+            id="teacher-settings-btn"
+          >
+            <SettingsIcon className="h-4 w-4" /> Settings
+          </button>
+        </div>
+      </div>
+
+      {/* Pending Approval Banner */}
+      {!isApprovedUser && (
+        <div className="bg-amber-50/50 border border-amber-200/60 rounded-2xl p-5 flex flex-col sm:flex-row items-start gap-4 animate-pulse" id="unverified-faculty-alert">
+          <div className="p-3 bg-amber-100 text-amber-700 rounded-xl shrink-0">
+            <AlertCircle className="h-6 w-6" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="font-extrabold text-sm text-amber-900">
+              Account Pending Verification
+            </h3>
+            <p className="text-xs text-amber-700 leading-relaxed">
+              Your account hasn't been verified by another teacher yet. Until then, you can look around, but you can't approve students, edit logs, manage other teacher accounts, or open a class for check-ins.
+            </p>
+            <p className="text-[10px] text-amber-600 font-mono">
+              Ask another verified teacher to approve you from the <strong>Teachers</strong> tab.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Stats Highlight Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5" id="teacher-stats-grid">
+        <div className="bg-white border border-ink-soft/10 rounded-2xl p-5 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-violet-50 text-violet-500 rounded-xl shrink-0">
+            <Users className="h-6 w-6" />
+          </div>
+          <div>
+            <span className="text-xs font-medium text-ink-soft/50 block">Total Roster</span>
+            <span className="text-2xl font-black text-ink block mt-0.5" id="metric-total-students">
+              {students.length} Students
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-white border border-ink-soft/10 rounded-2xl p-5 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-teal-50 text-teal-500 rounded-xl shrink-0">
+            <CheckCircle className="h-6 w-6" />
+          </div>
+          <div>
+            <span className="text-xs font-medium text-ink-soft/50 block">Present Today</span>
+            <span className="text-2xl font-black text-ink block mt-0.5" id="metric-present-today">
+              {presentToday} logged
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-white border border-ink-soft/10 rounded-2xl p-5 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-amber-50 text-amber-600 rounded-xl shrink-0">
+            <Clock className="h-6 w-6" />
+          </div>
+          <div>
+            <span className="text-xs font-medium text-ink-soft/50 block">Late Today</span>
+            <span className="text-2xl font-black text-ink block mt-0.5" id="metric-late-today">
+              {lateToday} logged
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-white border border-ink-soft/10 rounded-2xl p-5 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-rose-50 text-rose-500 rounded-xl shrink-0">
+            <XCircle className="h-6 w-6" />
+          </div>
+          <div>
+            <span className="text-xs font-medium text-ink-soft/50 block">Absent Today</span>
+            <span className="text-2xl font-black text-ink block mt-0.5" id="metric-absent-today">
+              {absentToday} logs
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-white border border-ink-soft/10 rounded-2xl p-5 shadow-sm flex items-center gap-4">
+          <div className="p-3 bg-orange-50 text-orange-600 rounded-xl shrink-0">
+            <TrendingUp className="h-6 w-6" />
+          </div>
+          <div>
+            <span className="text-xs font-medium text-ink-soft/50 block">Today's Rate</span>
+            <span className="text-2xl font-black text-ink block mt-0.5" id="metric-attendance-rate">
+              {todayAttendanceRate}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation - dropdown on mobile (no horizontal scrolling to fight
+          with), tab bar on larger screens where it actually fits. */}
+      <div className="sm:hidden">
+        <label className="sr-only" htmlFor="mobile-tab-select">Section</label>
+        <div className="relative">
+          <select
+            id="mobile-tab-select"
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value as typeof activeTab)}
+            className="w-full pl-4 pr-11 py-3 text-sm font-bold text-ink bg-white border-2 border-violet-100 rounded-xl focus:outline-none focus:border-violet-400 shadow-sm appearance-none cursor-pointer"
+          >
+            <option value="roster">
+              Class Roster ({enrolledStudents.length}){pendingApplicants.length > 0 ? ` \u2022 ${pendingApplicants.length} pending` : ""}
+            </option>
+            <option value="audit">Daily Sheet & Overrides</option>
+            <option value="reports">Performance Reports</option>
+            <option value="security">
+              Security Logs{securityLogs.length > 0 ? ` (${securityLogs.length})` : ""}
+            </option>
+            <option value="faculty">
+              Teachers{faculty.filter((f) => !f.isApproved).length > 0 ? ` \u2022 ${faculty.filter((f) => !f.isApproved).length} pending` : ""}
+            </option>
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-violet-500" />
+        </div>
+      </div>
+
+      <div className="hidden sm:flex border-b border-ink-soft/10 gap-6" id="teacher-tabs-nav">
+        <button
+          onClick={() => setActiveTab("roster")}
+          className={`pb-3 text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+            activeTab === "roster"
+              ? "border-violet-500 text-violet-500"
+              : "border-transparent text-ink-soft/50 hover:text-ink-soft"
+          }`}
+          id="tab-roster-btn"
+        >
+          Class Roster ({enrolledStudents.length})
+          {pendingApplicants.length > 0 && (
+            <span className="inline-flex items-center justify-center px-2 py-0.5 text-[9px] font-black bg-amber-500 text-white rounded-full animate-pulse">
+              {pendingApplicants.length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab("audit")}
+          className={`pb-3 text-sm font-bold border-b-2 transition-all cursor-pointer shrink-0 ${
+            activeTab === "audit"
+              ? "border-violet-500 text-violet-500"
+              : "border-transparent text-ink-soft/50 hover:text-ink-soft"
+          }`}
+          id="tab-audit-btn"
+        >
+          Daily Sheet & Overrides
+        </button>
+        <button
+          onClick={() => setActiveTab("reports")}
+          className={`pb-3 text-sm font-bold border-b-2 transition-all cursor-pointer shrink-0 ${
+            activeTab === "reports"
+              ? "border-violet-500 text-violet-500"
+              : "border-transparent text-ink-soft/50 hover:text-ink-soft"
+          }`}
+          id="tab-reports-btn"
+        >
+          Performance Reports
+        </button>
+        <button
+          onClick={() => setActiveTab("security")}
+          className={`pb-3 text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+            activeTab === "security"
+              ? "border-violet-500 text-violet-500"
+              : "border-transparent text-ink-soft/50 hover:text-ink-soft"
+          }`}
+          id="tab-security-btn"
+        >
+          Security Logs
+          {securityLogs.length > 0 && (
+            <span className="inline-flex items-center justify-center px-2 py-0.5 text-[9px] font-black bg-rose-500 text-white rounded-full animate-pulse">
+              {securityLogs.length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab("faculty")}
+          className={`pb-3 text-sm font-bold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+            activeTab === "faculty"
+              ? "border-violet-500 text-violet-500"
+              : "border-transparent text-ink-soft/50 hover:text-ink-soft"
+          }`}
+          id="tab-faculty-btn"
+        >
+          Teachers
+          {faculty.filter((f) => !f.isApproved).length > 0 && (
+            <span className="inline-flex items-center justify-center px-2 py-0.5 text-[9px] font-black bg-amber-500 text-white rounded-full animate-pulse">
+              {faculty.filter((f) => !f.isApproved).length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Render Active Tab */}
+      <div className="space-y-6" id="active-tab-container">
+        
+        {/* TAB 1: STUDENT ROSTER */}
+        {activeTab === "roster" && (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+              {/* Search Bar */}
+              <div className="relative flex-1 max-w-md">
+                <input
+                  type="text"
+                  placeholder="Search students by name or unique ID..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 text-xs bg-white border border-ink-soft/15 rounded-xl focus:outline-none focus:border-violet-400 text-ink shadow-sm"
+                  id="student-search-input"
+                />
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-ink-soft/50" />
+              </div>
+            </div>
+
+            {/* Pending Subject Applications */}
+            {activeSubject && pendingApplicants.length > 0 && (
+              <div className="bg-amber-50/60 border border-amber-200/80 rounded-2xl p-5 space-y-4 animate-fade-in shadow-sm">
+                <div className="space-y-0.5">
+                  <h3 className="text-xs font-black text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
+                    <AlertCircle className="h-4 w-4 text-amber-600 animate-bounce" />
+                    Pending Join Requests ({pendingApplicants.length})
+                  </h3>
+                  <p className="text-[11px] text-amber-800/80 leading-normal">
+                    These students have applied to enroll in your class: <strong>{activeSubject}</strong>. Approve to authorize attendance check-ins.
+                  </p>
+                </div>
+
+                {/* Mobile: stacked cards. No horizontal scrolling to fight with. */}
+                <div className="sm:hidden space-y-3">
+                  {pendingApplicants.map((student) => (
+                    <div key={student.id} className="bg-white border border-amber-100 rounded-xl p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-gray-950 text-sm truncate">{student.name}</p>
+                          <p className="font-mono text-xs text-amber-900 font-bold">{student.id}</p>
+                        </div>
+                        <span className="text-[10px] text-ink-soft/50 shrink-0 pt-0.5">{student.createdAt}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleApproveApplication(student.id)}
+                          className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold text-white bg-teal-500 hover:bg-teal-600 rounded-lg shadow-sm shadow-teal-100 transition-all cursor-pointer"
+                        >
+                          <UserCheck className="h-3.5 w-3.5" /> Approve Join
+                        </button>
+                        <button
+                          onClick={() => handleRejectApplication(student.id)}
+                          className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-100 rounded-lg transition-all cursor-pointer"
+                        >
+                          <XCircle className="h-3.5 w-3.5" /> Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop/tablet: table */}
+                <div className="hidden sm:block bg-white border border-amber-100 rounded-xl overflow-hidden">
+                  <div className="overflow-x-auto scroll-shadow-x">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-amber-50/30 border-b border-amber-100/50 text-[10px] text-amber-800/80 font-extrabold uppercase tracking-wider">
+                          <th className="px-5 py-3 font-semibold">Student ID</th>
+                          <th className="px-5 py-3 font-semibold">Full Name</th>
+                          <th className="px-5 py-3 font-semibold">Applied Date</th>
+                          <th className="px-5 py-3 font-semibold text-center">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-amber-50/50 text-xs text-ink-soft">
+                        {pendingApplicants.map((student) => (
+                          <tr key={student.id} className="hover:bg-amber-50/10 transition-colors">
+                            <td className="px-5 py-3.5 font-mono font-bold text-amber-900">
+                              {student.id}
+                            </td>
+                            <td className="px-5 py-3.5 font-semibold text-gray-950">
+                              {student.name}
+                            </td>
+                            <td className="px-5 py-3.5 text-ink-soft/70">
+                              {student.createdAt}
+                            </td>
+                            <td className="px-5 py-3.5 text-center flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => handleApproveApplication(student.id)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 text-[10px] font-bold text-white bg-teal-500 hover:bg-teal-600 rounded-lg shadow-sm shadow-teal-100 transition-all cursor-pointer"
+                              >
+                                <UserCheck className="h-3 w-3" /> Approve Join
+                              </button>
+                              <button
+                                onClick={() => handleRejectApplication(student.id)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 text-[10px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-100 rounded-lg transition-all cursor-pointer"
+                              >
+                                <XCircle className="h-3 w-3" /> Reject
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Students table */}
+            <div className="bg-white border border-ink-soft/10 rounded-2xl overflow-hidden shadow-sm">
+              {filteredStudents.length === 0 ? (
+                <div className="text-center py-16 text-ink-soft/50 text-sm">
+                  <AlertCircle className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  No students are currently enrolled in this subject class.
+                </div>
+              ) : (
+                <>
+                  {/* Mobile: stacked cards */}
+                  <div className="sm:hidden divide-y divide-gray-50">
+                    {filteredStudents.map((student) => (
+                      <div key={student.id} className="p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-ink text-sm truncate">{student.name}</p>
+                            <p className="font-mono text-xs text-violet-500 font-bold">{student.id}</p>
+                          </div>
+                          {student.isApproved ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-600 border border-teal-100 shrink-0">
+                              Verified
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100 animate-pulse shrink-0">
+                              Pending
+                            </span>
+                          )}
+                        </div>
+                        {(student.email || student.location) && (
+                          <div className="text-xs text-ink-soft/70 space-y-0.5">
+                            {student.email && <div className="text-ink-soft">{student.email}</div>}
+                            {student.location && <div className="text-[11px] text-ink-soft/50">{student.location}</div>}
+                          </div>
+                        )}
+                        <p className="text-[11px] text-ink-soft/50">Registered {student.createdAt}</p>
+                        <div className="flex gap-2 pt-1">
+                          {!student.isApproved && (
+                            <button
+                              onClick={() => handleApproveStudent(student.id)}
+                              disabled={!isApprovedUser}
+                              className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold text-teal-600 bg-teal-50 hover:bg-teal-100 border border-teal-100 rounded-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            >
+                              <UserCheck className="h-3.5 w-3.5" /> Approve
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setViewingStudent(student)}
+                            className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold text-violet-600 bg-violet-50 hover:bg-violet-100 border border-violet-100 rounded-lg transition-all cursor-pointer"
+                            id={`view-profile-btn-${student.id}`}
+                          >
+                            <Eye className="h-3.5 w-3.5" /> Profile
+                          </button>
+                          <button
+                            onClick={() => openEditStudent(student)}
+                            disabled={!isApprovedUser}
+                            className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold text-violet-600 bg-violet-50 hover:bg-violet-100 border border-violet-100 rounded-lg transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            <Edit className="h-3.5 w-3.5" /> Edit
+                          </button>
+                          <button
+                            onClick={() => handleRemoveStudent(student.id, student.name)}
+                            disabled={!isApprovedUser}
+                            className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-100 rounded-lg transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            <UserMinus className="h-3.5 w-3.5" /> Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop/tablet: table */}
+                  <div className="hidden sm:block overflow-x-auto scroll-shadow-x">
+                  <table className="w-full text-left border-collapse" id="roster-table">
+                    <thead>
+                      <tr className="bg-cream-dim/60 border-b border-ink-soft/10 text-[10px] text-ink-soft/50 font-extrabold uppercase tracking-wider">
+                        <th className="px-6 py-3.5 font-semibold">Student ID (Username)</th>
+                        <th className="px-6 py-3.5 font-semibold">Full Name</th>
+                        <th className="px-6 py-3.5 font-semibold">Contact</th>
+                        <th className="px-6 py-3.5 font-semibold">Registration Date</th>
+                        <th className="px-6 py-3.5 font-semibold">Status</th>
+                        <th className="px-6 py-3.5 font-semibold text-center">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50 text-xs text-ink-soft">
+                      {filteredStudents.map((student) => (
+                        <tr key={student.id} className="hover:bg-cream-dim/60/50 transition-colors">
+                          <td className="px-6 py-4 font-mono font-bold text-violet-500">
+                            {student.id}
+                          </td>
+                          <td className="px-6 py-4 font-semibold text-ink">
+                            <button
+                              onClick={() => setViewingStudent(student)}
+                              className="hover:text-violet-600 hover:underline transition-colors cursor-pointer text-left"
+                              id={`profile-link-${student.id}`}
+                            >
+                              {student.name}
+                            </button>
+                          </td>
+                          <td className="px-6 py-4 text-ink-soft/70">
+                            {student.email || student.location ? (
+                              <div className="space-y-0.5">
+                                {student.email && <div className="text-ink-soft">{student.email}</div>}
+                                {student.location && <div className="text-[11px] text-ink-soft/50">{student.location}</div>}
+                              </div>
+                            ) : (
+                              <span className="text-gray-300">—</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-ink-soft/70">
+                            {student.createdAt}
+                          </td>
+                          <td className="px-6 py-4">
+                            {student.isApproved ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-600 border border-teal-100">
+                                Verified Student
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100 animate-pulse">
+                                Pending Verification
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-center flex items-center justify-center gap-2">
+                            {!student.isApproved && (
+                              <button
+                                onClick={() => handleApproveStudent(student.id)}
+                                disabled={!isApprovedUser}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-teal-600 bg-teal-50 hover:bg-teal-100 border border-teal-100 rounded-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                title={!isApprovedUser ? "Verification Required" : "Verify this student profile"}
+                              >
+                                <UserCheck className="h-3 w-3" /> Approve
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setViewingStudent(student)}
+                              className="inline-flex p-1.5 text-violet-500 hover:bg-violet-50 rounded-lg transition-colors cursor-pointer"
+                              aria-label={`View ${student.name}'s profile`}
+                              title="View profile"
+                              id={`view-profile-btn-desktop-${student.id}`}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => openEditStudent(student)}
+                              disabled={!isApprovedUser}
+                              className="inline-flex p-1.5 text-violet-500 hover:bg-violet-50 rounded-lg transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                              aria-label={`Edit ${student.name}'s info`}
+                              title={!isApprovedUser ? "Verification Required" : "Edit student info"}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleRemoveStudent(student.id, student.name)}
+                              disabled={!isApprovedUser}
+                              className="inline-flex p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                              aria-label={`Remove ${student.name} from this class`}
+                              title={!isApprovedUser ? "Verification Required" : "Remove student from this subject class"}
+                            >
+                              <UserMinus className="h-4.5 w-4.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: DAILY SHEET & AUDIT OVERRIDES */}
+        {activeTab === "audit" && (
+          <div className="space-y-4">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+              
+              {/* Date selection & Filter */}
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4.5 w-4.5 text-violet-500" />
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="px-3 py-1.5 text-xs bg-white border border-ink-soft/15 rounded-xl focus:outline-none focus:border-violet-400 text-ink font-semibold shadow-sm"
+                    id="audit-date-picker"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1.5 border border-ink-soft/10 bg-cream-dim/60/50 p-1 rounded-xl">
+                  <button
+                    onClick={() => setStatusFilter("All")}
+                    className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                      statusFilter === "All"
+                        ? "bg-white text-ink shadow-sm"
+                        : "text-ink-soft/50 hover:text-ink-soft"
+                    }`}
+                  >
+                    All Students
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter("Present")}
+                    className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                      statusFilter === "Present"
+                        ? "bg-white text-teal-500 shadow-sm"
+                        : "text-ink-soft/50 hover:text-ink-soft"
+                    }`}
+                  >
+                    Present Today
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter("Late")}
+                    className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                      statusFilter === "Late"
+                        ? "bg-white text-amber-600 shadow-sm"
+                        : "text-ink-soft/50 hover:text-ink-soft"
+                    }`}
+                  >
+                    Late Today
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter("Absent")}
+                    className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                      statusFilter === "Absent"
+                        ? "bg-white text-rose-600 shadow-sm"
+                        : "text-ink-soft/50 hover:text-ink-soft"
+                    }`}
+                  >
+                    Absent Today
+                  </button>
+                </div>
+              </div>
+
+              {/* Manual Override Log Button */}
+              <button
+                onClick={() => {
+                  if (!isApprovedUser) {
+                    alert("Verification Required: Unverified teachers cannot record manual overrides.");
+                    return;
+                  }
+                  setLogError(null);
+                  setShowLogModal(true);
+                }}
+                disabled={!isApprovedUser}
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-violet-500 hover:bg-violet-600 rounded-full shadow-violet hover:-translate-y-0.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0"
+                id="open-override-btn"
+                title={!isApprovedUser ? "Verification Required" : "Add manual override log"}
+              >
+                <Plus className="h-4 w-4" /> Add Manual Log
+              </button>
+            </div>
+
+            {/* Attendance matrix sheet table */}
+            <div className="bg-white border border-ink-soft/10 rounded-2xl overflow-hidden shadow-sm">
+              {filteredDailySheet.length === 0 ? (
+                <div className="text-center py-16 text-ink-soft/50 text-sm">
+                  <AlertCircle className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  No matching student attendance records found for {selectedDate}.
+                </div>
+              ) : (
+                <>
+                  {/* Mobile: stacked cards */}
+                  <div className="sm:hidden divide-y divide-gray-50">
+                    {filteredDailySheet.map(({ student, record }) => (
+                      <div key={student.id} className="p-4 space-y-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-ink text-sm truncate">{student.name}</p>
+                            <p className="font-mono text-xs text-ink-soft/50">{student.id}</p>
+                          </div>
+                          {record ? (
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                                record.status === "Present"
+                                  ? "bg-teal-50 text-teal-600 border border-teal-100"
+                                  : record.status === "Late"
+                                  ? "bg-amber-50 text-amber-700 border border-amber-100"
+                                  : "bg-rose-50 text-rose-700 border border-rose-100"
+                              }`}
+                            >
+                              {record.status}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-ink-soft/50 shrink-0">
+                              Unmarked
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-ink-soft/70">
+                          <span>{selectedDate}</span>
+                          {record && record.status !== "Absent" && (
+                            <span className="font-mono">{record.time}</span>
+                          )}
+                        </div>
+                        {record?.notes && (
+                          <p className="text-xs text-ink-soft/70 italic">{record.notes}</p>
+                        )}
+                        <div className="pt-1">
+                          {record ? (
+                            <button
+                              onClick={() => handleQuickStatusToggle(record)}
+                              disabled={!isApprovedUser}
+                              className="w-full inline-flex items-center justify-center gap-1 text-xs font-bold text-violet-500 hover:text-violet-700 bg-violet-50 hover:bg-violet-100 px-3 py-2 rounded-lg transition-all cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
+                            >
+                              <Edit className="h-3.5 w-3.5" /> Toggle Status
+                            </button>
+                          ) : (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleMarkDirect(student, "Present")}
+                                disabled={!isApprovedUser}
+                                className="flex-1 text-xs font-extrabold text-teal-500 hover:text-teal-700 bg-teal-50 hover:bg-teal-100 px-2 py-2 rounded-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                Present
+                              </button>
+                              <button
+                                onClick={() => handleMarkDirect(student, "Late")}
+                                disabled={!isApprovedUser}
+                                className="flex-1 text-xs font-extrabold text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 px-2 py-2 rounded-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                Late
+                              </button>
+                              <button
+                                onClick={() => handleMarkDirect(student, "Absent")}
+                                disabled={!isApprovedUser}
+                                className="flex-1 text-xs font-extrabold text-rose-500 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2 py-2 rounded-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                Absent
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop/tablet: table */}
+                  <div className="hidden sm:block overflow-x-auto scroll-shadow-x">
+                  <table className="w-full text-left border-collapse" id="audit-logs-table">
+                    <thead>
+                      <tr className="bg-cream-dim/60 border-b border-ink-soft/10 text-[10px] text-ink-soft/50 font-extrabold uppercase tracking-wider">
+                        <th className="px-6 py-3.5 font-semibold">Student ID</th>
+                        <th className="px-6 py-3.5 font-semibold">Full Name</th>
+                        <th className="px-6 py-3.5 font-semibold">Date</th>
+                        <th className="px-6 py-3.5 font-semibold">Log Time</th>
+                        <th className="px-6 py-3.5 font-semibold">Status</th>
+                        <th className="px-6 py-3.5 font-semibold">Comments / Notes</th>
+                        <th className="px-6 py-3.5 font-semibold text-center">Quick Override</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50 text-xs text-ink-soft">
+                      {filteredDailySheet.map(({ student, record }) => (
+                        <tr key={student.id} className="hover:bg-cream-dim/60/50 transition-colors">
+                          <td className="px-6 py-4 font-mono text-ink-soft/70">
+                            {student.id}
+                          </td>
+                          <td className="px-6 py-4 font-semibold text-ink">
+                            {student.name}
+                          </td>
+                          <td className="px-6 py-4 font-mono font-medium text-ink-soft/70">
+                            {selectedDate}
+                          </td>
+                          <td className="px-6 py-4 font-mono text-ink-soft/70">
+                            {record && record.status !== "Absent" ? record.time : "—"}
+                          </td>
+                          <td className="px-6 py-4">
+                            {record ? (
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                  record.status === "Present"
+                                    ? "bg-teal-50 text-teal-600 border border-teal-100"
+                                    : record.status === "Late"
+                                    ? "bg-amber-50 text-amber-700 border border-amber-100"
+                                    : "bg-rose-50 text-rose-700 border border-rose-100"
+                                }`}
+                              >
+                                {record.status}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-ink-soft/50">
+                                Unmarked (Absent)
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-ink-soft/70 italic max-w-xs truncate">
+                            {record?.notes || "—"}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            {record ? (
+                              <button
+                                onClick={() => handleQuickStatusToggle(record)}
+                                disabled={!isApprovedUser}
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-violet-500 hover:text-violet-700 bg-violet-50 hover:bg-violet-100 px-2.5 py-1 rounded-lg transition-all cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
+                                title={!isApprovedUser ? "Verification Required" : "Cycle status: Present -> Late -> Absent"}
+                              >
+                                <Edit className="h-3 w-3" /> Toggle
+                              </button>
+                            ) : (
+                              <div className="flex justify-center gap-1.5">
+                                <button
+                                  onClick={() => handleMarkDirect(student, "Present")}
+                                  disabled={!isApprovedUser}
+                                  className="text-[10px] font-extrabold text-teal-500 hover:text-teal-700 bg-teal-50 hover:bg-teal-100 px-2 py-1 rounded-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                  title={!isApprovedUser ? "Verification Required" : "Mark as present"}
+                                >
+                                  Present
+                                </button>
+                                <button
+                                  onClick={() => handleMarkDirect(student, "Late")}
+                                  disabled={!isApprovedUser}
+                                  className="text-[10px] font-extrabold text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 px-2 py-1 rounded-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                  title={!isApprovedUser ? "Verification Required" : "Mark as late"}
+                                >
+                                  Late
+                                </button>
+                                <button
+                                  onClick={() => handleMarkDirect(student, "Absent")}
+                                  disabled={!isApprovedUser}
+                                  className="text-[10px] font-extrabold text-rose-500 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                  title={!isApprovedUser ? "Verification Required" : "Mark as absent"}
+                                >
+                                  Absent
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: PERFORMANCE REPORTS */}
+        {activeTab === "reports" && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            {/* Visual Trend Chart */}
+            <div className="lg:col-span-1 bg-white border border-ink-soft/10 rounded-2xl p-6 shadow-sm flex flex-col">
+              <h3 className="text-base font-bold text-ink flex items-center gap-1.5 mb-2">
+                <Activity className="h-5 w-5 text-violet-500" />
+                Attendance Trend
+              </h3>
+              <p className="text-xs text-ink-soft/70 mb-6">
+                Average attendance rate over the last 5 days.
+              </p>
+
+              {/* Custom SVG Bar Chart */}
+              <div className="flex-1 min-h-[220px] flex items-end justify-between px-2 pt-4 relative">
+                {/* Horizontal guide lines */}
+                <div className="absolute inset-x-0 bottom-0 h-full flex flex-col justify-between pointer-events-none text-[9px] text-gray-300 font-mono">
+                  <div className="border-t border-dashed border-ink-soft/10 w-full pt-1">100%</div>
+                  <div className="border-t border-dashed border-ink-soft/10 w-full pt-1">75%</div>
+                  <div className="border-t border-dashed border-ink-soft/10 w-full pt-1">50%</div>
+                  <div className="border-t border-dashed border-ink-soft/10 w-full pt-1">25%</div>
+                  <div className="border-t border-ink-soft/15 w-full" />
+                </div>
+
+                {trendData.map((data, idx) => (
+                  <div key={idx} className="flex flex-col items-center flex-1 group z-10">
+                    {/* Tooltip */}
+                    <div className="opacity-0 group-hover:opacity-100 absolute -top-2 bg-gray-900 text-white text-[10px] py-1 px-2 rounded font-semibold transition-opacity pointer-events-none">
+                      {data.rate}% ({data.present}/{data.total})
+                    </div>
+                    {/* Bar */}
+                    <div className="w-8 sm:w-10 bg-gray-100 rounded-t-lg overflow-hidden h-[150px] flex items-end">
+                      <div
+                        className={`w-full rounded-t-lg transition-all duration-500 ${
+                          data.rate >= 80 ? "bg-violet-500" : data.rate >= 60 ? "bg-amber-400" : "bg-rose-400"
+                        }`}
+                        style={{ height: `${data.rate}%` }}
+                      />
+                    </div>
+                    {/* Label */}
+                    <span className="text-[10px] font-bold text-ink-soft/70 mt-2 font-mono">
+                      {data.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Student attendance reports list */}
+            <div className="lg:col-span-2 bg-white border border-ink-soft/10 rounded-2xl p-6 shadow-sm">
+              <h3 className="text-base font-bold text-ink flex items-center gap-1.5 mb-2">
+                <FileSpreadsheet className="h-5 w-5 text-teal-500" />
+                Student Attendance Summary
+              </h3>
+              <p className="text-xs text-ink-soft/70 mb-4">
+                Total aggregate records and percentage attendance for individual students.
+              </p>
+
+              {enrolledStudents.length === 0 ? (
+                <div className="text-center py-10 text-ink-soft/50 text-sm">
+                  No student records to compile.
+                </div>
+              ) : (
+                <>
+                  {/* Mobile: stacked cards */}
+                  <div className="sm:hidden divide-y divide-gray-50">
+                    {enrolledStudents.map((student) => {
+                      const sStats = calculateStudentStats(student.id, activeSubject);
+                      return (
+                        <div key={student.id} className="py-4 space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-ink text-sm truncate">{student.name}</p>
+                              <p className="font-mono text-xs text-ink-soft/50">{student.id}</p>
+                            </div>
+                            <span
+                              className={`text-sm font-mono font-black shrink-0 ${
+                                sStats.percentage >= 90
+                                  ? "text-teal-500"
+                                  : sStats.percentage >= 75
+                                  ? "text-amber-600"
+                                  : "text-rose-500"
+                              }`}
+                            >
+                              {sStats.percentage}%
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4 text-xs">
+                            <span className="text-teal-500 font-bold">{sStats.presentCount} Present</span>
+                            <span className="text-amber-600 font-bold">{sStats.lateCount} Late</span>
+                            <span className="text-rose-500 font-bold">{sStats.absentCount} Absent</span>
+                          </div>
+                          <p className="text-[11px] text-ink-soft/50">{sStats.totalDays} total cycles logged</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Desktop/tablet: table */}
+                  <div className="hidden sm:block overflow-x-auto scroll-shadow-x">
+                  <table className="w-full text-left border-collapse" id="reports-table">
+                    <thead>
+                      <tr className="border-b border-ink-soft/10 text-[10px] text-ink-soft/50 font-extrabold uppercase tracking-wider">
+                        <th className="px-4 pb-3 font-semibold">Student ID</th>
+                        <th className="px-4 pb-3 font-semibold">Full Name</th>
+                        <th className="px-4 pb-3 font-semibold text-center">Present</th>
+                        <th className="px-4 pb-3 font-semibold text-center">Late</th>
+                        <th className="px-4 pb-3 font-semibold text-center">Absent</th>
+                        <th className="px-4 pb-3 font-semibold text-center">Total Cycles</th>
+                        <th className="px-4 pb-3 font-semibold text-right">Attendance Rate</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50 text-xs text-ink-soft">
+                      {enrolledStudents.map((student) => {
+                        const sStats = calculateStudentStats(student.id, activeSubject);
+                        return (
+                          <tr key={student.id} className="hover:bg-cream-dim/60/50 transition-colors">
+                            <td className="px-4 py-3.5 font-mono text-ink-soft/70">{student.id}</td>
+                            <td className="px-4 py-3.5 font-semibold text-ink">{student.name}</td>
+                            <td className="px-4 py-3.5 text-center font-bold text-teal-500">{sStats.presentCount}</td>
+                            <td className="px-4 py-3.5 text-center font-bold text-amber-600">{sStats.lateCount}</td>
+                            <td className="px-4 py-3.5 text-center font-bold text-rose-500">{sStats.absentCount}</td>
+                            <td className="px-4 py-3.5 text-center text-ink-soft/70">{sStats.totalDays}</td>
+                            <td className="px-4 py-3.5 text-right font-mono font-bold">
+                              <span
+                                className={`inline-flex items-center gap-1 ${
+                                  sStats.percentage >= 90
+                                    ? "text-teal-500"
+                                    : sStats.percentage >= 75
+                                    ? "text-amber-600"
+                                    : "text-rose-500"
+                                }`}
+                              >
+                                {sStats.percentage}%
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: SECURITY AUDIT TRAIL */}
+        {activeTab === "security" && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white border border-ink-soft/10 rounded-2xl p-6 shadow-sm space-y-6 animate-fade-in"
+            id="security-audit-container"
+          >
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-ink-soft/10 pb-4">
+              <div>
+                <h3 className="text-lg font-bold text-ink flex items-center gap-2">
+                  <ShieldAlert className="h-5 w-5 text-rose-500" />
+                  Impersonation & Access Reports
+                </h3>
+                <p className="text-xs text-ink-soft/70 mt-1">
+                  Chronological records of students attempting to access administrative hubs or unauthorized activities.
+                </p>
+              </div>
+
+              {securityLogs.length > 0 && (
+                <button
+                  onClick={() => {
+                    if (!isApprovedUser) {
+                      alert("Verification Required: Unverified teachers cannot clear security logs.");
+                      return;
+                    }
+                    if (window.confirm("Are you sure you want to clear all security logs?")) {
+                      securityLogs.forEach(l => deleteSecurityLog(l.id));
+                      loadDatabase();
+                    }
+                  }}
+                  disabled={!isApprovedUser}
+                  className="px-3.5 py-1.5 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={!isApprovedUser ? "Verification Required" : "Clear all logs"}
+                >
+                  Clear All Logs
+                </button>
+              )}
+            </div>
+
+            {securityLogs.length === 0 ? (
+              <div className="text-center py-12 text-ink-soft/50 text-sm">
+                <CheckCircle className="h-10 w-10 mx-auto mb-3 text-teal-500" />
+                <h4 className="font-bold text-ink-soft">System Secure</h4>
+                <p className="text-xs text-ink-soft/50 mt-1">
+                  No unauthorized access or student impersonation attempts have been detected.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Mobile: stacked cards */}
+                <div className="sm:hidden divide-y divide-gray-50">
+                  {securityLogs.map((log) => (
+                    <div key={log.id} className="py-4 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-bold text-rose-600 font-mono text-sm">{log.usernameAttempted}</span>
+                        <button
+                          onClick={() => {
+                            if (!isApprovedUser) {
+                              alert("Verification Required: Unverified teachers cannot delete log entries.");
+                              return;
+                            }
+                            deleteSecurityLog(log.id);
+                            loadDatabase();
+                          }}
+                          disabled={!isApprovedUser}
+                          className="p-1.5 text-ink-soft/50 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                          aria-label="Delete log entry"
+                          title={!isApprovedUser ? "Verification Required" : "Delete Log Entry"}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                        {log.type}
+                      </span>
+                      <p className="text-xs text-ink-soft leading-relaxed">{log.details}</p>
+                      <p className="text-[11px] text-ink-soft/50 font-mono">
+                        {new Date(log.timestamp).toLocaleString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit"
+                        })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop/tablet: table */}
+                <div className="hidden sm:block overflow-x-auto scroll-shadow-x">
+                <table className="w-full text-left border-collapse" id="security-logs-table">
+                  <thead>
+                    <tr className="border-b border-ink-soft/10 text-[10px] text-ink-soft/50 font-extrabold uppercase tracking-wider">
+                      <th className="px-4 pb-3 font-semibold">Timestamp</th>
+                      <th className="px-4 pb-3 font-semibold">Username/ID Attempted</th>
+                      <th className="px-4 pb-3 font-semibold">Violation Type</th>
+                      <th className="px-4 pb-3 font-semibold">Report Details</th>
+                      <th className="px-4 pb-3 font-semibold text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 text-xs text-ink-soft">
+                    {securityLogs.map((log) => (
+                      <tr key={log.id} className="hover:bg-rose-50/20 transition-colors">
+                        <td className="px-4 py-3.5 text-ink-soft/50 font-mono">
+                          {new Date(log.timestamp).toLocaleString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit"
+                          })}
+                        </td>
+                        <td className="px-4 py-3.5 font-bold text-rose-600 font-mono">
+                          {log.usernameAttempted}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                            {log.type}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-ink-soft leading-relaxed max-w-md">
+                          {log.details}
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
+                          <button
+                            onClick={() => {
+                              if (!isApprovedUser) {
+                                alert("Verification Required: Unverified teachers cannot delete log entries.");
+                                return;
+                              }
+                              deleteSecurityLog(log.id);
+                              loadDatabase();
+                            }}
+                            disabled={!isApprovedUser}
+                            className="p-1.5 text-ink-soft/50 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            aria-label="Delete log entry"
+                            title={!isApprovedUser ? "Verification Required" : "Delete Log Entry"}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                </div>
+              </>
+            )}
+          </motion.div>
+        )}
+
+        {/* TAB 5: FACULTY BOARD */}
+        {activeTab === "faculty" && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white border border-ink-soft/10 rounded-2xl p-6 shadow-sm space-y-6 animate-fade-in"
+            id="faculty-board-container"
+          >
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-ink-soft/10 pb-4">
+              <div>
+                <h3 className="text-lg font-bold text-ink flex items-center gap-2">
+                  <Globe className="h-5 w-5 text-violet-500" />
+                  Teachers
+                </h3>
+                <p className="text-xs text-ink-soft/70 mt-1">
+                  Approve new teacher accounts and manage existing ones.
+                </p>
+              </div>
+            </div>
+
+            {/* Mobile: stacked cards */}
+            <div className="sm:hidden divide-y divide-gray-50">
+              {faculty.map((member) => (
+                <div key={member.id} className="py-4 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-ink text-sm truncate flex items-center gap-1.5 flex-wrap">
+                        {member.name}
+                        {member.id.toLowerCase() === dbUser.id.toLowerCase() && (
+                          <span className="text-[9px] font-black bg-violet-50 text-violet-500 border border-violet-100 rounded px-1.5 py-0.5">You</span>
+                        )}
+                      </p>
+                      <p className="font-mono text-xs text-violet-500 font-bold">{member.id}</p>
+                    </div>
+                    {(member.isApproved === true || member.id.toLowerCase() === "teacher1") ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-600 border border-teal-100 shrink-0">
+                        Verified
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100 animate-pulse shrink-0">
+                        Pending
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-ink-soft/70 space-y-1">
+                    <p>
+                      {member.subject ? (
+                        <span className="inline-flex items-center gap-1 font-semibold text-ink">
+                          <BookOpen className="h-3 w-3 text-violet-500" /> {member.subject}
+                        </span>
+                      ) : (
+                        <span className="text-ink-soft/50 italic">No subject configured</span>
+                      )}
+                    </p>
+                    <p className="text-ink-soft/50">Registered {member.createdAt || "N/A"}</p>
+                  </div>
+                  {!(member.isApproved === true || member.id.toLowerCase() === "teacher1") && (
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        onClick={() => handleApproveFaculty(member.id)}
+                        disabled={!isApprovedUser}
+                        className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold text-teal-600 bg-teal-50 hover:bg-teal-100 border border-teal-100 rounded-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <UserCheck className="h-3.5 w-3.5" /> Verify
+                      </button>
+                      <button
+                        onClick={() => handleDeleteFaculty(member.id)}
+                        disabled={!isApprovedUser || member.id.toLowerCase() === dbUser.id.toLowerCase()}
+                        className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-100 rounded-lg transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Remove
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop/tablet: table */}
+            <div className="hidden sm:block overflow-x-auto scroll-shadow-x">
+              <table className="w-full text-left border-collapse" id="faculty-table">
+                <thead>
+                  <tr className="border-b border-ink-soft/10 text-[10px] text-ink-soft/50 font-extrabold uppercase tracking-wider">
+                    <th className="px-4 pb-3 font-semibold">Teacher ID (Username)</th>
+                    <th className="px-4 pb-3 font-semibold">Full Name</th>
+                    <th className="px-4 pb-3 font-semibold">Active Subject Class</th>
+                    <th className="px-4 pb-3 font-semibold">Registration Date</th>
+                    <th className="px-4 pb-3 font-semibold">Verification Status</th>
+                    <th className="px-4 pb-3 font-semibold text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50 text-xs text-ink-soft">
+                  {faculty.map((member) => (
+                    <tr key={member.id} className="hover:bg-cream-dim/60/50 transition-colors">
+                      <td className="px-4 py-3.5 font-mono font-bold text-violet-500">
+                        {member.id}
+                      </td>
+                      <td className="px-4 py-3.5 font-semibold text-ink">
+                        {member.name} {member.id.toLowerCase() === dbUser.id.toLowerCase() && <span className="text-[9px] font-black bg-violet-50 text-violet-500 border border-violet-100 rounded px-1.5 py-0.5 ml-1">You</span>}
+                      </td>
+                      <td className="px-4 py-3.5 font-medium text-ink-soft">
+                        {member.subject ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-ink">
+                            <BookOpen className="h-3 w-3 text-violet-500" /> {member.subject}
+                          </span>
+                        ) : (
+                          <span className="text-ink-soft/50 italic">None Configured</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5 text-ink-soft/50 font-mono">
+                        {member.createdAt || "N/A"}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        {(member.isApproved === true || member.id.toLowerCase() === "teacher1") ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-600 border border-teal-100">
+                            Verified Teacher
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100 animate-pulse">
+                            Pending Verification
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          {/* Approve/Verify Button */}
+                          {!(member.isApproved === true || member.id.toLowerCase() === "teacher1") && (
+                            <button
+                              onClick={() => handleApproveFaculty(member.id)}
+                              disabled={!isApprovedUser}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-teal-600 bg-teal-50 hover:bg-teal-100 border border-teal-100 rounded-lg transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                              title={isApprovedUser ? "Verify this teacher account" : "You must be a verified teacher to approve accounts"}
+                            >
+                              <UserCheck className="h-3 w-3" /> Verify
+                            </button>
+                          )}
+
+                          {/* Delete/Remove Button - ONLY shown for unverified pending profiles to protect registered faculty */}
+                          {!(member.isApproved === true || member.id.toLowerCase() === "teacher1") && (
+                            <button
+                              onClick={() => handleDeleteFaculty(member.id)}
+                              disabled={!isApprovedUser || member.id.toLowerCase() === dbUser.id.toLowerCase()}
+                              className="p-1.5 text-ink-soft/50 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                              title={
+                                !isApprovedUser 
+                                  ? "You must be a verified teacher to delete accounts" 
+                                  : member.id.toLowerCase() === dbUser.id.toLowerCase() 
+                                  ? "You cannot delete yourself" 
+                                  : "Remove this pending teacher account"
+                              }
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
+        )}
+      </div>
+
+      {/* MODAL: SELECT TEACHING SUBJECT CLASS */}
+      <AnimatePresence>
+        {showSubjectModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl shadow-2xl border border-ink-soft/10 max-w-md w-full overflow-hidden"
+              id="subject-selection-modal"
+            >
+              <div className="bg-violet-500 px-8 py-6 text-white relative">
+                <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 opacity-10">
+                  <BookOpen className="h-40 w-40" />
+                </div>
+                <h3 className="font-black text-xl flex items-center gap-2">
+                  <BookOpen className="h-5.5 w-5.5" /> Configure Teaching Subject
+                </h3>
+                <p className="text-xs text-violet-100 mt-1.5 leading-relaxed">
+                  Select or input the class subject you are holding today. Students checking in will join this subject session.
+                </p>
+              </div>
+
+              <div className="p-8 space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-ink-soft/70 uppercase tracking-wider block">
+                    Choose a Standard Subject
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {["Mathematics", "Computer Science", "Biology", "Chemistry", "Physics", "English Literature", "World History", "Art & Design"].map((sub) => (
+                      <button
+                        key={sub}
+                        type="button"
+                        onClick={() => setTempSubject(sub)}
+                        className={`px-3 py-2 text-xs font-semibold rounded-xl text-left border transition-all cursor-pointer ${
+                          tempSubject === sub
+                            ? "bg-violet-50 border-violet-500 text-violet-600 shadow-sm"
+                            : "bg-white border-ink-soft/15 text-ink-soft hover:bg-cream-dim/60"
+                        }`}
+                      >
+                        {sub}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="relative flex py-2 items-center">
+                  <div className="flex-grow border-t border-ink-soft/10"></div>
+                  <span className="flex-shrink mx-4 text-ink-soft/50 text-[10px] uppercase font-bold tracking-widest">Or Type Custom</span>
+                  <div className="flex-grow border-t border-ink-soft/10"></div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-ink-soft block" htmlFor="custom-subject">
+                    Custom Subject Name
+                  </label>
+                  <input
+                    id="custom-subject"
+                    type="text"
+                    placeholder="e.g. Advanced Thermodynamics"
+                    value={tempSubject}
+                    onChange={(e) => setTempSubject(e.target.value)}
+                    className="w-full px-3.5 py-2.5 text-xs border border-ink-soft/15 rounded-xl focus:outline-none focus:border-violet-500 text-ink font-medium"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  {activeSubject && (
+                    <button
+                      type="button"
+                      onClick={() => setShowSubjectModal(false)}
+                      className="flex-1 py-2.5 rounded-xl text-xs font-bold text-ink-soft/70 hover:text-ink-soft border border-ink-soft/15 hover:bg-cream-dim/60 transition-all cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (tempSubject.trim()) {
+                        handleSaveSubject(tempSubject);
+                      }
+                    }}
+                    disabled={!tempSubject.trim()}
+                    className="flex-grow py-2.5 rounded-xl text-xs font-bold text-white bg-violet-500 hover:bg-violet-600 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Establish Class Session
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL: SETTINGS */}
+      <AnimatePresence>
+        {showSettingsModal && (
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            onClick={() => {
+              setShowSettingsModal(false);
+              setShowDangerZone(false);
+              setDeleteAccountPassword("");
+              setDeleteAccountError(null);
+              setSettingsError(null);
+              setSettingsSuccess(null);
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-xl border border-ink-soft/10 max-w-md w-full max-h-[85vh] overflow-hidden flex flex-col"
+              id="settings-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="bg-violet-500 px-6 py-4 text-white flex items-center justify-between shrink-0">
+                <h3 className="font-extrabold text-lg flex items-center gap-1.5">
+                  <SettingsIcon className="h-5 w-5" /> Settings
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowSettingsModal(false);
+                    setShowDangerZone(false);
+                    setDeleteAccountPassword("");
+                    setDeleteAccountError(null);
+                    setSettingsError(null);
+                    setSettingsSuccess(null);
+                  }}
+                  className="text-violet-100 hover:text-white cursor-pointer"
+                  aria-label="Close settings"
+                >
+                  <XCircle className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-6 overflow-y-auto">
+                {/* Profile section */}
+                <form onSubmit={handleSaveName} className="space-y-3">
+                  <h4 className="text-xs font-black text-ink-soft uppercase tracking-wide">Profile</h4>
+                  {settingsError && (
+                    <div className="p-3 bg-red-50 border border-red-100 text-red-700 text-xs rounded-lg flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <span>{settingsError}</span>
+                    </div>
+                  )}
+                  {settingsSuccess && (
+                    <div className="p-3 bg-teal-50 border border-teal-100 text-teal-600 text-xs rounded-lg flex items-start gap-2">
+                      <CheckCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <span>{settingsSuccess}</span>
+                    </div>
+                  )}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-ink-soft" htmlFor="edit-name">Full Name</label>
+                    <input
+                      id="edit-name"
+                      type="text"
+                      value={editNameValue}
+                      onChange={(e) => setEditNameValue(e.target.value)}
+                      className="w-full px-3 py-2 text-xs border border-ink-soft/15 rounded-xl focus:outline-none focus:border-violet-400 text-ink"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={isSavingName}
+                    className="px-4 py-2 text-xs font-bold text-white bg-violet-500 hover:bg-violet-600 rounded-xl cursor-pointer disabled:opacity-60"
+                  >
+                    {isSavingName ? "Saving..." : "Save Changes"}
+                  </button>
+                </form>
+
+                <div className="border-t border-ink-soft/10 pt-4">
+                  <h4 className="text-xs font-black text-ink-soft uppercase tracking-wide mb-3">Appearance</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {THEME_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.id}
+                        onClick={() => onThemeChange(opt.id)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                          theme === opt.id
+                            ? "border-violet-400 bg-violet-50 text-violet-600"
+                            : "border-ink-soft/15 bg-white text-ink-soft hover:bg-cream-dim/60"
+                        }`}
+                      >
+                        <span className={`h-4 w-4 rounded-full shrink-0 ${opt.swatch}`} />
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border-t border-ink-soft/10 pt-4">
+                  <h4 className="text-xs font-black text-ink-soft uppercase tracking-wide mb-3">Password</h4>
+                  {!showChangePassword ? (
+                    <button
+                      onClick={() => {
+                        setShowChangePassword(true);
+                        setChangePasswordError(null);
+                        setChangePasswordSuccess(null);
+                      }}
+                      className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-semibold text-ink-soft bg-cream-dim/60 border border-ink-soft/15 rounded-xl hover:bg-cream-dim hover:text-ink transition-all cursor-pointer"
+                    >
+                      <Key className="h-4 w-4" /> Change Password
+                    </button>
+                  ) : (
+                    <form onSubmit={handleChangePassword} className="space-y-3">
+                      {changePasswordError && (
+                        <div className="p-3 bg-red-50 border border-red-100 text-red-700 text-xs rounded-lg flex items-start gap-2">
+                          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                          <span>{changePasswordError}</span>
+                        </div>
+                      )}
+                      {changePasswordSuccess && (
+                        <div className="p-3 bg-teal-50 border border-teal-100 text-teal-600 text-xs rounded-lg flex items-start gap-2">
+                          <CheckCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                          <span>{changePasswordSuccess}</span>
+                        </div>
+                      )}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-ink-soft" htmlFor="current-password">Current Password</label>
+                        <input
+                          id="current-password"
+                          type="password"
+                          value={currentPasswordInput}
+                          onChange={(e) => setCurrentPasswordInput(e.target.value)}
+                          className="w-full px-3 py-2 text-xs border border-ink-soft/15 rounded-xl focus:outline-none focus:border-violet-400 text-ink"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-ink-soft" htmlFor="new-password">New Password</label>
+                        <input
+                          id="new-password"
+                          type="password"
+                          value={newPasswordInput}
+                          onChange={(e) => setNewPasswordInput(e.target.value)}
+                          className="w-full px-3 py-2 text-xs border border-ink-soft/15 rounded-xl focus:outline-none focus:border-violet-400 text-ink"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={isChangingPassword}
+                        className="w-full px-4 py-2 text-xs font-bold text-white bg-violet-500 hover:bg-violet-600 rounded-xl cursor-pointer disabled:opacity-60"
+                      >
+                        {isChangingPassword ? "Updating..." : "Update Password"}
+                      </button>
+                    </form>
+                  )}
+                </div>
+
+                <div className="border-t border-ink-soft/10 pt-4">
+                  <h4 className="text-xs font-black text-ink-soft uppercase tracking-wide mb-3">Connection</h4>
+                  <button
+                    onClick={handleForceReconnect}
+                    disabled={isReconnecting}
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-semibold text-ink-soft bg-cream-dim/60 border border-ink-soft/15 rounded-xl hover:bg-cream-dim hover:text-ink transition-all cursor-pointer disabled:opacity-60"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isReconnecting ? "animate-spin" : ""}`} />
+                    {isReconnecting ? "Refreshing..." : "Refresh Live Connection"}
+                  </button>
+                  {reconnectMessage && (
+                    <p className="text-[11px] text-teal-500 mt-1.5 text-center">{reconnectMessage}</p>
+                  )}
+                  <p className="text-[11px] text-ink-soft/50 mt-1.5">
+                    If new data isn't showing up automatically, use this instead of reloading the page.
+                  </p>
+                </div>
+
+                <div className="border-t border-ink-soft/10 pt-4">
+                  <h4 className="text-xs font-black text-ink-soft uppercase tracking-wide mb-3">Account</h4>
+                  <button
+                    onClick={onLogout}
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-semibold text-ink-soft bg-cream-dim/60 border border-ink-soft/15 rounded-xl hover:bg-cream-dim hover:text-ink transition-all cursor-pointer"
+                  >
+                    <LogOut className="h-4 w-4" /> Sign Out
+                  </button>
+                </div>
+
+                {/* Danger zone - tucked away, requires an extra click to reveal */}
+                <div className="border-t border-ink-soft/10 pt-4">
+                  {!showDangerZone ? (
+                    <button
+                      onClick={() => setShowDangerZone(true)}
+                      className="text-xs font-semibold text-ink-soft/50 hover:text-red-500 cursor-pointer transition-colors"
+                    >
+                      Advanced options
+                    </button>
+                  ) : (
+                    <form onSubmit={handleDeleteOwnAccount} className="space-y-3">
+                      <h4 className="text-xs font-black text-red-600 uppercase tracking-wide">Danger Zone</h4>
+                      <p className="text-[11px] text-ink-soft/70">
+                        Permanently deletes your account, login, and all associated data. This cannot be undone.
+                      </p>
+                      {deleteAccountError && (
+                        <div className="p-3 bg-red-50 border border-red-100 text-red-700 text-xs rounded-lg flex items-start gap-2">
+                          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                          <span>{deleteAccountError}</span>
+                        </div>
+                      )}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-ink-soft" htmlFor="delete-account-password">
+                          Enter your password to confirm
+                        </label>
+                        <input
+                          id="delete-account-password"
+                          type="password"
+                          value={deleteAccountPassword}
+                          onChange={(e) => setDeleteAccountPassword(e.target.value)}
+                          className="w-full px-3 py-2 text-xs border border-ink-soft/15 rounded-xl focus:outline-none focus:border-red-300 text-ink"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={isDeletingAccount}
+                        className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl cursor-pointer disabled:opacity-60"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {isDeletingAccount ? "Deleting..." : "Permanently Delete My Account"}
+                      </button>
+                    </form>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL 2: ADD MANUAL LOG / OVERRIDE */}
+      <AnimatePresence>
+        {showLogModal && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-xl border border-ink-soft/10 max-w-md w-full overflow-hidden"
+              id="manual-log-modal"
+            >
+              <div className="bg-violet-500 px-6 py-4 text-white">
+                <h3 className="font-extrabold text-lg flex items-center gap-1.5">
+                  <UserCheck className="h-5 w-5" /> Add Manual Log
+                </h3>
+                <p className="text-xs text-violet-100 mt-1">
+                  Record attendance for any student for the selected date: <span className="font-bold">{selectedDate}</span>
+                </p>
+              </div>
+
+              <form onSubmit={handleSaveAttendanceOverride} className="p-6 space-y-4" id="manual-log-form">
+                {logError && (
+                  <div className="p-3 bg-red-50 border border-red-100 text-red-700 text-xs rounded-lg flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span>{logError}</span>
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-ink-soft" htmlFor="log-student">Select Student Profile *</label>
+                  <select
+                    id="log-student"
+                    value={logStudentId}
+                    onChange={(e) => setLogStudentId(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-ink-soft/15 rounded-xl focus:outline-none focus:border-violet-400 text-ink bg-white"
+                  >
+                    <option value="">-- Choose student --</option>
+                    {enrolledStudents.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.id})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-ink-soft">Status *</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setLogStatus("Present")}
+                      className={`py-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                        logStatus === "Present"
+                          ? "border-teal-500 bg-teal-50 text-teal-600"
+                          : "border-ink-soft/15 bg-white text-ink-soft/70 hover:bg-cream-dim/60"
+                      }`}
+                    >
+                      Present
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLogStatus("Late")}
+                      className={`py-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                        logStatus === "Late"
+                          ? "border-amber-500 bg-amber-50 text-amber-700"
+                          : "border-ink-soft/15 bg-white text-ink-soft/70 hover:bg-cream-dim/60"
+                      }`}
+                    >
+                      Late
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLogStatus("Absent")}
+                      className={`py-2 rounded-xl border text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                        logStatus === "Absent"
+                          ? "border-rose-500 bg-rose-50 text-rose-700"
+                          : "border-ink-soft/15 bg-white text-ink-soft/70 hover:bg-cream-dim/60"
+                      }`}
+                    >
+                      Absent
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-ink-soft" htmlFor="log-notes">Admin Notes / Remarks</label>
+                  <input
+                    id="log-notes"
+                    type="text"
+                    placeholder="e.g. Medical excuse sheet submitted, late bus check"
+                    value={logNotes}
+                    onChange={(e) => setLogNotes(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-ink-soft/15 rounded-xl focus:outline-none focus:border-violet-400 text-ink"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowLogModal(false)}
+                    className="px-4 py-2 text-xs font-bold text-ink-soft/70 hover:text-ink-soft cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-xs font-bold text-white bg-violet-500 hover:bg-violet-600 rounded-xl cursor-pointer"
+                  >
+                    Record Log
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* MODAL: EDIT STUDENT INFO */}
+        {studentToEdit && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-xl border border-ink-soft/10 max-w-md w-full overflow-hidden"
+              id="edit-student-modal"
+            >
+              <div className="bg-violet-500 px-6 py-4 text-white">
+                <h3 className="font-extrabold text-lg flex items-center gap-1.5">
+                  <Edit className="h-5 w-5" /> Edit Student Info
+                </h3>
+                <p className="text-xs text-violet-100 mt-1 font-mono">{studentToEdit.id}</p>
+              </div>
+
+              <form onSubmit={handleSaveStudentEdit} className="p-6 space-y-4">
+                {editStudentError && (
+                  <div className="p-3 bg-red-50 border border-red-100 text-red-700 text-xs rounded-lg flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span>{editStudentError}</span>
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-ink-soft" htmlFor="edit-student-name">Full Name</label>
+                  <input
+                    id="edit-student-name"
+                    type="text"
+                    value={editStudentName}
+                    onChange={(e) => setEditStudentName(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-ink-soft/15 rounded-xl focus:outline-none focus:border-violet-400 text-ink"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-ink-soft" htmlFor="edit-student-email">Email</label>
+                  <input
+                    id="edit-student-email"
+                    type="email"
+                    value={editStudentEmail}
+                    onChange={(e) => setEditStudentEmail(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-ink-soft/15 rounded-xl focus:outline-none focus:border-violet-400 text-ink"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-ink-soft" htmlFor="edit-student-location">Location</label>
+                  <input
+                    id="edit-student-location"
+                    type="text"
+                    value={editStudentLocation}
+                    onChange={(e) => setEditStudentLocation(e.target.value)}
+                    className="w-full px-3 py-2 text-xs border border-ink-soft/15 rounded-xl focus:outline-none focus:border-violet-400 text-ink"
+                  />
+                </div>
+                <div className="flex justify-end gap-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setStudentToEdit(null)}
+                    className="px-4 py-2 text-xs font-bold text-ink-soft/70 hover:text-ink-soft cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingStudent}
+                    className="px-4 py-2 text-xs font-bold text-white bg-violet-500 hover:bg-violet-600 rounded-xl cursor-pointer disabled:opacity-60"
+                  >
+                    {isSavingStudent ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* MODAL 3: CUSTOM REMOVAL CONFIRMATION */}
+        {studentToDelete && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-2xl shadow-xl border border-ink-soft/10 max-w-sm w-full overflow-hidden"
+              id="delete-student-modal"
+            >
+              <div className="bg-amber-600 px-6 py-4 text-white">
+                <h3 className="font-extrabold text-lg flex items-center gap-1.5">
+                  <UserMinus className="h-5 w-5" /> Remove Student from Class?
+                </h3>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="p-3 bg-amber-50 border border-amber-100 text-amber-800 text-xs rounded-xl flex items-start gap-2.5">
+                  <AlertCircle className="h-5 w-5 shrink-0 mt-0.5 text-amber-600" />
+                  <div className="space-y-1">
+                    <p className="font-bold">This student will lose access to class check-ins.</p>
+                    <p className="leading-relaxed">
+                      This will remove <strong>{studentToDelete.name} ({studentToDelete.id})</strong> from the subject roster <strong>{activeSubject || "General Class"}</strong>. If this is a mistake, they can reapply from their dashboard.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setStudentToDelete(null)}
+                    className="px-4 py-2 text-xs font-bold text-ink-soft/70 hover:text-ink-soft bg-cream-dim/60 hover:bg-cream-dim border border-ink-soft/15 rounded-xl cursor-pointer transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={executeRemoveStudent}
+                    className="px-4 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-md shadow-amber-100 cursor-pointer transition-all"
+                    id="confirm-delete-student-btn"
+                  >
+                    Remove Student
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

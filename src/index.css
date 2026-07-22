@@ -1,0 +1,185 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* ---- Attendance Hub design system (from Stitch) ---- */
+  --color-cream: #fbf9f5;
+  --color-cream-dim: #efeeea;
+  --color-ink: #1b1c1a;
+  --color-ink-soft: #57423b;
+
+  /* Coral / Tangerine - brand + primary actions */
+  --color-coral-50: #fff1ec;
+  --color-coral-100: #ffdbcf;
+  --color-coral-400: #ff9166;
+  --color-coral-500: #ff7f50;
+  --color-coral-600: #e8622f;
+  --color-coral-700: #a43c12;
+  --color-coral-900: #6c2000;
+
+  /* Teal / Emerald - student contexts */
+  --color-teal-50: #e9fbf9;
+  --color-teal-100: #c9f5ef;
+  --color-teal-400: #48d1cc;
+  --color-teal-500: #20b2aa;
+  --color-teal-600: #0d8b84;
+  --color-teal-700: #006a65;
+
+  /* Violet / Indigo - teacher contexts */
+  --color-violet-50: #f5ecff;
+  --color-violet-100: #efdbff;
+  --color-violet-400: #a15be0;
+  --color-violet-500: #8422dc;
+  --color-violet-600: #6d17bc;
+  --color-violet-700: #560097;
+}
+
+/* ---------------------------------------------------------------------
+   Theme system. The app's components are built with hardcoded light-mode
+   Tailwind classes, so instead of re-theming every component individually
+   we apply a CSS filter to the whole document - the same trick browsers
+   use for automatic dark mode. Each theme is a distinct filter recipe.
+
+   IMPORTANT: the filter lives on <html> itself, not an inner wrapper div.
+   Putting `filter` on a wrapper makes that wrapper the containing block
+   for any position:fixed children (like modals) - if the page ever
+   scrolls horizontally even slightly, those "fixed" elements drift with
+   it instead of staying pinned to the real screen, exposing unthemed
+   page underneath. <html> IS the viewport, so this side effect can't
+   happen here.
+--------------------------------------------------------------------- */
+html,
+body {
+  background-color: var(--color-cream); /* warm cream base, avoids sterile white/gray SaaS look */
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+}
+
+/* Soft, tinted "floating" shadows instead of harsh neutral-black ones -
+   each accent color casts a low-opacity shadow of itself. */
+.shadow-coral {
+  box-shadow: 0 8px 24px -6px rgba(255, 127, 80, 0.35);
+}
+.shadow-teal {
+  box-shadow: 0 8px 24px -6px rgba(32, 178, 170, 0.3);
+}
+.shadow-violet {
+  box-shadow: 0 8px 24px -6px rgba(132, 34, 220, 0.3);
+}
+
+/* Large low-opacity mesh/blob background used behind hero + auth screens */
+.bg-mesh {
+  background-image:
+    radial-gradient(circle at 15% 20%, rgba(255, 127, 80, 0.16), transparent 40%),
+    radial-gradient(circle at 85% 15%, rgba(132, 34, 220, 0.13), transparent 45%),
+    radial-gradient(circle at 50% 90%, rgba(32, 178, 170, 0.14), transparent 45%);
+}
+
+/* Belt-and-suspenders: if any element anywhere still tries to render
+   wider than the screen, clip it at the <html> level rather than letting
+   the browser widen the whole page's effective viewport to fit it (which
+   is what makes a phone render a shrunk-down "desktop" layout instead of
+   a real mobile one, and is why the dark-mode filter looked like it
+   stopped partway across the screen - it was covering the artificially
+   widened canvas, not the visible screen).
+
+   NOTE: this intentionally does NOT apply max-width to every element -
+   the tab bar and data tables are deliberately wider than the screen
+   internally so their own overflow-x:auto can scroll them sideways.
+   Constraining every element would break that scrolling instead of
+   fixing anything.
+--------------------------------------------------------------------- */
+img,
+svg {
+  max-width: 100%;
+}
+
+html.theme-dark,
+html.theme-void,
+html.theme-ghost,
+html.theme-blood-moon {
+  background-color: #000;
+}
+
+html {
+  transition: filter 0.25s ease, background-color 0.25s ease;
+}
+
+html.theme-dark {
+  filter: invert(1) hue-rotate(180deg) brightness(1.05) contrast(0.95);
+}
+html.theme-dark img,
+html.theme-dark video {
+  filter: invert(1) hue-rotate(180deg) brightness(1.05) contrast(0.95);
+}
+
+html.theme-void {
+  filter: invert(1) hue-rotate(180deg) grayscale(0.5) brightness(0.85) contrast(1.2);
+}
+html.theme-void img,
+html.theme-void video {
+  filter: invert(1) hue-rotate(180deg) grayscale(0.5) brightness(0.85) contrast(1.2);
+}
+
+html.theme-ghost {
+  filter: grayscale(0.7) brightness(1.15) contrast(0.9) saturate(0.55);
+}
+
+html.theme-blood-moon {
+  filter: invert(1) hue-rotate(320deg) saturate(2.1) contrast(1.05) brightness(1);
+}
+html.theme-blood-moon img,
+html.theme-blood-moon video {
+  filter: invert(1) hue-rotate(320deg) saturate(2.1) contrast(1.05) brightness(1);
+}
+
+/* Hide scrollbar on horizontally-scrollable elements (mobile tab bars,
+   wide tables) while still allowing touch/trackpad scroll. */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Explicitly claim horizontal swipe gestures for scrollable regions.
+   Without this, Chrome on Android can interpret a horizontal swipe that
+   starts on/near a table or tab bar as its own "swipe from edge to go
+   back" navigation gesture instead of scrolling the element - especially
+   likely here since these regions run edge-to-edge on phones. */
+.overflow-x-auto,
+#teacher-tabs-nav {
+  touch-action: pan-x pan-y;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Auto-appearing "there's more, swipe →" shadow for any element with
+   class .scroll-shadow-x that scrolls horizontally (used on data tables).
+   Uses the background-attachment:local trick: the shadow gradients are
+   pinned to the CONTENT (scrolls with it) while a covering same-color
+   gradient is pinned to the VIEWPORT (stays put) - so the shadow only
+   peeks out exactly when there's more content in that direction. No JS
+   needed, and it automatically hides itself once you've scrolled all the
+   way to an edge. */
+.scroll-shadow-x {
+  background:
+    linear-gradient(to right, white 30%, rgba(255, 255, 255, 0)),
+    linear-gradient(to right, rgba(255, 255, 255, 0), white 70%) 100% 0,
+    radial-gradient(farthest-side at 0 50%, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0)),
+    radial-gradient(farthest-side at 100% 50%, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0)) 100% 0;
+  background-repeat: no-repeat;
+  background-color: white;
+  background-size: 24px 100%, 24px 100%, 10px 100%, 10px 100%;
+  background-attachment: local, local, scroll, scroll;
+}
+

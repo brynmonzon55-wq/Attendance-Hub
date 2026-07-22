@@ -1,0 +1,6 @@
+{
+  "name": "Attendance System",
+  "description": "A simple and modern student attendance tracker with role-based features for students and teachers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
