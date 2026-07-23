@@ -562,6 +562,191 @@ function ClassLog({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// PostsPanel: a flat, single-purpose feed of just announcements OR just
+// assignments for one class - no attendance mixed in, no type picker (the
+// caller decides the type). This is what powers the top-level
+// "Announcements" / "Assignments" tabs so teachers and students don't have
+// to drill into a separate Classes section to see them.
+// ---------------------------------------------------------------------------
+
+export function PostsPanel({
+  currentUser,
+  cls,
+  filterType,
+  emptyText,
+}: {
+  currentUser: User;
+  cls: ClassRoom | undefined;
+  filterType: "announcement" | "assignment";
+  emptyText?: string;
+}) {
+  const isTeacher = currentUser.role === "teacher";
+  const isAssignment = filterType === "assignment";
+  const [posts, setPosts] = useState<ClassPost[]>(cls ? getPostsForClass(cls.id) : []);
+  const [showComposer, setShowComposer] = useState(false);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [attachment, setAttachment] = useState<{ name: string; dataUrl: string } | null>(null);
+  const [fileError, setFileError] = useState("");
+  const [posting, setPosting] = useState(false);
+
+  useEffect(() => {
+    if (!cls) {
+      setPosts([]);
+      return;
+    }
+    const refresh = () => setPosts(getPostsForClass(cls.id));
+    refresh();
+    window.addEventListener("db_updated", refresh);
+    return () => window.removeEventListener("db_updated", refresh);
+  }, [cls?.id]);
+
+  if (!cls) {
+    return (
+      <div className="bg-white rounded-2xl border border-ink-soft/10 p-10 text-center">
+        <p className="text-sm text-ink-soft/70">
+          Pick a class from the switcher above to see its {isAssignment ? "assignments" : "announcements"}.
+        </p>
+      </div>
+    );
+  }
+
+  const handleFile = async (file: File | undefined) => {
+    setFileError("");
+    if (!file) return;
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      setFileError("File is too large (max ~700KB). Try a smaller image or a linked doc instead.");
+      return;
+    }
+    const dataUrl = await readFileAsDataUrl(file);
+    setAttachment({ name: file.name, dataUrl });
+  };
+
+  const resetComposer = () => {
+    setTitle("");
+    setContent("");
+    setDueDate("");
+    setAttachment(null);
+    setFileError("");
+    setShowComposer(false);
+  };
+
+  const handlePost = () => {
+    if (posting) return; // guard against rapid double-clicks
+    if (!content.trim() && !title.trim()) return;
+    setPosting(true);
+    createPost({
+      classId: cls.id,
+      type: filterType,
+      authorId: currentUser.id,
+      authorName: currentUser.name,
+      title: isAssignment ? title.trim() : undefined,
+      content: content.trim(),
+      dueDate: isAssignment && dueDate ? dueDate : undefined,
+      attachmentName: attachment?.name,
+      attachmentDataUrl: attachment?.dataUrl,
+    });
+    // Same synchronous-refresh fix as the unified log: read straight back
+    // from localStorage instead of waiting on the "db_updated" event so a
+    // second click can't fire while the first post is still "in flight".
+    setPosts(getPostsForClass(cls.id));
+    resetComposer();
+    setPosting(false);
+  };
+
+  const filteredPosts = posts
+    .filter((p) => p.type === filterType)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  return (
+    <div className="space-y-4">
+      {isTeacher && !showComposer && (
+        <button
+          onClick={() => setShowComposer(true)}
+          className="w-full bg-white rounded-2xl border border-ink-soft/10 p-4 inline-flex items-center justify-center gap-1.5 text-sm font-bold text-ink-soft/70 hover:text-violet-600 hover:bg-violet-50/60 transition-colors cursor-pointer"
+        >
+          {isAssignment ? <FileText className="h-4 w-4" /> : <Megaphone className="h-4 w-4" />}
+          New {isAssignment ? "assignment" : "announcement"}
+        </button>
+      )}
+
+      {isTeacher && showComposer && (
+        <div className="bg-white rounded-2xl border border-ink-soft/10 p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="font-bold text-ink text-sm">
+              {isAssignment ? "New assignment" : "New announcement"}
+            </h4>
+            <button onClick={resetComposer} className="text-ink-soft/50 hover:text-ink cursor-pointer"><X className="h-4 w-4" /></button>
+          </div>
+          {isAssignment && (
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Assignment title"
+              className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-soft/15 focus:outline-none focus:border-coral-400"
+            />
+          )}
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder={isAssignment ? "Instructions..." : "Share something with your class..."}
+            rows={3}
+            className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-soft/15 focus:outline-none focus:border-violet-400 resize-none"
+          />
+          <div className="flex items-center gap-3 flex-wrap">
+            {isAssignment && (
+              <label className="text-xs font-bold text-ink-soft/70 inline-flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5" /> Due
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="px-2 py-1.5 text-xs rounded-lg border border-ink-soft/15 focus:outline-none focus:border-coral-400"
+                />
+              </label>
+            )}
+            <label className="text-xs font-bold text-ink-soft/70 inline-flex items-center gap-1.5 cursor-pointer hover:text-violet-600">
+              <Paperclip className="h-3.5 w-3.5" /> {attachment ? attachment.name : "Attach file/photo"}
+              <input type="file" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
+            </label>
+            {attachment && (
+              <button onClick={() => setAttachment(null)} className="text-xs text-coral-600 font-semibold cursor-pointer">Remove</button>
+            )}
+          </div>
+          {fileError && <p className="text-xs text-coral-600 font-semibold">{fileError}</p>}
+          <button
+            onClick={handlePost}
+            disabled={posting}
+            className="inline-flex items-center gap-1.5 bg-violet-500 hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold px-5 py-2.5 rounded-full shadow-violet transition-colors cursor-pointer"
+          >
+            <Send className="h-3.5 w-3.5" /> {posting ? "Posting..." : "Post"}
+          </button>
+        </div>
+      )}
+
+      {filteredPosts.length === 0 && (
+        <div className="bg-white rounded-2xl border border-ink-soft/10 p-10 text-center">
+          <p className="text-sm text-ink-soft/70">
+            {emptyText || (isAssignment ? "No assignments yet." : "No announcements yet.")}
+          </p>
+        </div>
+      )}
+
+      {filteredPosts.map((post) => (
+        <PostCard
+          key={post.id}
+          post={post}
+          currentUser={currentUser}
+          isTeacher={isTeacher}
+          onDeleted={() => setPosts(getPostsForClass(cls.id))}
+        />
+      ))}
+    </div>
+  );
+}
+
 function AttendanceLogCard({
   entry,
   isTeacher,
