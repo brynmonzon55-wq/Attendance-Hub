@@ -43,6 +43,8 @@ export default function Classroom({ currentUser }: ClassroomProps) {
   const isTeacher = currentUser.role === "teacher";
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [, setRefreshTick] = useState(0);
+  const bumpRefresh = () => setRefreshTick((n) => n + 1);
 
   const load = () => {
     setClasses(isTeacher ? getClassesForTeacher(currentUser.id) : getClassesForStudent(currentUser.id));
@@ -64,7 +66,8 @@ export default function Classroom({ currentUser }: ClassroomProps) {
         currentUser={currentUser}
         cls={selectedClass}
         onBack={() => setSelectedClassId(null)}
-        onDeleted={() => setSelectedClassId(null)}
+        onDeleted={() => { setSelectedClassId(null); load(); }}
+        onChanged={bumpRefresh}
       />
     );
   }
@@ -74,6 +77,7 @@ export default function Classroom({ currentUser }: ClassroomProps) {
       currentUser={currentUser}
       classes={classes}
       onOpen={(id) => setSelectedClassId(id)}
+      onChanged={load}
     />
   );
 }
@@ -86,10 +90,12 @@ function ClassList({
   currentUser,
   classes,
   onOpen,
+  onChanged,
 }: {
   currentUser: User;
   classes: ClassRoom[];
   onOpen: (id: string) => void;
+  onChanged: () => void;
 }) {
   const isTeacher = currentUser.role === "teacher";
   const [showCreate, setShowCreate] = useState(false);
@@ -105,6 +111,7 @@ function ClassList({
       return;
     }
     createClass(name, subject, currentUser);
+    onChanged();
     setName("");
     setSubject("");
     setShowCreate(false);
@@ -114,6 +121,7 @@ function ClassList({
   const handleJoin = () => {
     try {
       joinClassByCode(joinCode, currentUser);
+      onChanged();
       setJoinCode("");
       setShowJoin(false);
       setError("");
@@ -252,22 +260,17 @@ function ClassDetail({
   cls,
   onBack,
   onDeleted,
+  onChanged,
 }: {
   currentUser: User;
   cls: ClassRoom;
   onBack: () => void;
   onDeleted: () => void;
+  onChanged: () => void;
 }) {
   const isTeacher = currentUser.role === "teacher";
   const [tab, setTab] = useState<"stream" | "classmates">("stream");
   const [copied, setCopied] = useState(false);
-  const [, forceRerender] = useState(0);
-
-  useEffect(() => {
-    const handler = () => forceRerender((n) => n + 1);
-    window.addEventListener("db_updated", handler);
-    return () => window.removeEventListener("db_updated", handler);
-  }, []);
 
   const handleCopyCode = () => {
     navigator.clipboard?.writeText(cls.joinCode).catch(() => {});
@@ -277,6 +280,7 @@ function ClassDetail({
 
   const handleRegenerate = () => {
     regenerateJoinCode(cls.id);
+    onChanged();
   };
 
   const handleDeleteClass = () => {
@@ -379,6 +383,8 @@ function Stream({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
     setAttachment({ name: file.name, dataUrl });
   };
 
+  const [posting, setPosting] = useState(false);
+
   const resetComposer = () => {
     setTitle("");
     setContent("");
@@ -389,7 +395,9 @@ function Stream({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
   };
 
   const handlePost = () => {
+    if (posting) return; // guard against rapid double-clicks
     if (!content.trim() && !title.trim()) return;
+    setPosting(true);
     createPost({
       classId: cls.id,
       type: postType,
@@ -401,7 +409,13 @@ function Stream({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
       attachmentName: attachment?.name,
       attachmentDataUrl: attachment?.dataUrl,
     });
+    // The localStorage write above is synchronous - refresh straight from it
+    // instead of waiting for the Firestore round-trip (which is what the
+    // "db_updated" event fires on). Waiting on that event made posting feel
+    // unresponsive enough that clicking again created real duplicate posts.
+    setPosts(getPostsForClass(cls.id));
     resetComposer();
+    setPosting(false);
   };
 
   return (
@@ -469,9 +483,10 @@ function Stream({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
           {fileError && <p className="text-xs text-coral-600 font-semibold">{fileError}</p>}
           <button
             onClick={handlePost}
-            className="inline-flex items-center gap-1.5 bg-violet-500 hover:bg-violet-600 text-white text-sm font-bold px-5 py-2.5 rounded-full shadow-violet transition-colors cursor-pointer"
+            disabled={posting}
+            className="inline-flex items-center gap-1.5 bg-violet-500 hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold px-5 py-2.5 rounded-full shadow-violet transition-colors cursor-pointer"
           >
-            <Send className="h-3.5 w-3.5" /> Post
+            <Send className="h-3.5 w-3.5" /> {posting ? "Posting..." : "Post"}
           </button>
         </div>
       )}
@@ -483,13 +498,13 @@ function Stream({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
       )}
 
       {posts.map((post) => (
-        <PostCard key={post.id} post={post} currentUser={currentUser} isTeacher={isTeacher} />
+        <PostCard key={post.id} post={post} currentUser={currentUser} isTeacher={isTeacher} onDeleted={() => setPosts(getPostsForClass(cls.id))} />
       ))}
     </div>
   );
 }
 
-function PostCard({ post, currentUser, isTeacher }: { post: ClassPost; currentUser: User; isTeacher: boolean }) {
+function PostCard({ post, currentUser, isTeacher, onDeleted }: { post: ClassPost; currentUser: User; isTeacher: boolean; onDeleted: () => void }) {
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<PostComment[]>(getCommentsForPost(post.id));
   const [commentText, setCommentText] = useState("");
@@ -513,6 +528,7 @@ function PostCard({ post, currentUser, isTeacher }: { post: ClassPost; currentUs
   const handleComment = () => {
     if (!commentText.trim()) return;
     addComment({ postId: post.id, classId: post.classId, authorId: currentUser.id, authorName: currentUser.name, content: commentText.trim() });
+    setComments(getCommentsForPost(post.id));
     setCommentText("");
   };
 
@@ -538,6 +554,7 @@ function PostCard({ post, currentUser, isTeacher }: { post: ClassPost; currentUs
       attachmentName: submitAttachment?.name,
       attachmentDataUrl: submitAttachment?.dataUrl,
     });
+    setSubmissions(getSubmissionsForPost(post.id));
     setSubmitText("");
     setSubmitAttachment(null);
     setShowSubmitForm(false);
@@ -680,7 +697,7 @@ function PostCard({ post, currentUser, isTeacher }: { post: ClassPost; currentUs
           </div>
         </div>
         {isTeacher && (
-          <button onClick={() => deletePost(post.id)} title="Delete post" className="text-ink-soft/30 hover:text-coral-500 cursor-pointer shrink-0">
+          <button onClick={() => { deletePost(post.id); onDeleted(); }} title="Delete post" className="text-ink-soft/30 hover:text-coral-500 cursor-pointer shrink-0">
             <Trash2 className="h-4 w-4" />
           </button>
         )}
@@ -715,6 +732,7 @@ function Classmates({ cls, isTeacher }: { cls: ClassRoom; isTeacher: boolean }) 
       return;
     }
     addStudentToClass(cls.id, match.id);
+    setRows(getClassmatesWithStats(cls.id));
     setAddId("");
     setAddError("");
   };
@@ -758,7 +776,7 @@ function Classmates({ cls, isTeacher }: { cls: ClassRoom; isTeacher: boolean }) 
             </div>
             {isTeacher && (
               <button
-                onClick={() => removeStudentFromClass(cls.id, student.id)}
+                onClick={() => { removeStudentFromClass(cls.id, student.id); setRows(getClassmatesWithStats(cls.id)); }}
                 title="Remove from class"
                 className="text-ink-soft/30 hover:text-coral-500 cursor-pointer shrink-0"
               >
