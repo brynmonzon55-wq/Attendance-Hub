@@ -23,10 +23,12 @@ import {
   Trash2,
   Settings as SettingsIcon,
   Key,
-  RefreshCw
+  RefreshCw,
+  Users2
 } from "lucide-react";
 import { User, AttendanceRecord, AttendanceStatus, StudentStats } from "../types";
 import type { AppTheme } from "../App";
+import Classroom from "./Classroom";
 import {
   getUsers,
   getAttendanceRecords,
@@ -53,10 +55,12 @@ const THEME_OPTIONS: { id: AppTheme; label: string; swatch: string }[] = [
 
 export default function StudentDashboard({ user, onLogout, theme, onThemeChange }: StudentDashboardProps) {
   const [dbUser, setDbUser] = useState<User>(user);
+  const [showClassroom, setShowClassroom] = useState(false);
   const [history, setHistory] = useState<AttendanceRecord[]>([]);
   const [stats, setStats] = useState<StudentStats>({
     presentCount: 0,
     absentCount: 0,
+    lateCount: 0,
     totalDays: 0,
     percentage: 100,
   });
@@ -336,7 +340,18 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
           </p>
         </div>
 
-        <div className="self-start md:self-center">
+        <div className="self-start md:self-center flex items-center gap-2">
+          <button
+            onClick={() => setShowClassroom((v) => !v)}
+            className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl shadow-sm transition-all cursor-pointer ${
+              showClassroom
+                ? "bg-violet-500 text-white"
+                : "text-ink-soft bg-white border border-ink-soft/15 hover:bg-cream-dim/60 hover:text-ink"
+            }`}
+            id="student-classes-btn"
+          >
+            <Users2 className="h-4 w-4" /> Classes
+          </button>
           <button
             onClick={() => {
               setEditNameValue(dbUser.name);
@@ -353,6 +368,13 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
           </button>
         </div>
       </div>
+
+      {/* Classroom (Google-Classroom-style classes: join/create, stream, classmates) */}
+      {showClassroom && (
+        <div className="bg-white border border-ink-soft/10 rounded-2xl p-5 shadow-sm">
+          <Classroom currentUser={dbUser} />
+        </div>
+      )}
 
       {/* Pending Approval Warning Banner */}
       {!dbUser.isApproved && (
