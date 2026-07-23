@@ -24,7 +24,6 @@ import {
   Activity,
   ShieldAlert,
   Globe,
-  Sliders,
   BookOpen,
   UserMinus,
   Settings as SettingsIcon,
@@ -39,7 +38,7 @@ import {
 import { User, AttendanceRecord, AttendanceStatus, StudentStats, SecurityLog, ClassRoom } from "../types";
 import type { AppTheme } from "../App";
 import StudentProfile from "./StudentProfile";
-import Classroom, { PostsPanel } from "./Classroom";
+import { PostsPanel, ClassesPanel } from "./Classroom";
 import {
   getUsers,
   saveUser,
@@ -56,7 +55,6 @@ import {
   changeOwnPassword,
   forceReconnect,
   getClassesForTeacher,
-  createClass,
   addStudentToClass,
   removeStudentFromClass,
 } from "../lib/db";
@@ -85,12 +83,8 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
   const isApprovedUser = dbUser.isApproved === true || dbUser.id.toLowerCase() === "teacher1";
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<"roster" | "announcements" | "assignments" | "audit" | "reports" | "security" | "faculty">("roster");
+  const [activeTab, setActiveTab] = useState<"roster" | "announcements" | "assignments" | "audit" | "reports" | "security" | "faculty" | "classes">("roster");
   const [viewingStudent, setViewingStudent] = useState<User | null>(null);
-  // Class creation/deletion now lives in a modal off the header's class
-  // picker instead of its own nested tab - "Announcements" and "Assignments"
-  // take that tab slot instead, scoped to whichever class is active.
-  const [showClassManager, setShowClassManager] = useState(false);
 
   // Active class: which of this teacher's ClassRooms attendance actions
   // (roster, daily sheet, reports) apply to right now. Replaces the old
@@ -105,26 +99,6 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
   const handleSelectActiveClass = (id: string) => {
     setActiveClassId(id);
     localStorage.setItem(ACTIVE_CLASS_STORAGE_PREFIX + user.id, id);
-  };
-
-  // Creating a class right where a new teacher first needs one (the empty
-  // Roster tab), instead of sending them off to a separate "Classes"
-  // destination first - class creation should feel like a normal action,
-  // not a gate you have to clear before the rest of the app opens up.
-  const [inlineClassName, setInlineClassName] = useState("");
-  const [inlineClassSubject, setInlineClassSubject] = useState("");
-  const [inlineClassError, setInlineClassError] = useState<string | null>(null);
-  const handleCreateClassInline = () => {
-    if (!inlineClassName.trim()) {
-      setInlineClassError("Class name is required.");
-      return;
-    }
-    const created = createClass(inlineClassName, inlineClassSubject, user);
-    handleSelectActiveClass(created.id);
-    loadDatabase();
-    setInlineClassName("");
-    setInlineClassSubject("");
-    setInlineClassError(null);
   };
 
   // Quick "add student by ID" on the Roster tab (mirrors the same control
@@ -623,12 +597,6 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                 <BookOpen className="h-3.5 w-3.5" /> No classes yet
               </span>
             )}
-            <button
-              onClick={() => setShowClassManager(true)}
-              className="inline-flex items-center gap-1 text-xs font-bold text-violet-500 hover:text-violet-700 hover:bg-violet-50 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
-            >
-              <Sliders className="h-3 w-3" /> {classes.length > 0 ? "Manage classes" : "Create a class"}
-            </button>
           </div>
         </div>
 
@@ -754,6 +722,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
             <option value="faculty">
               Teachers{faculty.filter((f) => !f.isApproved).length > 0 ? ` \u2022 ${faculty.filter((f) => !f.isApproved).length} pending` : ""}
             </option>
+            <option value="classes">Classes</option>
           </select>
           <ChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-violet-500" />
         </div>
@@ -847,6 +816,17 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
             </span>
           )}
         </button>
+        <button
+          onClick={() => setActiveTab("classes")}
+          className={`pb-3 text-sm font-bold border-b-2 transition-all cursor-pointer inline-flex items-center gap-1.5 shrink-0 ${
+            activeTab === "classes"
+              ? "border-violet-500 text-violet-500"
+              : "border-transparent text-ink-soft/50 hover:text-ink-soft"
+          }`}
+          id="tab-classes-btn"
+        >
+          <BookOpen className="h-3.5 w-3.5" /> Classes
+        </button>
       </div>
 
       {/* Render Active Tab */}
@@ -862,6 +842,9 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
           <PostsPanel currentUser={user} cls={activeClass} filterType="assignment" />
         )}
 
+        {/* TAB: CLASSES - the one place classes get created/deleted, flat, no drill-down */}
+        {activeTab === "classes" && <ClassesPanel currentUser={user} />}
+
         {/* TAB 1: STUDENT ROSTER */}
         {activeTab === "roster" && !activeClass && classes.length === 0 && (
           <div className="bg-white rounded-2xl border border-ink-soft/10 p-8 space-y-4 max-w-md mx-auto text-center">
@@ -869,30 +852,15 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
             <div>
               <h3 className="font-bold text-ink">Create your first class</h3>
               <p className="text-sm text-ink-soft/70 mt-1">
-                A class holds its own roster, attendance, announcements, and assignments. You can create more later.
+                A class holds its own roster, attendance, announcements, and assignments.
               </p>
             </div>
-            <div className="text-left space-y-2.5">
-              <input
-                value={inlineClassName}
-                onChange={(e) => setInlineClassName(e.target.value)}
-                placeholder="Class name, e.g. Grade 10 - Section A"
-                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-soft/15 focus:outline-none focus:border-violet-400 bg-white"
-              />
-              <input
-                value={inlineClassSubject}
-                onChange={(e) => setInlineClassSubject(e.target.value)}
-                placeholder="Subject (optional), e.g. Mathematics"
-                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-soft/15 focus:outline-none focus:border-violet-400 bg-white"
-              />
-              {inlineClassError && <p className="text-xs text-coral-600 font-semibold">{inlineClassError}</p>}
-              <button
-                onClick={handleCreateClassInline}
-                className="w-full inline-flex items-center justify-center gap-1.5 bg-violet-500 hover:bg-violet-600 text-white text-sm font-bold px-4 py-2.5 rounded-full shadow-violet transition-colors cursor-pointer"
-              >
-                <Plus className="h-4 w-4" /> Create class
-              </button>
-            </div>
+            <button
+              onClick={() => setActiveTab("classes")}
+              className="inline-flex items-center justify-center gap-1.5 bg-violet-500 hover:bg-violet-600 text-white text-sm font-bold px-4 py-2.5 rounded-full shadow-violet transition-colors cursor-pointer"
+            >
+              <Plus className="h-4 w-4" /> Go to Classes
+            </button>
           </div>
         )}
         {activeTab === "roster" && !activeClass && classes.length > 0 && (
@@ -2318,39 +2286,6 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
           </div>
         )}
       </AnimatePresence>
-
-      {/* MODAL: MANAGE CLASSES - create/delete classes and manage per-class
-          rosters. Reached from the header's "Manage classes" button instead
-          of living in the main tab bar. */}
-      {showClassManager && (
-        <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-          onClick={() => setShowClassManager(false)}
-        >
-          <div
-            className="bg-cream rounded-3xl border border-ink-soft/10 shadow-xl p-4 md:p-6 w-full max-w-3xl max-h-[85vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-ink text-lg">Manage classes</h3>
-              <button
-                onClick={() => setShowClassManager(false)}
-                className="text-ink-soft/50 hover:text-ink cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <Classroom
-              currentUser={user}
-              onOpenAttendance={(id) => {
-                handleSelectActiveClass(id);
-                setActiveTab("roster");
-                setShowClassManager(false);
-              }}
-            />
-          </div>
-        </div>
-      )}
     </>
   );
 }
