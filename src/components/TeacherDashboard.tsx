@@ -54,6 +54,7 @@ import {
   changeOwnPassword,
   forceReconnect,
   getClassesForTeacher,
+  createClass,
   addStudentToClass,
   removeStudentFromClass,
 } from "../lib/db";
@@ -98,6 +99,26 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
   const handleSelectActiveClass = (id: string) => {
     setActiveClassId(id);
     localStorage.setItem(ACTIVE_CLASS_STORAGE_PREFIX + user.id, id);
+  };
+
+  // Creating a class right where a new teacher first needs one (the empty
+  // Roster tab), instead of sending them off to a separate "Classes"
+  // destination first - class creation should feel like a normal action,
+  // not a gate you have to clear before the rest of the app opens up.
+  const [inlineClassName, setInlineClassName] = useState("");
+  const [inlineClassSubject, setInlineClassSubject] = useState("");
+  const [inlineClassError, setInlineClassError] = useState<string | null>(null);
+  const handleCreateClassInline = () => {
+    if (!inlineClassName.trim()) {
+      setInlineClassError("Class name is required.");
+      return;
+    }
+    const created = createClass(inlineClassName, inlineClassSubject, user);
+    handleSelectActiveClass(created.id);
+    loadDatabase();
+    setInlineClassName("");
+    setInlineClassSubject("");
+    setInlineClassError(null);
   };
 
   // Quick "add student by ID" on the Roster tab (mirrors the same control
@@ -825,22 +846,42 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
         )}
 
         {/* TAB 1: STUDENT ROSTER */}
-        {activeTab === "roster" && !activeClass && (
+        {activeTab === "roster" && !activeClass && classes.length === 0 && (
+          <div className="bg-white rounded-2xl border border-ink-soft/10 p-8 space-y-4 max-w-md mx-auto text-center">
+            <BookOpen className="h-8 w-8 mx-auto text-violet-300" />
+            <div>
+              <h3 className="font-bold text-ink">Create your first class</h3>
+              <p className="text-sm text-ink-soft/70 mt-1">
+                A class holds its own roster, attendance, and stream. You can create more later.
+              </p>
+            </div>
+            <div className="text-left space-y-2.5">
+              <input
+                value={inlineClassName}
+                onChange={(e) => setInlineClassName(e.target.value)}
+                placeholder="Class name, e.g. Grade 10 - Section A"
+                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-soft/15 focus:outline-none focus:border-violet-400 bg-white"
+              />
+              <input
+                value={inlineClassSubject}
+                onChange={(e) => setInlineClassSubject(e.target.value)}
+                placeholder="Subject (optional), e.g. Mathematics"
+                className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-soft/15 focus:outline-none focus:border-violet-400 bg-white"
+              />
+              {inlineClassError && <p className="text-xs text-coral-600 font-semibold">{inlineClassError}</p>}
+              <button
+                onClick={handleCreateClassInline}
+                className="w-full inline-flex items-center justify-center gap-1.5 bg-violet-500 hover:bg-violet-600 text-white text-sm font-bold px-4 py-2.5 rounded-full shadow-violet transition-colors cursor-pointer"
+              >
+                <Plus className="h-4 w-4" /> Create class
+              </button>
+            </div>
+          </div>
+        )}
+        {activeTab === "roster" && !activeClass && classes.length > 0 && (
           <div className="bg-white rounded-2xl border border-ink-soft/10 p-10 text-center space-y-3">
             <BookOpen className="h-8 w-8 mx-auto text-violet-300" />
-            <p className="text-sm text-ink-soft/70">
-              {classes.length === 0
-                ? "You haven't created a class yet. Create one to get a join code and start taking attendance."
-                : "Pick a class from the switcher above to see its roster."}
-            </p>
-            {classes.length === 0 && (
-              <button
-                onClick={() => setActiveTab("classes")}
-                className="inline-flex items-center gap-1.5 bg-violet-500 hover:bg-violet-600 text-white text-sm font-bold px-4 py-2.5 rounded-full shadow-violet transition-colors cursor-pointer"
-              >
-                <Plus className="h-4 w-4" /> Create a class
-              </button>
-            )}
+            <p className="text-sm text-ink-soft/70">Pick a class from the switcher above to see its roster.</p>
           </div>
         )}
         {activeTab === "roster" && activeClass && (
