@@ -72,5 +72,61 @@ service cloud.firestore {
       // passwords or personal data - just usernames and event types).
       allow read, write: if signedIn();
     }
+
+    // -------------------------------------------------------------------
+    // Classroom feature: classes (sections), stream posts (announcements +
+    // assignments), comments, and assignment submissions.
+    // -------------------------------------------------------------------
+
+    match /classes/{classId} {
+      // Readable by any signed-in user - students need to browse/search by
+      // join code before they're a member, same tradeoff as /users above.
+      allow read: if signedIn();
+
+      // Only an approved teacher can create a class, and only as its owner.
+      allow create: if isApprovedTeacher() && request.resource.data.teacherId == myProfile().id;
+
+      // The owning teacher can change anything (rename, roster, join code).
+      // Anyone else may only touch the roster (join/leave) - ownership
+      // itself can't be reassigned by a non-owner.
+      allow update: if signedIn() && (
+        resource.data.teacherId == myProfile().id
+        || request.resource.data.teacherId == resource.data.teacherId
+      );
+
+      // Only the owning teacher can delete the class.
+      allow delete: if signedIn() && resource.data.teacherId == myProfile().id;
+    }
+
+    match /class_posts/{postId} {
+      allow read: if signedIn();
+
+      // Only an approved teacher can post, and only as themselves.
+      allow create: if isApprovedTeacher() && request.resource.data.authorId == myProfile().id;
+
+      // Posts are effectively immutable after creation (no edit feature) -
+      // only the author or any approved teacher can remove one.
+      allow update, delete: if signedIn() && (
+        resource.data.authorId == myProfile().id || isApprovedTeacher()
+      );
+    }
+
+    match /post_comments/{commentId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.authorId == myProfile().id;
+      allow delete: if signedIn() && (
+        resource.data.authorId == myProfile().id || isApprovedTeacher()
+      );
+    }
+
+    match /assignment_submissions/{submissionId} {
+      // A teacher needs to read every submission for grading; a student's
+      // own submission is naturally theirs to read/write too.
+      allow read: if signedIn();
+      allow create, update: if signedIn() && request.resource.data.studentId == myProfile().id;
+      allow delete: if signedIn() && (
+        resource.data.studentId == myProfile().id || isApprovedTeacher()
+      );
+    }
   }
 }
