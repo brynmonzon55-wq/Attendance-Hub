@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { User, AttendanceRecord, AttendanceStatus, StudentStats, SecurityLog } from "../types";
+import { User, AttendanceRecord, AttendanceStatus, StudentStats, SecurityLog, ClassRoom, ClassPost, PostComment, AssignmentSubmission } from "../types";
 import { db, auth, idToAuthEmail, createUserWithoutSigningIn } from "./firebase";
 import { doc, setDoc, deleteDoc, collection, onSnapshot, getDoc } from "firebase/firestore";
 import {
@@ -155,6 +155,10 @@ export async function createStudentAccount(
 const USERS_KEY = "attendance_system_users";
 const ATTENDANCE_KEY = "attendance_system_records";
 const SECURITY_LOGS_KEY = "attendance_system_security_logs";
+const CLASSES_KEY = "attendance_system_classes";
+const POSTS_KEY = "attendance_system_class_posts";
+const COMMENTS_KEY = "attendance_system_post_comments";
+const SUBMISSIONS_KEY = "attendance_system_assignment_submissions";
 
 // Helper to format date as YYYY-MM-DD
 export function formatDate(date: Date): string {
@@ -242,6 +246,18 @@ export function initDB(): void {
   if (!localStorage.getItem(SECURITY_LOGS_KEY)) {
     localStorage.setItem(SECURITY_LOGS_KEY, JSON.stringify([]));
   }
+  if (!localStorage.getItem(CLASSES_KEY)) {
+    localStorage.setItem(CLASSES_KEY, JSON.stringify([]));
+  }
+  if (!localStorage.getItem(POSTS_KEY)) {
+    localStorage.setItem(POSTS_KEY, JSON.stringify([]));
+  }
+  if (!localStorage.getItem(COMMENTS_KEY)) {
+    localStorage.setItem(COMMENTS_KEY, JSON.stringify([]));
+  }
+  if (!localStorage.getItem(SUBMISSIONS_KEY)) {
+    localStorage.setItem(SUBMISSIONS_KEY, JSON.stringify([]));
+  }
 }
 
 /**
@@ -308,6 +324,58 @@ export function attachRealtimeListeners(): void {
     window.dispatchEvent(new Event("db_updated"));
   }, (err) => {
     console.error("Security logs snapshot error:", err);
+    isListenersAttached = false;
+  });
+
+  // Sync "classes" collection from Firestore
+  onSnapshot(collection(db, "classes"), (snapshot) => {
+    const firestoreClasses: ClassRoom[] = [];
+    snapshot.forEach((doc) => {
+      firestoreClasses.push(doc.data() as ClassRoom);
+    });
+    localStorage.setItem(CLASSES_KEY, JSON.stringify(firestoreClasses));
+    window.dispatchEvent(new Event("db_updated"));
+  }, (err) => {
+    console.error("Classes snapshot error:", err);
+    isListenersAttached = false;
+  });
+
+  // Sync "class_posts" collection from Firestore (announcements + assignments)
+  onSnapshot(collection(db, "class_posts"), (snapshot) => {
+    const firestorePosts: ClassPost[] = [];
+    snapshot.forEach((doc) => {
+      firestorePosts.push(doc.data() as ClassPost);
+    });
+    localStorage.setItem(POSTS_KEY, JSON.stringify(firestorePosts));
+    window.dispatchEvent(new Event("db_updated"));
+  }, (err) => {
+    console.error("Class posts snapshot error:", err);
+    isListenersAttached = false;
+  });
+
+  // Sync "post_comments" collection from Firestore
+  onSnapshot(collection(db, "post_comments"), (snapshot) => {
+    const firestoreComments: PostComment[] = [];
+    snapshot.forEach((doc) => {
+      firestoreComments.push(doc.data() as PostComment);
+    });
+    localStorage.setItem(COMMENTS_KEY, JSON.stringify(firestoreComments));
+    window.dispatchEvent(new Event("db_updated"));
+  }, (err) => {
+    console.error("Post comments snapshot error:", err);
+    isListenersAttached = false;
+  });
+
+  // Sync "assignment_submissions" collection from Firestore
+  onSnapshot(collection(db, "assignment_submissions"), (snapshot) => {
+    const firestoreSubmissions: AssignmentSubmission[] = [];
+    snapshot.forEach((doc) => {
+      firestoreSubmissions.push(doc.data() as AssignmentSubmission);
+    });
+    localStorage.setItem(SUBMISSIONS_KEY, JSON.stringify(firestoreSubmissions));
+    window.dispatchEvent(new Event("db_updated"));
+  }, (err) => {
+    console.error("Assignment submissions snapshot error:", err);
     isListenersAttached = false;
   });
 }
@@ -509,4 +577,282 @@ export function calculateStudentStats(studentId: string, subject?: string): Stud
     totalDays,
     percentage,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Classroom feature: classes, stream posts (announcements + assignments),
+// comments, and assignment submissions. Same local-first + Firestore-sync
+// pattern as everything above - writes go to localStorage immediately and
+// to Firestore in the background; onSnapshot listeners above keep every
+// open tab in sync.
+// ---------------------------------------------------------------------------
+
+function randomJoinCode(): string {
+  // Unambiguous charset (no 0/O/1/I) so codes are easy to read aloud/type.
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
+// --- Classes ---
+
+export function getClasses(): ClassRoom[] {
+  initDB();
+  const data = localStorage.getItem(CLASSES_KEY);
+  return data ? JSON.parse(data) : [];
+}
+
+export function getClassesForTeacher(teacherId: string): ClassRoom[] {
+  return getClasses().filter((c) => c.teacherId.toLowerCase() === teacherId.toLowerCase());
+}
+
+export function getClassesForStudent(studentId: string): ClassRoom[] {
+  return getClasses().filter((c) => c.studentIds.some((id) => id.toLowerCase() === studentId.toLowerCase()));
+}
+
+export function getClassById(classId: string): ClassRoom | undefined {
+  return getClasses().find((c) => c.id === classId);
+}
+
+function saveClass(cls: ClassRoom): void {
+  const classes = getClasses();
+  const index = classes.findIndex((c) => c.id === cls.id);
+  if (index !== -1) {
+    classes[index] = cls;
+  } else {
+    classes.push(cls);
+  }
+  localStorage.setItem(CLASSES_KEY, JSON.stringify(classes));
+  setDoc(doc(db, "classes", cls.id), cls).catch((err) => {
+    console.error("Error writing class to Firestore:", err);
+  });
+}
+
+export function createClass(name: string, subject: string, teacher: User): ClassRoom {
+  // Vanishingly unlikely, but guard against a join-code collision anyway.
+  const existingCodes = new Set(getClasses().map((c) => c.joinCode));
+  let joinCode = randomJoinCode();
+  while (existingCodes.has(joinCode)) {
+    joinCode = randomJoinCode();
+  }
+  const cls: ClassRoom = {
+    id: `class-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    name: name.trim(),
+    subject: subject.trim() || undefined,
+    teacherId: teacher.id,
+    teacherName: teacher.name,
+    joinCode,
+    createdAt: formatDate(new Date()),
+    studentIds: [],
+  };
+  saveClass(cls);
+  return cls;
+}
+
+export function regenerateJoinCode(classId: string): ClassRoom | undefined {
+  const cls = getClassById(classId);
+  if (!cls) return undefined;
+  const existingCodes = new Set(getClasses().map((c) => c.joinCode));
+  let joinCode = randomJoinCode();
+  while (existingCodes.has(joinCode)) {
+    joinCode = randomJoinCode();
+  }
+  const updated = { ...cls, joinCode };
+  saveClass(updated);
+  return updated;
+}
+
+/** Student self-joins a class using the teacher-shared code. */
+export function joinClassByCode(code: string, student: User): ClassRoom {
+  const cls = getClasses().find((c) => c.joinCode.toLowerCase() === code.trim().toLowerCase());
+  if (!cls) {
+    throw new Error("invalid-code");
+  }
+  if (cls.studentIds.some((id) => id.toLowerCase() === student.id.toLowerCase())) {
+    return cls; // already a member, nothing to do
+  }
+  const updated = { ...cls, studentIds: [...cls.studentIds, student.id] };
+  saveClass(updated);
+  return updated;
+}
+
+/** Teacher manually adds an already-registered student by their ID. */
+export function addStudentToClass(classId: string, studentId: string): ClassRoom | undefined {
+  const cls = getClassById(classId);
+  if (!cls) return undefined;
+  if (cls.studentIds.some((id) => id.toLowerCase() === studentId.toLowerCase())) {
+    return cls;
+  }
+  const updated = { ...cls, studentIds: [...cls.studentIds, studentId] };
+  saveClass(updated);
+  return updated;
+}
+
+export function removeStudentFromClass(classId: string, studentId: string): ClassRoom | undefined {
+  const cls = getClassById(classId);
+  if (!cls) return undefined;
+  const updated = { ...cls, studentIds: cls.studentIds.filter((id) => id.toLowerCase() !== studentId.toLowerCase()) };
+  saveClass(updated);
+  return updated;
+}
+
+export function deleteClass(classId: string): void {
+  const classes = getClasses().filter((c) => c.id !== classId);
+  localStorage.setItem(CLASSES_KEY, JSON.stringify(classes));
+  deleteDoc(doc(db, "classes", classId)).catch((err) => console.error(err));
+
+  // Cascade: remove this class's posts, their comments, and submissions.
+  const posts = getPostsForClass(classId);
+  posts.forEach((p) => deletePost(p.id));
+}
+
+/** Classmates in a class with their attendance stats, for the roster/classmates view. */
+export function getClassmatesWithStats(
+  classId: string
+): { student: User; stats: StudentStats }[] {
+  const cls = getClassById(classId);
+  if (!cls) return [];
+  const users = getUsers();
+  return cls.studentIds
+    .map((id) => users.find((u) => u.id.toLowerCase() === id.toLowerCase()))
+    .filter((u): u is User => !!u)
+    .map((student) => ({
+      student,
+      stats: calculateStudentStatsForClass(student.id, classId),
+    }));
+}
+
+export function calculateStudentStatsForClass(studentId: string, classId: string): StudentStats {
+  const records = getAttendanceRecords().filter(
+    (r) => r.studentId.toLowerCase() === studentId.toLowerCase() && r.classId === classId
+  );
+  const presentCount = records.filter((r) => r.status === "Present").length;
+  const absentCount = records.filter((r) => r.status === "Absent").length;
+  const lateCount = records.filter((r) => r.status === "Late").length;
+  const totalDays = records.length;
+  const percentage = totalDays > 0 ? Math.round(((presentCount + lateCount) / totalDays) * 100) : 100;
+  return { presentCount, absentCount, lateCount, totalDays, percentage };
+}
+
+// --- Stream posts (announcements + assignments) ---
+
+export function getPosts(): ClassPost[] {
+  initDB();
+  const data = localStorage.getItem(POSTS_KEY);
+  return data ? JSON.parse(data) : [];
+}
+
+export function getPostsForClass(classId: string): ClassPost[] {
+  return getPosts()
+    .filter((p) => p.classId === classId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export function createPost(input: Omit<ClassPost, "id" | "createdAt">): ClassPost {
+  const post: ClassPost = {
+    ...input,
+    id: `post-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    createdAt: new Date().toISOString(),
+  };
+  const posts = getPosts();
+  posts.push(post);
+  localStorage.setItem(POSTS_KEY, JSON.stringify(posts));
+  setDoc(doc(db, "class_posts", post.id), post).catch((err) => {
+    console.error("Error writing post to Firestore:", err);
+  });
+  return post;
+}
+
+export function deletePost(postId: string): void {
+  const posts = getPosts().filter((p) => p.id !== postId);
+  localStorage.setItem(POSTS_KEY, JSON.stringify(posts));
+  deleteDoc(doc(db, "class_posts", postId)).catch((err) => console.error(err));
+
+  // Cascade: remove this post's comments and submissions too.
+  getCommentsForPost(postId).forEach((c) => deleteComment(c.id));
+  getSubmissionsForPost(postId).forEach((s) => deleteSubmission(s.id));
+}
+
+// --- Comments ---
+
+export function getComments(): PostComment[] {
+  initDB();
+  const data = localStorage.getItem(COMMENTS_KEY);
+  return data ? JSON.parse(data) : [];
+}
+
+export function getCommentsForPost(postId: string): PostComment[] {
+  return getComments()
+    .filter((c) => c.postId === postId)
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+}
+
+export function addComment(input: Omit<PostComment, "id" | "createdAt">): PostComment {
+  const comment: PostComment = {
+    ...input,
+    id: `comment-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    createdAt: new Date().toISOString(),
+  };
+  const comments = getComments();
+  comments.push(comment);
+  localStorage.setItem(COMMENTS_KEY, JSON.stringify(comments));
+  setDoc(doc(db, "post_comments", comment.id), comment).catch((err) => {
+    console.error("Error writing comment to Firestore:", err);
+  });
+  return comment;
+}
+
+export function deleteComment(commentId: string): void {
+  const comments = getComments().filter((c) => c.id !== commentId);
+  localStorage.setItem(COMMENTS_KEY, JSON.stringify(comments));
+  deleteDoc(doc(db, "post_comments", commentId)).catch((err) => console.error(err));
+}
+
+// --- Assignment submissions ---
+
+export function getSubmissions(): AssignmentSubmission[] {
+  initDB();
+  const data = localStorage.getItem(SUBMISSIONS_KEY);
+  return data ? JSON.parse(data) : [];
+}
+
+export function getSubmissionsForPost(postId: string): AssignmentSubmission[] {
+  return getSubmissions().filter((s) => s.postId === postId);
+}
+
+export function getSubmissionForStudent(postId: string, studentId: string): AssignmentSubmission | undefined {
+  return getSubmissions().find(
+    (s) => s.postId === postId && s.studentId.toLowerCase() === studentId.toLowerCase()
+  );
+}
+
+export function submitAssignment(input: Omit<AssignmentSubmission, "id" | "submittedAt">): AssignmentSubmission {
+  // Resubmitting replaces the previous submission rather than duplicating it.
+  const existing = getSubmissionForStudent(input.postId, input.studentId);
+  const submission: AssignmentSubmission = {
+    ...input,
+    id: existing?.id || `sub-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    submittedAt: new Date().toISOString(),
+  };
+  const submissions = getSubmissions();
+  const index = submissions.findIndex((s) => s.id === submission.id);
+  if (index !== -1) {
+    submissions[index] = submission;
+  } else {
+    submissions.push(submission);
+  }
+  localStorage.setItem(SUBMISSIONS_KEY, JSON.stringify(submissions));
+  setDoc(doc(db, "assignment_submissions", submission.id), submission).catch((err) => {
+    console.error("Error writing submission to Firestore:", err);
+  });
+  return submission;
+}
+
+export function deleteSubmission(submissionId: string): void {
+  const submissions = getSubmissions().filter((s) => s.id !== submissionId);
+  localStorage.setItem(SUBMISSIONS_KEY, JSON.stringify(submissions));
+  deleteDoc(doc(db, "assignment_submissions", submissionId)).catch((err) => console.error(err));
 }
