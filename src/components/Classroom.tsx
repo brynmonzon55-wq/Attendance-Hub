@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import {
-  Plus, ArrowLeft, Copy, Check, RefreshCw, Users, MessageSquare,
+  Plus, ArrowLeft, Check, Users, MessageSquare,
   Paperclip, Calendar, Trash2, Send, X, FileText, Megaphone, UserPlus, UserMinus,
-  Activity, ListChecks, ChevronDown, ChevronRight, AlertTriangle, ClipboardCheck, KeyRound
+  Activity, ListChecks, ChevronDown, ChevronRight, AlertTriangle, ClipboardCheck
 } from "lucide-react";
 import { User, ClassRoom, ClassPost, PostComment, AssignmentSubmission, AttendanceRecord } from "../types";
 import {
   getClassesForTeacher, getClassesForStudent, getClassById, createClass,
-  joinClassByCode, regenerateJoinCode, addStudentToClass, removeStudentFromClass,
+  addStudentToClass, removeStudentFromClass,
   deleteClass, getPostsForClass, createPost, deletePost, getCommentsForPost,
   addComment, getSubmissionsForPost, getSubmissionForStudent, submitAssignment,
   getClassmatesWithStats, getUsers, getAttendanceRecords, attendanceMatchesClass, formatDate,
@@ -106,10 +106,8 @@ function ClassList({
 }) {
   const isTeacher = currentUser.role === "teacher";
   const [showCreate, setShowCreate] = useState(false);
-  const [showJoin, setShowJoin] = useState(false);
   const [name, setName] = useState("");
   const [subject, setSubject] = useState("");
-  const [joinCode, setJoinCode] = useState("");
   const [error, setError] = useState("");
 
   const handleCreate = () => {
@@ -125,18 +123,6 @@ function ClassList({
     setError("");
   };
 
-  const handleJoin = () => {
-    try {
-      joinClassByCode(joinCode, currentUser);
-      onChanged();
-      setJoinCode("");
-      setShowJoin(false);
-      setError("");
-    } catch {
-      setError("That code doesn't match any class. Double-check it with your teacher.");
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -147,19 +133,12 @@ function ClassList({
           </p>
         </div>
         <div className="flex gap-2">
-          {isTeacher ? (
+          {isTeacher && (
             <button
               onClick={() => setShowCreate(true)}
               className="inline-flex items-center gap-1.5 bg-violet-500 hover:bg-violet-600 text-white text-sm font-bold px-4 py-2.5 rounded-full shadow-violet transition-colors cursor-pointer"
             >
               <Plus className="h-4 w-4" /> Create class
-            </button>
-          ) : (
-            <button
-              onClick={() => setShowJoin(true)}
-              className="inline-flex items-center gap-1.5 bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold px-4 py-2.5 rounded-full shadow-teal transition-colors cursor-pointer"
-            >
-              <Plus className="h-4 w-4" /> Join class
             </button>
           )}
         </div>
@@ -169,8 +148,8 @@ function ClassList({
         <div className="bg-white rounded-2xl border border-ink-soft/10 p-10 text-center">
           <p className="text-sm text-ink-soft/70">
             {isTeacher
-              ? "You haven't created a class yet. Create one to get a join code you can share with students."
-              : "You haven't joined a class yet. Ask your teacher for a join code, or wait to be added."}
+              ? "You haven't created a class yet."
+              : "You haven't been added to a class yet. Ask your teacher to add you by your student ID."}
           </p>
         </div>
       )}
@@ -189,7 +168,6 @@ function ClassList({
             {c.subject && <p className="text-xs text-ink-soft/60 mt-0.5">{c.subject}</p>}
             <div className="flex items-center justify-between mt-4 text-xs text-ink-soft/60">
               <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {c.studentIds.length} students</span>
-              {isTeacher && <span className="font-mono font-bold text-violet-500">{c.joinCode}</span>}
               {!isTeacher && <span>{c.teacherName}</span>}
             </div>
           </button>
@@ -228,38 +206,12 @@ function ClassList({
           </div>
         </div>
       )}
-
-      {/* Join class modal */}
-      {showJoin && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowJoin(false)}>
-          <div className="bg-white rounded-2xl border border-ink-soft/10 shadow-xl p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-ink">Join a class</h3>
-              <button onClick={() => setShowJoin(false)} className="text-ink-soft/50 hover:text-ink cursor-pointer"><X className="h-5 w-5" /></button>
-            </div>
-            <label className="text-xs font-bold text-ink-soft/70 block mb-1">Join code</label>
-            <input
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-              placeholder="ABC123"
-              className="w-full mb-3 px-3.5 py-2.5 text-sm font-mono tracking-widest rounded-xl border border-ink-soft/15 focus:outline-none focus:border-teal-400 bg-white uppercase"
-            />
-            {error && <p className="text-xs text-coral-600 font-semibold mb-3">{error}</p>}
-            <button
-              onClick={handleJoin}
-              className="w-full bg-teal-500 hover:bg-teal-600 text-white text-sm font-bold py-2.5 rounded-full shadow-teal transition-colors cursor-pointer"
-            >
-              Join
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// A single class: header (join code for teacher), tabs for Stream / Classmates
+// A single class: header, tabs for Stream / Classmates
 // ---------------------------------------------------------------------------
 
 function ClassDetail({
@@ -279,8 +231,6 @@ function ClassDetail({
 }) {
   const isTeacher = currentUser.role === "teacher";
   const [tab, setTab] = useState<"log" | "roster">("log");
-  const [copied, setCopied] = useState(false);
-  const [showCode, setShowCode] = useState(false);
 
   // Today's attendance snapshot for this class - the thing that makes this
   // page an Attendance Hub class page and not a generic message board.
@@ -306,17 +256,6 @@ function ClassDetail({
   const lateT = todayRecords.filter((r) => r.status === "Late").length;
   const absentT = todayRecords.filter((r) => r.status === "Absent").length;
   const myToday = !isTeacher ? todayRecords.find((r) => r.studentId.toLowerCase() === currentUser.id.toLowerCase()) : undefined;
-
-  const handleCopyCode = () => {
-    navigator.clipboard?.writeText(cls.joinCode).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
-  const handleRegenerate = () => {
-    regenerateJoinCode(cls.id);
-    onChanged();
-  };
 
   const handleDeleteClass = () => {
     if (!confirm(`Delete "${cls.name}"? This removes the class, its log, and all submissions. This can't be undone.`)) return;
@@ -388,33 +327,6 @@ function ClassDetail({
           )}
         </div>
 
-        {/* Join code: still here, just no longer the hero */}
-        {isTeacher && (
-          <div className="pt-1">
-            {showCode ? (
-              <div className="inline-flex items-center gap-2 bg-violet-50 border border-violet-100 rounded-full pl-4 pr-1.5 py-1.5">
-                <span className="text-xs font-bold text-violet-600">Join code</span>
-                <span className="font-mono font-black text-violet-700 tracking-widest">{cls.joinCode}</span>
-                <button onClick={handleCopyCode} title="Copy code" className="p-1.5 rounded-full hover:bg-violet-100 text-violet-600 cursor-pointer">
-                  {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                </button>
-                <button onClick={handleRegenerate} title="Generate a new code" className="p-1.5 rounded-full hover:bg-violet-100 text-violet-600 cursor-pointer">
-                  <RefreshCw className="h-3.5 w-3.5" />
-                </button>
-                <button onClick={() => setShowCode(false)} title="Hide" className="p-1.5 rounded-full hover:bg-violet-100 text-violet-600 cursor-pointer">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowCode(true)}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-ink-soft/50 hover:text-violet-600 cursor-pointer"
-              >
-                <KeyRound className="h-3.5 w-3.5" /> Show join code
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
       {isTeacher && atRiskCount > 0 && (
