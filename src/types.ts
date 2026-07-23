@@ -30,7 +30,8 @@ export interface AttendanceRecord {
   time: string; // HH:MM:SS
   status: AttendanceStatus;
   notes?: string;
-  subject?: string; // The subject class this attendance was marked for
+  subject?: string; // Legacy free-text subject label, kept for old records
+  classId?: string; // Which ClassRoom this attendance belongs to (new records)
 }
 
 export interface SecurityLog {
@@ -47,4 +48,59 @@ export interface StudentStats {
   lateCount: number;
   totalDays: number;
   percentage: number;
+}
+
+// ---------------------------------------------------------------------------
+// Classroom feature: a teacher runs one or more ClassRoom "sections", each
+// with its own roster, join code, stream of posts, and attendance records
+// (tagged via AttendanceRecord.classId above).
+// ---------------------------------------------------------------------------
+
+export interface ClassRoom {
+  id: string;
+  name: string; // e.g. "Grade 10 - Section A"
+  subject?: string; // e.g. "Mathematics"
+  teacherId: string; // User.id of the owning teacher
+  teacherName: string;
+  joinCode: string; // short code students can enter to join
+  createdAt: string;
+  studentIds: string[]; // User.id of enrolled students
+}
+
+export type ClassPostType = "announcement" | "assignment";
+
+export interface ClassPost {
+  id: string;
+  classId: string;
+  type: ClassPostType;
+  authorId: string;
+  authorName: string;
+  title?: string; // assignments use this as the assignment title
+  content: string; // announcement body or assignment instructions
+  createdAt: string;
+  dueDate?: string; // assignments only, YYYY-MM-DD
+  attachmentName?: string;
+  attachmentDataUrl?: string; // small file/photo attachments, base64 data URL
+}
+
+export interface PostComment {
+  id: string;
+  postId: string;
+  classId: string;
+  authorId: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface AssignmentSubmission {
+  id: string;
+  postId: string;
+  classId: string;
+  studentId: string;
+  studentName: string;
+  submittedAt: string;
+  content?: string;
+  attachmentName?: string;
+  attachmentDataUrl?: string;
 }
