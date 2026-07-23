@@ -37,6 +37,7 @@ import {
 import { User, AttendanceRecord, AttendanceStatus, StudentStats, SecurityLog } from "../types";
 import type { AppTheme } from "../App";
 import StudentProfile from "./StudentProfile";
+import Classroom from "./Classroom";
 import {
   getUsers,
   saveUser,
@@ -75,7 +76,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
   const isApprovedUser = dbUser.isApproved === true || dbUser.id.toLowerCase() === "teacher1";
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<"roster" | "audit" | "reports" | "security" | "faculty">("roster");
+  const [activeTab, setActiveTab] = useState<"roster" | "audit" | "reports" | "security" | "faculty" | "classes">("roster");
   const [viewingStudent, setViewingStudent] = useState<User | null>(null);
 
   // Subject Configuration States
@@ -736,6 +737,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
             <option value="roster">
               Class Roster ({enrolledStudents.length}){pendingApplicants.length > 0 ? ` \u2022 ${pendingApplicants.length} pending` : ""}
             </option>
+            <option value="classes">Classes</option>
             <option value="audit">Daily Sheet & Overrides</option>
             <option value="reports">Performance Reports</option>
             <option value="security">
@@ -765,6 +767,17 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
               {pendingApplicants.length}
             </span>
           )}
+        </button>
+        <button
+          onClick={() => setActiveTab("classes")}
+          className={`pb-3 text-sm font-bold border-b-2 transition-all cursor-pointer shrink-0 ${
+            activeTab === "classes"
+              ? "border-violet-500 text-violet-500"
+              : "border-transparent text-ink-soft/50 hover:text-ink-soft"
+          }`}
+          id="tab-classes-btn"
+        >
+          Classes
         </button>
         <button
           onClick={() => setActiveTab("audit")}
@@ -824,7 +837,10 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
 
       {/* Render Active Tab */}
       <div className="space-y-6" id="active-tab-container">
-        
+
+        {/* TAB: CLASSES (Google-Classroom-style sections) */}
+        {activeTab === "classes" && <Classroom currentUser={user} />}
+
         {/* TAB 1: STUDENT ROSTER */}
         {activeTab === "roster" && (
           <div className="space-y-4">
