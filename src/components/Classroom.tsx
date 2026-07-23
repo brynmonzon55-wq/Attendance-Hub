@@ -211,6 +211,116 @@ function ClassList({
 }
 
 // ---------------------------------------------------------------------------
+// ClassesPanel: the ONE place classes get created/deleted - a flat grid of
+// cards with a create form up top, no drilling into a separate class page.
+// (Announcements, Assignments, and Roster all live as their own top-level
+// tabs scoped to the header's active-class picker, so this panel doesn't
+// need to duplicate that browsing.)
+// ---------------------------------------------------------------------------
+
+export function ClassesPanel({ currentUser }: { currentUser: User }) {
+  const [classes, setClasses] = useState<ClassRoom[]>(getClassesForTeacher(currentUser.id));
+  const [name, setName] = useState("");
+  const [subject, setSubject] = useState("");
+  const [error, setError] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    const refresh = () => setClasses(getClassesForTeacher(currentUser.id));
+    refresh();
+    window.addEventListener("db_updated", refresh);
+    return () => window.removeEventListener("db_updated", refresh);
+  }, [currentUser.id]);
+
+  const handleCreate = () => {
+    if (creating) return; // guard against rapid double-clicks / duplicate classes
+    if (!name.trim()) {
+      setError("Class name is required.");
+      return;
+    }
+    setCreating(true);
+    createClass(name, subject, currentUser);
+    setClasses(getClassesForTeacher(currentUser.id));
+    setName("");
+    setSubject("");
+    setError("");
+    setCreating(false);
+  };
+
+  const handleDelete = (cls: ClassRoom) => {
+    if (!confirm(`Delete "${cls.name}"? This removes the class, its posts, and all submissions. This can't be undone.`)) return;
+    deleteClass(cls.id);
+    setClasses(getClassesForTeacher(currentUser.id));
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-2xl border border-ink-soft/10 p-5 space-y-3">
+        <h3 className="text-sm font-bold text-ink flex items-center gap-1.5">
+          <Plus className="h-4 w-4 text-violet-500" /> New class
+        </h3>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+            placeholder="Class name, e.g. Grade 10 - Section A"
+            className="flex-1 min-w-0 px-3.5 py-2.5 text-sm rounded-xl border border-ink-soft/15 focus:outline-none focus:border-violet-400 bg-white"
+          />
+          <input
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+            placeholder="Subject (optional)"
+            className="flex-1 min-w-0 px-3.5 py-2.5 text-sm rounded-xl border border-ink-soft/15 focus:outline-none focus:border-violet-400 bg-white"
+          />
+          <button
+            onClick={handleCreate}
+            disabled={creating}
+            className="inline-flex items-center justify-center gap-1.5 bg-violet-500 hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold px-4 py-2.5 rounded-full shadow-violet transition-colors cursor-pointer shrink-0"
+          >
+            <Plus className="h-4 w-4" /> {creating ? "Creating..." : "Create"}
+          </button>
+        </div>
+        {error && <p className="text-xs text-coral-600 font-semibold">{error}</p>}
+      </div>
+
+      {classes.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-ink-soft/10 p-10 text-center">
+          <p className="text-sm text-ink-soft/70">You haven't created a class yet.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {classes.map((c) => (
+            <div key={c.id} className="bg-white rounded-2xl border border-ink-soft/10 p-5 space-y-3">
+              <div className="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-ink">{c.name}</h4>
+                {c.subject && <p className="text-xs text-ink-soft/60 mt-0.5">{c.subject}</p>}
+              </div>
+              <div className="flex items-center justify-between text-xs text-ink-soft/60 pt-2 border-t border-ink-soft/10">
+                <span className="inline-flex items-center gap-1">
+                  <Users className="h-3.5 w-3.5" /> {c.studentIds.length} students
+                </span>
+                <button
+                  onClick={() => handleDelete(c)}
+                  title="Delete class"
+                  className="text-ink-soft/40 hover:text-coral-500 cursor-pointer"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // A single class: header, tabs for Stream / Classmates
 // ---------------------------------------------------------------------------
 
