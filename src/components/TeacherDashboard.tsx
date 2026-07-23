@@ -34,7 +34,7 @@ import {
   Clock,
   Eye
 } from "lucide-react";
-import { User, AttendanceRecord, AttendanceStatus, StudentStats, SecurityLog } from "../types";
+import { User, AttendanceRecord, AttendanceStatus, StudentStats, SecurityLog, ClassRoom } from "../types";
 import type { AppTheme } from "../App";
 import StudentProfile from "./StudentProfile";
 import Classroom from "./Classroom";
@@ -46,13 +46,19 @@ import {
   saveAttendanceRecord,
   deleteAttendanceRecord,
   calculateStudentStats,
+  attendanceMatchesClass,
   formatDate,
   getSecurityLogs,
   deleteSecurityLog,
   deleteOwnAccount,
   changeOwnPassword,
-  forceReconnect
+  forceReconnect,
+  getClassesForTeacher,
+  addStudentToClass,
+  removeStudentFromClass,
 } from "../lib/db";
+
+const ACTIVE_CLASS_STORAGE_PREFIX = "attendance_active_class_";
 
 interface TeacherDashboardProps {
   user: User;
@@ -79,10 +85,39 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
   const [activeTab, setActiveTab] = useState<"roster" | "audit" | "reports" | "security" | "faculty" | "classes">("roster");
   const [viewingStudent, setViewingStudent] = useState<User | null>(null);
 
-  // Subject Configuration States
-  const [activeSubject, setActiveSubject] = useState<string>(user.subject || "");
-  const [showSubjectModal, setShowSubjectModal] = useState(!user.subject);
-  const [tempSubject, setTempSubject] = useState(user.subject || "");
+  // Active class: which of this teacher's ClassRooms attendance actions
+  // (roster, daily sheet, reports) apply to right now. Replaces the old
+  // free-text "subject" field - classes are real, shareable, multi-section
+  // entities instead of one string per teacher account.
+  const [classes, setClasses] = useState<ClassRoom[]>([]);
+  const [activeClassId, setActiveClassId] = useState<string>(
+    () => localStorage.getItem(ACTIVE_CLASS_STORAGE_PREFIX + user.id) || ""
+  );
+  const activeClass = classes.find((c) => c.id === activeClassId);
+
+  const handleSelectActiveClass = (id: string) => {
+    setActiveClassId(id);
+    localStorage.setItem(ACTIVE_CLASS_STORAGE_PREFIX + user.id, id);
+  };
+
+  // Quick "add student by ID" on the Roster tab (mirrors the same control
+  // in the Classes tab's roster view) so managing who's in the active
+  // class doesn't require switching tabs.
+  const [addStudentIdInput, setAddStudentIdInput] = useState("");
+  const [addStudentError, setAddStudentError] = useState<string | null>(null);
+  const handleAddStudentToActiveClass = () => {
+    const trimmed = addStudentIdInput.trim();
+    if (!trimmed || !activeClassId) return;
+    const match = getUsers().find((u) => u.role === "student" && u.id.toLowerCase() === trimmed.toLowerCase());
+    if (!match) {
+      setAddStudentError("No student found with that ID.");
+      return;
+    }
+    addStudentToClass(activeClassId, match.id);
+    loadDatabase();
+    setAddStudentIdInput("");
+    setAddStudentError(null);
+  };
 
   // Security Log State
   const [securityLogs, setSecurityLogs] = useState<SecurityLog[]>([]);
@@ -283,6 +318,17 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
     if (freshUser) {
       setDbUser(freshUser);
     }
+
+    const teacherClasses = getClassesForTeacher(user.id);
+    setClasses(teacherClasses);
+    // Keep the active class valid: if nothing's picked yet, or the
+    // previously-active class was deleted, fall back to the first class.
+    setActiveClassId((current) => {
+      if (current && teacherClasses.some((c) => c.id === current)) return current;
+      const fallback = teacherClasses[0]?.id || "";
+      if (fallback) localStorage.setItem(ACTIVE_CLASS_STORAGE_PREFIX + user.id, fallback);
+      return fallback;
+    });
   };
 
   useEffect(() => {
@@ -302,22 +348,8 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
   };
 
   const executeRemoveStudent = () => {
-    if (studentToDelete) {
-      const allUsers = getUsers();
-      let changedUser: User | null = null;
-      const updated = allUsers.map((u) => {
-        if (u.id.toLowerCase() === studentToDelete.id.toLowerCase()) {
-          const currentEnrolled = u.enrolledSubjects || [];
-          changedUser = {
-            ...u,
-            enrolledSubjects: currentEnrolled.filter((sub) => sub !== activeSubject)
-          };
-          return changedUser;
-        }
-        return u;
-      });
-      localStorage.setItem("attendance_system_users", JSON.stringify(updated));
-      if (changedUser) saveUser(changedUser);
+    if (studentToDelete && activeClassId) {
+      removeStudentFromClass(activeClassId, studentToDelete.id);
       loadDatabase();
       setStudentToDelete(null);
     }
@@ -333,53 +365,6 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
       saveUser(allUsers[userIndex]);
       loadDatabase();
     }
-  };
-
-  // Handler: Approve Student Application for activeSubject
-  const handleApproveApplication = (studentId: string) => {
-    if (!isApprovedUser) return;
-    const allUsers = getUsers();
-    let changedUser: User | null = null;
-    const updated = allUsers.map((u) => {
-      if (u.id.toLowerCase() === studentId.toLowerCase()) {
-        const currentApplied = u.appliedSubjects || [];
-        const currentEnrolled = u.enrolledSubjects || [];
-        changedUser = {
-          ...u,
-          isApproved: true, // also verify their student profile
-          appliedSubjects: currentApplied.filter((sub) => sub !== activeSubject),
-          enrolledSubjects: currentEnrolled.includes(activeSubject)
-            ? currentEnrolled
-            : [...currentEnrolled, activeSubject]
-        };
-        return changedUser;
-      }
-      return u;
-    });
-    localStorage.setItem("attendance_system_users", JSON.stringify(updated));
-    if (changedUser) saveUser(changedUser);
-    loadDatabase();
-  };
-
-  // Handler: Reject Student Application for activeSubject
-  const handleRejectApplication = (studentId: string) => {
-    if (!isApprovedUser) return;
-    const allUsers = getUsers();
-    let changedUser: User | null = null;
-    const updated = allUsers.map((u) => {
-      if (u.id.toLowerCase() === studentId.toLowerCase()) {
-        const currentApplied = u.appliedSubjects || [];
-        changedUser = {
-          ...u,
-          appliedSubjects: currentApplied.filter((sub) => sub !== activeSubject)
-        };
-        return changedUser;
-      }
-      return u;
-    });
-    localStorage.setItem("attendance_system_users", JSON.stringify(updated));
-    if (changedUser) saveUser(changedUser);
-    loadDatabase();
   };
 
   // Handler: Approve Faculty Member
@@ -408,22 +393,6 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
     }
   };
 
-  // Handler: Save Teaching Subject Configuration
-  const handleSaveSubject = (selected: string) => {
-    if (!selected.trim()) return;
-    const allUsers = getUsers();
-    const teacherIndex = allUsers.findIndex((u) => u.id.toLowerCase() === user.id.toLowerCase());
-    if (teacherIndex !== -1) {
-      const updatedTeacher = { ...allUsers[teacherIndex], subject: selected.trim() };
-      allUsers[teacherIndex] = updatedTeacher;
-      localStorage.setItem("attendance_system_users", JSON.stringify(allUsers));
-      // Persist to Firestore so it survives re-login and syncs across devices
-      saveUser(updatedTeacher);
-    }
-    setActiveSubject(selected.trim());
-    setShowSubjectModal(false);
-  };
-
   // Handler: Save Attendance Override / Manual Log
   const handleSaveAttendanceOverride = (e: React.FormEvent) => {
     e.preventDefault();
@@ -442,7 +411,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
 
     // Check if record for this student and date already exists
     const existingIndex = attendanceRecords.findIndex(
-      (r) => r.studentId.toLowerCase() === logStudentId.toLowerCase() && r.date === selectedDate && (!activeSubject || r.subject === activeSubject)
+      (r) => r.studentId.toLowerCase() === logStudentId.toLowerCase() && r.date === selectedDate && (!activeClass || attendanceMatchesClass(r, activeClass))
     );
 
     const recordId = existingIndex !== -1 ? attendanceRecords[existingIndex].id : `rec-${Date.now()}`;
@@ -456,7 +425,8 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
       time: logStatus === "Absent" ? "00:00:00" : nowTime,
       status: logStatus,
       notes: logNotes.trim() || undefined,
-      subject: activeSubject || "General Class",
+      subject: activeClass ? (activeClass.subject || activeClass.name) : "General Class",
+      classId: activeClassId || undefined,
     };
 
     saveAttendanceRecord(updatedRecord);
@@ -500,7 +470,8 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
       time: status === "Absent" ? "00:00:00" : nowTime,
       status,
       notes: `Recorded by teacher (${user.name})`,
-      subject: activeSubject || "General Class",
+      subject: activeClass ? (activeClass.subject || activeClass.name) : "General Class",
+      classId: activeClassId || undefined,
     };
 
     saveAttendanceRecord(newRec);
@@ -510,7 +481,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
   // Computations
   // 1. Statistics for Today
   const todayDateStr = selectedDate;
-  const todayLogs = attendanceRecords.filter((r) => r.date === todayDateStr && (!activeSubject || r.subject === activeSubject));
+  const todayLogs = attendanceRecords.filter((r) => r.date === todayDateStr && (!activeClass || attendanceMatchesClass(r, activeClass)));
   const presentToday = todayLogs.filter((r) => r.status === "Present").length;
   const lateToday = todayLogs.filter((r) => r.status === "Late").length;
   const absentToday = todayLogs.filter((r) => r.status === "Absent").length;
@@ -519,17 +490,11 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
   const todayAttendanceRate =
     checkedInCount > 0 ? Math.round(((presentToday + lateToday) / checkedInCount) * 100) : 0;
 
-  // Students enrolled in activeSubject
-  const enrolledStudents = students.filter((s) => {
-    if (!activeSubject) return true; // show all if no subject configured
-    return (s.enrolledSubjects || []).includes(activeSubject);
-  });
-
-  // Students who have applied for activeSubject but are not enrolled
-  const pendingApplicants = students.filter((s) => {
-    if (!activeSubject) return false;
-    return (s.appliedSubjects || []).includes(activeSubject) && !(s.enrolledSubjects || []).includes(activeSubject);
-  });
+  // Students enrolled in the active class (real ClassRoom roster - joined
+  // by code or added by ID, both instant, no approval step)
+  const enrolledStudents = activeClass
+    ? students.filter((s) => activeClass.studentIds.some((id) => id.toLowerCase() === s.id.toLowerCase()))
+    : [];
 
   // Filter enrolled students based on search
   const filteredStudents = enrolledStudents.filter(
@@ -541,7 +506,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
   // Daily Audit Log mapping
   const dailySheet = enrolledStudents.map((student) => {
     const log = attendanceRecords.find(
-      (r) => r.studentId.toLowerCase() === student.id.toLowerCase() && r.date === selectedDate && (!activeSubject || r.subject === activeSubject)
+      (r) => r.studentId.toLowerCase() === student.id.toLowerCase() && r.date === selectedDate && (!activeClass || attendanceMatchesClass(r, activeClass))
     );
     return {
       student,
@@ -566,7 +531,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
       d.setDate(d.getDate() - offset);
       const dateStr = formatDate(d);
 
-      const logs = attendanceRecords.filter((r) => r.date === dateStr && (!activeSubject || r.subject === activeSubject));
+      const logs = attendanceRecords.filter((r) => r.date === dateStr && (!activeClass || attendanceMatchesClass(r, activeClass)));
       const present = logs.filter((r) => r.status === "Present" || r.status === "Late").length;
       const total = logs.length;
       const rate = total > 0 ? Math.round((present / total) * 100) : 0;
@@ -609,18 +574,33 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
             Role: <span className="font-semibold text-ink-soft">Teacher</span>
           </p>
           <div className="flex flex-wrap items-center gap-2 mt-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold bg-violet-500 text-white rounded-lg shadow-sm">
-              <BookOpen className="h-3.5 w-3.5" />
-              Active Subject: {activeSubject || "Not Configured"}
-            </span>
+            {classes.length > 0 ? (
+              <div className="inline-flex items-center gap-1.5 bg-violet-500 rounded-lg pl-3 pr-1.5 py-1 shadow-sm">
+                <BookOpen className="h-3.5 w-3.5 text-white shrink-0" />
+                <label className="sr-only" htmlFor="active-class-select">Active class</label>
+                <select
+                  id="active-class-select"
+                  value={activeClassId}
+                  onChange={(e) => handleSelectActiveClass(e.target.value)}
+                  className="bg-transparent text-xs font-bold text-white cursor-pointer focus:outline-none appearance-none pr-1"
+                >
+                  {classes.map((c) => (
+                    <option key={c.id} value={c.id} className="text-ink">
+                      {c.name}{c.subject ? ` · ${c.subject}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold bg-amber-100 text-amber-800 rounded-lg">
+                <BookOpen className="h-3.5 w-3.5" /> No classes yet
+              </span>
+            )}
             <button
-              onClick={() => {
-                setTempSubject(activeSubject);
-                setShowSubjectModal(true);
-              }}
+              onClick={() => setActiveTab("classes")}
               className="inline-flex items-center gap-1 text-xs font-bold text-violet-500 hover:text-violet-700 hover:bg-violet-50 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
             >
-              <Sliders className="h-3 w-3" /> Configure Subject
+              <Sliders className="h-3 w-3" /> {classes.length > 0 ? "Manage classes" : "Create a class"}
             </button>
           </div>
         </div>
@@ -735,7 +715,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
             className="w-full pl-4 pr-11 py-3 text-sm font-bold text-ink bg-white border-2 border-violet-100 rounded-xl focus:outline-none focus:border-violet-400 shadow-sm appearance-none cursor-pointer"
           >
             <option value="roster">
-              Class Roster ({enrolledStudents.length}){pendingApplicants.length > 0 ? ` \u2022 ${pendingApplicants.length} pending` : ""}
+              Class Roster ({enrolledStudents.length})
             </option>
             <option value="classes">Classes</option>
             <option value="audit">Daily Sheet & Overrides</option>
@@ -762,11 +742,6 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
           id="tab-roster-btn"
         >
           Class Roster ({enrolledStudents.length})
-          {pendingApplicants.length > 0 && (
-            <span className="inline-flex items-center justify-center px-2 py-0.5 text-[9px] font-black bg-amber-500 text-white rounded-full animate-pulse">
-              {pendingApplicants.length}
-            </span>
-          )}
         </button>
         <button
           onClick={() => setActiveTab("classes")}
@@ -839,12 +814,38 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
       <div className="space-y-6" id="active-tab-container">
 
         {/* TAB: CLASSES (Google-Classroom-style sections) */}
-        {activeTab === "classes" && <Classroom currentUser={user} />}
+        {activeTab === "classes" && (
+          <Classroom
+            currentUser={user}
+            onOpenAttendance={(id) => {
+              handleSelectActiveClass(id);
+              setActiveTab("roster");
+            }}
+          />
+        )}
 
         {/* TAB 1: STUDENT ROSTER */}
-        {activeTab === "roster" && (
+        {activeTab === "roster" && !activeClass && (
+          <div className="bg-white rounded-2xl border border-ink-soft/10 p-10 text-center space-y-3">
+            <BookOpen className="h-8 w-8 mx-auto text-violet-300" />
+            <p className="text-sm text-ink-soft/70">
+              {classes.length === 0
+                ? "You haven't created a class yet. Create one to get a join code and start taking attendance."
+                : "Pick a class from the switcher above to see its roster."}
+            </p>
+            {classes.length === 0 && (
+              <button
+                onClick={() => setActiveTab("classes")}
+                className="inline-flex items-center gap-1.5 bg-violet-500 hover:bg-violet-600 text-white text-sm font-bold px-4 py-2.5 rounded-full shadow-violet transition-colors cursor-pointer"
+              >
+                <Plus className="h-4 w-4" /> Create a class
+              </button>
+            )}
+          </div>
+        )}
+        {activeTab === "roster" && activeClass && (
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
               {/* Search Bar */}
               <div className="relative flex-1 max-w-md">
                 <input
@@ -857,103 +858,33 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                 />
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-ink-soft/50" />
               </div>
-            </div>
-
-            {/* Pending Subject Applications */}
-            {activeSubject && pendingApplicants.length > 0 && (
-              <div className="bg-amber-50/60 border border-amber-200/80 rounded-2xl p-5 space-y-4 animate-fade-in shadow-sm">
-                <div className="space-y-0.5">
-                  <h3 className="text-xs font-black text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
-                    <AlertCircle className="h-4 w-4 text-amber-600 animate-bounce" />
-                    Pending Join Requests ({pendingApplicants.length})
-                  </h3>
-                  <p className="text-[11px] text-amber-800/80 leading-normal">
-                    These students have applied to enroll in your class: <strong>{activeSubject}</strong>. Approve to authorize attendance check-ins.
-                  </p>
-                </div>
-
-                {/* Mobile: stacked cards. No horizontal scrolling to fight with. */}
-                <div className="sm:hidden space-y-3">
-                  {pendingApplicants.map((student) => (
-                    <div key={student.id} className="bg-white border border-amber-100 rounded-xl p-4 space-y-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="font-semibold text-gray-950 text-sm truncate">{student.name}</p>
-                          <p className="font-mono text-xs text-amber-900 font-bold">{student.id}</p>
-                        </div>
-                        <span className="text-[10px] text-ink-soft/50 shrink-0 pt-0.5">{student.createdAt}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleApproveApplication(student.id)}
-                          className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold text-white bg-teal-500 hover:bg-teal-600 rounded-lg shadow-sm shadow-teal-100 transition-all cursor-pointer"
-                        >
-                          <UserCheck className="h-3.5 w-3.5" /> Approve Join
-                        </button>
-                        <button
-                          onClick={() => handleRejectApplication(student.id)}
-                          className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-100 rounded-lg transition-all cursor-pointer"
-                        >
-                          <XCircle className="h-3.5 w-3.5" /> Reject
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Desktop/tablet: table */}
-                <div className="hidden sm:block bg-white border border-amber-100 rounded-xl overflow-hidden">
-                  <div className="overflow-x-auto scroll-shadow-x">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-amber-50/30 border-b border-amber-100/50 text-[10px] text-amber-800/80 font-extrabold uppercase tracking-wider">
-                          <th className="px-5 py-3 font-semibold">Student ID</th>
-                          <th className="px-5 py-3 font-semibold">Full Name</th>
-                          <th className="px-5 py-3 font-semibold">Applied Date</th>
-                          <th className="px-5 py-3 font-semibold text-center">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-amber-50/50 text-xs text-ink-soft">
-                        {pendingApplicants.map((student) => (
-                          <tr key={student.id} className="hover:bg-amber-50/10 transition-colors">
-                            <td className="px-5 py-3.5 font-mono font-bold text-amber-900">
-                              {student.id}
-                            </td>
-                            <td className="px-5 py-3.5 font-semibold text-gray-950">
-                              {student.name}
-                            </td>
-                            <td className="px-5 py-3.5 text-ink-soft/70">
-                              {student.createdAt}
-                            </td>
-                            <td className="px-5 py-3.5 text-center flex items-center justify-center gap-2">
-                              <button
-                                onClick={() => handleApproveApplication(student.id)}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 text-[10px] font-bold text-white bg-teal-500 hover:bg-teal-600 rounded-lg shadow-sm shadow-teal-100 transition-all cursor-pointer"
-                              >
-                                <UserCheck className="h-3 w-3" /> Approve Join
-                              </button>
-                              <button
-                                onClick={() => handleRejectApplication(student.id)}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 text-[10px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-100 rounded-lg transition-all cursor-pointer"
-                              >
-                                <XCircle className="h-3 w-3" /> Reject
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+              {/* Add student to active class by ID - joining is instant now, no approval step */}
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  placeholder="Add student by ID"
+                  value={addStudentIdInput}
+                  onChange={(e) => { setAddStudentIdInput(e.target.value); setAddStudentError(null); }}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddStudentToActiveClass()}
+                  className="px-3.5 py-2 text-xs bg-white border border-ink-soft/15 rounded-xl focus:outline-none focus:border-violet-400 text-ink shadow-sm w-40"
+                  id="roster-add-student-input"
+                />
+                <button
+                  onClick={handleAddStudentToActiveClass}
+                  className="inline-flex items-center gap-1 px-3 py-2 text-xs font-bold text-white bg-violet-500 hover:bg-violet-600 rounded-xl transition-all cursor-pointer shrink-0"
+                >
+                  <UserPlus className="h-3.5 w-3.5" /> Add
+                </button>
               </div>
-            )}
+            </div>
+            {addStudentError && <p className="text-xs text-rose-600 font-semibold">{addStudentError}</p>}
 
             {/* Students table */}
             <div className="bg-white border border-ink-soft/10 rounded-2xl overflow-hidden shadow-sm">
               {filteredStudents.length === 0 ? (
                 <div className="text-center py-16 text-ink-soft/50 text-sm">
                   <AlertCircle className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                  No students are currently enrolled in this subject class.
+                  No students in this class yet. Share the join code from the Classes tab, or add one by ID above.
                 </div>
               ) : (
                 <>
@@ -1455,7 +1386,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                   {/* Mobile: stacked cards */}
                   <div className="sm:hidden divide-y divide-gray-50">
                     {enrolledStudents.map((student) => {
-                      const sStats = calculateStudentStats(student.id, activeSubject);
+                      const sStats = calculateStudentStats(student.id, activeClassId);
                       return (
                         <div key={student.id} className="py-4 space-y-2">
                           <div className="flex items-start justify-between gap-2">
@@ -1502,7 +1433,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                     </thead>
                     <tbody className="divide-y divide-gray-50 text-xs text-ink-soft">
                       {enrolledStudents.map((student) => {
-                        const sStats = calculateStudentStats(student.id, activeSubject);
+                        const sStats = calculateStudentStats(student.id, activeClassId);
                         return (
                           <tr key={student.id} className="hover:bg-cream-dim/60/50 transition-colors">
                             <td className="px-4 py-3.5 font-mono text-ink-soft/70">{student.id}</td>
@@ -1855,105 +1786,6 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
       </div>
     </div>
     </div>
-
-      {/* MODAL: SELECT TEACHING SUBJECT CLASS */}
-      {/* Rendered outside the glass panel above on purpose - those modals
-          use position:fixed to cover the whole screen, and backdrop-filter
-          on an ancestor (the glass panel's blur) would trap them inside
-          that panel's box instead of the real viewport. */}
-      <AnimatePresence>
-        {showSubjectModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-3xl shadow-2xl border border-ink-soft/10 max-w-md w-full overflow-hidden"
-              id="subject-selection-modal"
-            >
-              <div className="bg-violet-500 px-8 py-6 text-white relative">
-                <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 opacity-10">
-                  <BookOpen className="h-40 w-40" />
-                </div>
-                <h3 className="font-black text-xl flex items-center gap-2">
-                  <BookOpen className="h-5.5 w-5.5" /> Configure Teaching Subject
-                </h3>
-                <p className="text-xs text-violet-100 mt-1.5 leading-relaxed">
-                  Select or input the class subject you are holding today. Students checking in will join this subject session.
-                </p>
-              </div>
-
-              <div className="p-8 space-y-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-ink-soft/70 uppercase tracking-wider block">
-                    Choose a Standard Subject
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {["Mathematics", "Computer Science", "Biology", "Chemistry", "Physics", "English Literature", "World History", "Art & Design"].map((sub) => (
-                      <button
-                        key={sub}
-                        type="button"
-                        onClick={() => setTempSubject(sub)}
-                        className={`px-3 py-2 text-xs font-semibold rounded-xl text-left border transition-all cursor-pointer ${
-                          tempSubject === sub
-                            ? "bg-violet-50 border-violet-500 text-violet-600 shadow-sm"
-                            : "bg-white border-ink-soft/15 text-ink-soft hover:bg-cream-dim/60"
-                        }`}
-                      >
-                        {sub}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="relative flex py-2 items-center">
-                  <div className="flex-grow border-t border-ink-soft/10"></div>
-                  <span className="flex-shrink mx-4 text-ink-soft/50 text-[10px] uppercase font-bold tracking-widest">Or Type Custom</span>
-                  <div className="flex-grow border-t border-ink-soft/10"></div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-ink-soft block" htmlFor="custom-subject">
-                    Custom Subject Name
-                  </label>
-                  <input
-                    id="custom-subject"
-                    type="text"
-                    placeholder="e.g. Advanced Thermodynamics"
-                    value={tempSubject}
-                    onChange={(e) => setTempSubject(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-xs border border-ink-soft/15 rounded-xl focus:outline-none focus:border-violet-500 text-ink font-medium"
-                  />
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                  {activeSubject && (
-                    <button
-                      type="button"
-                      onClick={() => setShowSubjectModal(false)}
-                      className="flex-1 py-2.5 rounded-xl text-xs font-bold text-ink-soft/70 hover:text-ink-soft border border-ink-soft/15 hover:bg-cream-dim/60 transition-all cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (tempSubject.trim()) {
-                        handleSaveSubject(tempSubject);
-                      }
-                    }}
-                    disabled={!tempSubject.trim()}
-                    className="flex-grow py-2.5 rounded-xl text-xs font-bold text-white bg-violet-500 hover:bg-violet-600 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Establish Class Session
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       {/* MODAL: SETTINGS */}
       <AnimatePresence>
@@ -2401,7 +2233,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                   <div className="space-y-1">
                     <p className="font-bold">This student will lose access to class check-ins.</p>
                     <p className="leading-relaxed">
-                      This will remove <strong>{studentToDelete.name} ({studentToDelete.id})</strong> from the subject roster <strong>{activeSubject || "General Class"}</strong>. If this is a mistake, they can reapply from their dashboard.
+                      This will remove <strong>{studentToDelete.name} ({studentToDelete.id})</strong> from the class roster <strong>{activeClass?.name || "this class"}</strong>. If this is a mistake, they can rejoin with the class join code.
                     </p>
                   </div>
                 </div>

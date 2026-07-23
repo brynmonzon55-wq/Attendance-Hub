@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 import {
   Plus, ArrowLeft, Copy, Check, RefreshCw, Users, MessageSquare,
-  Paperclip, Calendar, Trash2, Send, X, FileText, Megaphone, UserPlus, UserMinus
+  Paperclip, Calendar, Trash2, Send, X, FileText, Megaphone, UserPlus, UserMinus,
+  Activity, ListChecks, ChevronDown, ChevronRight, AlertTriangle, ClipboardCheck, KeyRound
 } from "lucide-react";
-import { User, ClassRoom, ClassPost, PostComment, AssignmentSubmission } from "../types";
+import { User, ClassRoom, ClassPost, PostComment, AssignmentSubmission, AttendanceRecord } from "../types";
 import {
   getClassesForTeacher, getClassesForStudent, getClassById, createClass,
   joinClassByCode, regenerateJoinCode, addStudentToClass, removeStudentFromClass,
   deleteClass, getPostsForClass, createPost, deletePost, getCommentsForPost,
   addComment, getSubmissionsForPost, getSubmissionForStudent, submitAssignment,
-  getClassmatesWithStats, getUsers,
+  getClassmatesWithStats, getUsers, getAttendanceRecords, attendanceMatchesClass, formatDate,
 } from "../lib/db";
 
 const MAX_ATTACHMENT_BYTES = 700 * 1024; // stored inline in Firestore docs - keep small
@@ -37,9 +38,14 @@ function timeAgo(iso: string): string {
 
 interface ClassroomProps {
   currentUser: User;
+  // Lets the host dashboard (teacher) jump straight to the attendance-taking
+  // tab for a given class, e.g. from a "Take attendance" button in the
+  // class header - keeps Classroom from being an island cut off from the
+  // rest of the app.
+  onOpenAttendance?: (classId: string) => void;
 }
 
-export default function Classroom({ currentUser }: ClassroomProps) {
+export default function Classroom({ currentUser, onOpenAttendance }: ClassroomProps) {
   const isTeacher = currentUser.role === "teacher";
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
@@ -68,6 +74,7 @@ export default function Classroom({ currentUser }: ClassroomProps) {
         onBack={() => setSelectedClassId(null)}
         onDeleted={() => { setSelectedClassId(null); load(); }}
         onChanged={bumpRefresh}
+        onOpenAttendance={onOpenAttendance}
       />
     );
   }
@@ -261,16 +268,44 @@ function ClassDetail({
   onBack,
   onDeleted,
   onChanged,
+  onOpenAttendance,
 }: {
   currentUser: User;
   cls: ClassRoom;
   onBack: () => void;
   onDeleted: () => void;
   onChanged: () => void;
+  onOpenAttendance?: (classId: string) => void;
 }) {
   const isTeacher = currentUser.role === "teacher";
-  const [tab, setTab] = useState<"stream" | "classmates">("stream");
+  const [tab, setTab] = useState<"log" | "roster">("log");
   const [copied, setCopied] = useState(false);
+  const [showCode, setShowCode] = useState(false);
+
+  // Today's attendance snapshot for this class - the thing that makes this
+  // page an Attendance Hub class page and not a generic message board.
+  const [todayRecords, setTodayRecords] = useState<AttendanceRecord[]>([]);
+  const [atRiskCount, setAtRiskCount] = useState(0);
+
+  useEffect(() => {
+    const refresh = () => {
+      const today = formatDate(new Date());
+      setTodayRecords(getAttendanceRecords().filter((r) => r.date === today && attendanceMatchesClass(r, cls)));
+      if (isTeacher) {
+        const below = getClassmatesWithStats(cls.id).filter((row) => row.stats.totalDays > 0 && row.stats.percentage < 75);
+        setAtRiskCount(below.length);
+      }
+    };
+    refresh();
+    window.addEventListener("db_updated", refresh);
+    return () => window.removeEventListener("db_updated", refresh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cls.id]);
+
+  const presentT = todayRecords.filter((r) => r.status === "Present").length;
+  const lateT = todayRecords.filter((r) => r.status === "Late").length;
+  const absentT = todayRecords.filter((r) => r.status === "Absent").length;
+  const myToday = !isTeacher ? todayRecords.find((r) => r.studentId.toLowerCase() === currentUser.id.toLowerCase()) : undefined;
 
   const handleCopyCode = () => {
     navigator.clipboard?.writeText(cls.joinCode).catch(() => {});
@@ -284,7 +319,7 @@ function ClassDetail({
   };
 
   const handleDeleteClass = () => {
-    if (!confirm(`Delete "${cls.name}"? This removes the class, its stream, and all submissions. This can't be undone.`)) return;
+    if (!confirm(`Delete "${cls.name}"? This removes the class, its log, and all submissions. This can't be undone.`)) return;
     deleteClass(cls.id);
     onDeleted();
   };
@@ -295,68 +330,161 @@ function ClassDetail({
         <ArrowLeft className="h-4 w-4" /> Back to classes
       </button>
 
-      <div className="bg-white rounded-2xl border border-ink-soft/10 p-5 flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h2 className="text-xl font-black text-ink">{cls.name}</h2>
-          {cls.subject && <p className="text-sm text-ink-soft/60">{cls.subject}</p>}
-          {!isTeacher && <p className="text-xs text-ink-soft/50 mt-1">Taught by {cls.teacherName}</p>}
-        </div>
-        {isTeacher ? (
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 bg-violet-50 border border-violet-100 rounded-full pl-4 pr-1.5 py-1.5">
-              <span className="text-xs font-bold text-violet-600">Join code</span>
-              <span className="font-mono font-black text-violet-700 tracking-widest">{cls.joinCode}</span>
-              <button onClick={handleCopyCode} title="Copy code" className="p-1.5 rounded-full hover:bg-violet-100 text-violet-600 cursor-pointer">
-                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-              </button>
-              <button onClick={handleRegenerate} title="Generate a new code" className="p-1.5 rounded-full hover:bg-violet-100 text-violet-600 cursor-pointer">
-                <RefreshCw className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <button onClick={handleDeleteClass} title="Delete class" className="p-2.5 rounded-full hover:bg-coral-50 text-coral-500 cursor-pointer">
+      <div className="bg-white rounded-2xl border border-ink-soft/10 p-5 space-y-4">
+        <div className="flex items-start justify-between flex-wrap gap-3">
+          <div>
+            <h2 className="text-xl font-black text-ink">{cls.name}</h2>
+            {cls.subject && <p className="text-sm text-ink-soft/60">{cls.subject}</p>}
+            {!isTeacher && <p className="text-xs text-ink-soft/50 mt-1">Taught by {cls.teacherName}</p>}
+          </div>
+          {isTeacher && (
+            <button onClick={handleDeleteClass} title="Delete class" className="p-2.5 rounded-full hover:bg-coral-50 text-coral-500 cursor-pointer shrink-0">
               <Trash2 className="h-4 w-4" />
             </button>
+          )}
+        </div>
+
+        {/* Today's attendance snapshot - the primary hero content now,
+            instead of the join code. */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {isTeacher ? (
+            <>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-700 bg-teal-50 px-3 py-1.5 rounded-full">
+                {presentT} present
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1.5 rounded-full">
+                {lateT} late
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-coral-700 bg-coral-50 px-3 py-1.5 rounded-full">
+                {absentT} absent
+              </span>
+              <span className="text-xs text-ink-soft/50">today, of {cls.studentIds.length} students</span>
+              {onOpenAttendance && (
+                <button
+                  onClick={() => onOpenAttendance(cls.id)}
+                  className="inline-flex items-center gap-1.5 bg-violet-500 hover:bg-violet-600 text-white text-xs font-bold px-3.5 py-1.5 rounded-full shadow-violet transition-colors cursor-pointer ml-auto"
+                >
+                  <ClipboardCheck className="h-3.5 w-3.5" /> Take attendance
+                </button>
+              )}
+            </>
+          ) : myToday ? (
+            <span
+              className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full ${
+                myToday.status === "Present" ? "text-teal-700 bg-teal-50" : myToday.status === "Late" ? "text-amber-700 bg-amber-50" : "text-coral-700 bg-coral-50"
+              }`}
+            >
+              You: {myToday.status} today
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-ink-soft/60 bg-cream-dim px-3 py-1.5 rounded-full">
+              Not checked in today
+            </span>
+          )}
+          {!isTeacher && (
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-ink-soft/60 bg-cream-dim px-3 py-1.5 rounded-full">
+              <Users className="h-3.5 w-3.5" /> {cls.studentIds.length} classmates
+            </span>
+          )}
+        </div>
+
+        {/* Join code: still here, just no longer the hero */}
+        {isTeacher && (
+          <div className="pt-1">
+            {showCode ? (
+              <div className="inline-flex items-center gap-2 bg-violet-50 border border-violet-100 rounded-full pl-4 pr-1.5 py-1.5">
+                <span className="text-xs font-bold text-violet-600">Join code</span>
+                <span className="font-mono font-black text-violet-700 tracking-widest">{cls.joinCode}</span>
+                <button onClick={handleCopyCode} title="Copy code" className="p-1.5 rounded-full hover:bg-violet-100 text-violet-600 cursor-pointer">
+                  {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                </button>
+                <button onClick={handleRegenerate} title="Generate a new code" className="p-1.5 rounded-full hover:bg-violet-100 text-violet-600 cursor-pointer">
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={() => setShowCode(false)} title="Hide" className="p-1.5 rounded-full hover:bg-violet-100 text-violet-600 cursor-pointer">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowCode(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-ink-soft/50 hover:text-violet-600 cursor-pointer"
+              >
+                <KeyRound className="h-3.5 w-3.5" /> Show join code
+              </button>
+            )}
           </div>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-600 bg-teal-50 px-3 py-1.5 rounded-full">
-            <Users className="h-3.5 w-3.5" /> {cls.studentIds.length} classmates
-          </span>
         )}
       </div>
 
+      {isTeacher && atRiskCount > 0 && (
+        <div className="flex items-center gap-2 bg-coral-50 border border-coral-100 rounded-xl px-4 py-3 text-xs font-bold text-coral-700">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          {atRiskCount} student{atRiskCount === 1 ? " is" : "s are"} below 75% attendance in this class.
+          <button onClick={() => setTab("roster")} className="underline underline-offset-2 hover:text-coral-800 cursor-pointer ml-auto shrink-0">
+            View roster
+          </button>
+        </div>
+      )}
+
       <div className="flex border-b border-ink-soft/10 gap-6">
         <button
-          onClick={() => setTab("stream")}
+          onClick={() => setTab("log")}
           className={`pb-3 text-sm font-bold border-b-2 transition-all cursor-pointer inline-flex items-center gap-1.5 ${
-            tab === "stream" ? "border-violet-500 text-violet-500" : "border-transparent text-ink-soft/50 hover:text-ink-soft"
+            tab === "log" ? "border-violet-500 text-violet-500" : "border-transparent text-ink-soft/50 hover:text-ink-soft"
           }`}
         >
-          <MessageSquare className="h-4 w-4" /> Stream
+          <Activity className="h-4 w-4" /> Class Log
         </button>
         <button
-          onClick={() => setTab("classmates")}
+          onClick={() => setTab("roster")}
           className={`pb-3 text-sm font-bold border-b-2 transition-all cursor-pointer inline-flex items-center gap-1.5 ${
-            tab === "classmates" ? "border-violet-500 text-violet-500" : "border-transparent text-ink-soft/50 hover:text-ink-soft"
+            tab === "roster" ? "border-violet-500 text-violet-500" : "border-transparent text-ink-soft/50 hover:text-ink-soft"
           }`}
         >
-          <Users className="h-4 w-4" /> Classmates
+          <Users className="h-4 w-4" /> Roster
         </button>
       </div>
 
-      {tab === "stream" && <Stream currentUser={currentUser} cls={cls} />}
-      {tab === "classmates" && <Classmates cls={cls} isTeacher={isTeacher} />}
+      {tab === "log" && <ClassLog currentUser={currentUser} cls={cls} />}
+      {tab === "roster" && <Classmates cls={cls} isTeacher={isTeacher} />}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Stream: announcements + assignments, each with comments (and, for
-// assignments, submissions).
+// Class Log: a unified, chronological feed of announcements, assignments,
+// AND real attendance events for this class - the thing that makes this
+// page belong to an attendance app instead of being a copy of Classroom's
+// Stream tab.
 // ---------------------------------------------------------------------------
 
-function Stream({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
+type LogEntry =
+  | { kind: "post"; ts: number; post: ClassPost }
+  | { kind: "attendance"; ts: number; date: string; present: number; late: number; absent: number; total: number; records: AttendanceRecord[] };
+
+function buildAttendanceEntries(cls: ClassRoom): LogEntry[] {
+  const records = getAttendanceRecords().filter((r) => attendanceMatchesClass(r, cls));
+  const byDate = new Map<string, AttendanceRecord[]>();
+  records.forEach((r) => {
+    byDate.set(r.date, [...(byDate.get(r.date) || []), r]);
+  });
+  return Array.from(byDate.entries()).map(([date, recs]) => ({
+    kind: "attendance" as const,
+    ts: new Date(`${date}T12:00:00`).getTime(),
+    date,
+    present: recs.filter((r) => r.status === "Present").length,
+    late: recs.filter((r) => r.status === "Late").length,
+    absent: recs.filter((r) => r.status === "Absent").length,
+    total: recs.length,
+    records: recs,
+  }));
+}
+
+function ClassLog({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
   const isTeacher = currentUser.role === "teacher";
   const [posts, setPosts] = useState<ClassPost[]>(getPostsForClass(cls.id));
+  const [attendanceEntries, setAttendanceEntries] = useState<LogEntry[]>(() => buildAttendanceEntries(cls));
   const [showComposer, setShowComposer] = useState(false);
   const [postType, setPostType] = useState<"announcement" | "assignment">("announcement");
   const [title, setTitle] = useState("");
@@ -366,7 +494,10 @@ function Stream({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
   const [fileError, setFileError] = useState("");
 
   useEffect(() => {
-    const refresh = () => setPosts(getPostsForClass(cls.id));
+    const refresh = () => {
+      setPosts(getPostsForClass(cls.id));
+      setAttendanceEntries(buildAttendanceEntries(cls));
+    };
     refresh();
     window.addEventListener("db_updated", refresh);
     return () => window.removeEventListener("db_updated", refresh);
@@ -417,6 +548,11 @@ function Stream({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
     resetComposer();
     setPosting(false);
   };
+
+  const entries: LogEntry[] = [
+    ...posts.map((post) => ({ kind: "post" as const, ts: new Date(post.createdAt).getTime(), post })),
+    ...attendanceEntries,
+  ].sort((a, b) => b.ts - a.ts);
 
   return (
     <div className="space-y-4">
@@ -491,15 +627,86 @@ function Stream({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
         </div>
       )}
 
-      {posts.length === 0 && (
+      {entries.length === 0 && (
         <div className="bg-white rounded-2xl border border-ink-soft/10 p-10 text-center">
-          <p className="text-sm text-ink-soft/70">Nothing posted yet.</p>
+          <p className="text-sm text-ink-soft/70">Nothing here yet. Announcements, assignments, and attendance will show up as they happen.</p>
         </div>
       )}
 
-      {posts.map((post) => (
-        <PostCard key={post.id} post={post} currentUser={currentUser} isTeacher={isTeacher} onDeleted={() => setPosts(getPostsForClass(cls.id))} />
-      ))}
+      {entries.map((entry) =>
+        entry.kind === "post" ? (
+          <PostCard
+            key={entry.post.id}
+            post={entry.post}
+            currentUser={currentUser}
+            isTeacher={isTeacher}
+            onDeleted={() => setPosts(getPostsForClass(cls.id))}
+          />
+        ) : (
+          <AttendanceLogCard key={`attendance-${entry.date}`} entry={entry} isTeacher={isTeacher} currentUser={currentUser} />
+        )
+      )}
+    </div>
+  );
+}
+
+function AttendanceLogCard({
+  entry,
+  isTeacher,
+  currentUser,
+}: {
+  entry: Extract<LogEntry, { kind: "attendance" }>;
+  isTeacher: boolean;
+  currentUser: User;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const rate = entry.total > 0 ? Math.round(((entry.present + entry.late) / entry.total) * 100) : 0;
+  const mine = !isTeacher ? entry.records.find((r) => r.studentId.toLowerCase() === currentUser.id.toLowerCase()) : undefined;
+  const absentees = entry.records.filter((r) => r.status === "Absent");
+
+  return (
+    <div className="bg-teal-50/40 rounded-2xl border border-teal-100 p-5">
+      <div className="flex items-start gap-3">
+        <div className="w-9 h-9 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center shrink-0">
+          <ListChecks className="h-4 w-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-sm font-bold text-ink">Attendance taken</p>
+            <span className="text-xs text-ink-soft/50">
+              {new Date(`${entry.date}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
+            </span>
+          </div>
+          <p className="text-sm text-ink-soft/80 mt-1">
+            {entry.present} present &bull; {entry.late} late &bull; {entry.absent} absent{" "}
+            <span className="text-ink-soft/50">({rate}%)</span>
+          </p>
+          {mine && (
+            <p
+              className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full mt-2 ${
+                mine.status === "Present" ? "text-teal-700 bg-teal-100" : mine.status === "Late" ? "text-amber-700 bg-amber-100" : "text-coral-700 bg-coral-100"
+              }`}
+            >
+              You: {mine.status}
+            </p>
+          )}
+          {isTeacher && absentees.length > 0 && (
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              className="text-xs font-bold text-coral-600 hover:text-coral-700 mt-2 inline-flex items-center gap-1 cursor-pointer"
+            >
+              {absentees.length} absent {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+            </button>
+          )}
+          {expanded && (
+            <div className="mt-2 space-y-1">
+              {absentees.map((r) => (
+                <p key={r.id} className="text-xs text-ink-soft/70">{r.studentName}</p>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

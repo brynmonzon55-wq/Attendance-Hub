@@ -456,23 +456,35 @@ export function saveAttendanceRecord(record: AttendanceRecord): void {
   });
 }
 
-// Record today's attendance for a student
+// Record today's attendance for a student, tagged to a real ClassRoom.
+// classId is the source of truth going forward; `subject` is derived from
+// the class and kept in sync purely so older code paths that still display
+// or export that free-text label (StudentProfile's CSV export, for one)
+// keep working without changes.
 export function recordTodayAttendance(
   studentId: string,
   studentName: string,
   status: AttendanceStatus,
-  notes?: string,
-  subject?: string
+  notes: string | undefined,
+  classId: string
 ): AttendanceRecord {
   const todayStr = formatDate(new Date());
   const timeStr = formatTime(new Date());
   const records = getAttendanceRecords();
+  const cls = getClassById(classId);
+  const subject = cls ? (cls.subject || cls.name) : undefined;
 
-  // Check if attendance already exists for today (with matching subject if provided)
+  // Match an existing record for today in this class. Records created
+  // before classes existed only carry the old `subject` string with no
+  // classId - matching on that too means a returning user's history keeps
+  // updating in place instead of getting duplicated once they're on the
+  // new class-based flow.
   const existingIndex = records.findIndex(
-    (r) => r.studentId.toLowerCase() === studentId.toLowerCase() && 
-           r.date === todayStr && 
-           (!subject || r.subject === subject)
+    (r) =>
+      r.studentId.toLowerCase() === studentId.toLowerCase() &&
+      r.date === todayStr &&
+      !!cls &&
+      attendanceMatchesClass(r, cls)
   );
 
   let record: AttendanceRecord;
@@ -485,6 +497,7 @@ export function recordTodayAttendance(
       status,
       notes: notes || records[existingIndex].notes,
       subject: subject || records[existingIndex].subject,
+      classId,
     };
     records[existingIndex] = record;
   } else {
@@ -498,6 +511,7 @@ export function recordTodayAttendance(
       status,
       notes,
       subject,
+      classId,
     };
     records.push(record);
   }
@@ -557,9 +571,14 @@ export function deleteSecurityLog(id: string): void {
 }
 
 // Statistics calculations
-export function calculateStudentStats(studentId: string, subject?: string): StudentStats {
+// Stats for a student, optionally scoped to one class. Records written
+// before the classId migration only have the legacy `subject` string, so
+// those still count here too (matched against that class's subject/name)
+// rather than silently vanishing from a returning user's history.
+export function calculateStudentStats(studentId: string, classId?: string): StudentStats {
+  const cls = classId ? getClassById(classId) : undefined;
   const records = getAttendanceRecords().filter(
-    (r) => r.studentId.toLowerCase() === studentId.toLowerCase() && (!subject || r.subject === subject)
+    (r) => r.studentId.toLowerCase() === studentId.toLowerCase() && (!cls || attendanceMatchesClass(r, cls))
   );
 
   const presentCount = records.filter((r) => r.status === "Present").length;
@@ -725,9 +744,23 @@ export function getClassmatesWithStats(
     }));
 }
 
+/**
+ * True if an attendance record belongs to the given class - either tagged
+ * directly via classId (every record going forward), or, for records
+ * written before that field existed, matched by the legacy free-text
+ * subject label. Shared by both dashboards and the Classroom log so
+ * pre-migration history doesn't just disappear once classes take over.
+ */
+export function attendanceMatchesClass(record: AttendanceRecord, cls: ClassRoom): boolean {
+  if (record.classId) return record.classId === cls.id;
+  const legacySubject = cls.subject || cls.name;
+  return !!record.subject && record.subject === legacySubject;
+}
+
 export function calculateStudentStatsForClass(studentId: string, classId: string): StudentStats {
+  const cls = getClassById(classId);
   const records = getAttendanceRecords().filter(
-    (r) => r.studentId.toLowerCase() === studentId.toLowerCase() && r.classId === classId
+    (r) => r.studentId.toLowerCase() === studentId.toLowerCase() && !!cls && attendanceMatchesClass(r, cls)
   );
   const presentCount = records.filter((r) => r.status === "Present").length;
   const absentCount = records.filter((r) => r.status === "Absent").length;

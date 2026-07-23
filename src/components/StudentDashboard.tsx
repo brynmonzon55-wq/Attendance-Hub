@@ -18,7 +18,6 @@ import {
   ClipboardList,
   BookOpen,
   Send,
-  Hourglass,
   Plus,
   Trash2,
   Settings as SettingsIcon,
@@ -26,7 +25,7 @@ import {
   RefreshCw,
   Users2
 } from "lucide-react";
-import { User, AttendanceRecord, AttendanceStatus, StudentStats } from "../types";
+import { User, AttendanceRecord, AttendanceStatus, StudentStats, ClassRoom } from "../types";
 import type { AppTheme } from "../App";
 import Classroom from "./Classroom";
 import {
@@ -34,11 +33,13 @@ import {
   getAttendanceRecords,
   recordTodayAttendance,
   calculateStudentStats,
+  attendanceMatchesClass,
   formatDate,
   saveUser,
   deleteOwnAccount,
   changeOwnPassword,
-  forceReconnect
+  forceReconnect,
+  getClassesForStudent
 } from "../lib/db";
 
 interface StudentDashboardProps {
@@ -69,9 +70,12 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
   const [selectedStatus, setSelectedStatus] = useState<AttendanceStatus>("Present");
   const [notes, setNotes] = useState("");
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [availableSubjects, setAvailableSubjects] = useState<{ teacherName: string; subject: string }[]>([]);
-  const [selectedSubject, setSelectedSubject] = useState<string>("");
-  const [dashboardSubject, setDashboardSubject] = useState<string>("");
+  // Classes this student has actually joined (via code or added by a
+  // teacher) - the real roster, replacing the old apply-to-subject flow.
+  const [myClasses, setMyClasses] = useState<ClassRoom[]>([]);
+  const [activeClassId, setActiveClassId] = useState<string>(
+    () => localStorage.getItem("attendance_active_class_" + user.id) || ""
+  );
 
   // Settings modal state (profile edit, sign out, delete account)
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -211,27 +215,20 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
       setDbUser(freshUser);
     }
 
-    // Fetch active subjects from registered verified teachers
-    const teachersWithSubjects = allUsers
-      .filter((u) => u.role === "teacher" && (u.isApproved === true || u.id.toLowerCase() === "teacher1") && u.subject)
-      .map((u) => ({
-        teacherName: u.name,
-        subject: u.subject as string
-      }));
-    setAvailableSubjects(teachersWithSubjects);
+    // Classes this student has actually joined
+    const joinedClasses = getClassesForStudent(user.id);
+    setMyClasses(joinedClasses);
 
-    const enrolledList = freshUser ? (freshUser.enrolledSubjects || []) : [];
-    const studentEnrolledSubjects = teachersWithSubjects.filter((item) =>
-      enrolledList.includes(item.subject)
-    );
-
-    // Default the class filter to the student's own class once we know it
-    // (there's no more "All Classes Combined" view to fall back to).
-    let effectiveSubject = dashboardSubject;
-    if (!effectiveSubject && studentEnrolledSubjects.length > 0) {
-      effectiveSubject = studentEnrolledSubjects[0].subject;
-      setDashboardSubject(effectiveSubject);
+    // Default (and keep valid) the active class - falls back to the first
+    // joined class, or clears if the student left/was removed from the
+    // one they had selected.
+    let effectiveClassId = activeClassId;
+    if (!effectiveClassId || !joinedClasses.some((c) => c.id === effectiveClassId)) {
+      effectiveClassId = joinedClasses[0]?.id || "";
+      setActiveClassId(effectiveClassId);
+      if (effectiveClassId) localStorage.setItem("attendance_active_class_" + user.id, effectiveClassId);
     }
+    const effectiveClass = joinedClasses.find((c) => c.id === effectiveClassId);
 
     const allRecords = getAttendanceRecords();
     const studentRecords = allRecords
@@ -239,50 +236,32 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
       .sort((a, b) => b.date.localeCompare(a.date));
 
     // Filter history to the selected class
-    const filteredHistory = !effectiveSubject
+    const filteredHistory = !effectiveClass
       ? studentRecords
-      : studentRecords.filter((r) => (r.subject || "General Class").toLowerCase() === effectiveSubject!.toLowerCase());
+      : studentRecords.filter((r) => attendanceMatchesClass(r, effectiveClass));
 
     setHistory(filteredHistory);
 
     // Find if already recorded today
-    const todayLog = studentRecords.find((r) => r.date === todayStr);
+    const todayLog = effectiveClass
+      ? studentRecords.find((r) => r.date === todayStr && attendanceMatchesClass(r, effectiveClass))
+      : studentRecords.find((r) => r.date === todayStr && !r.classId);
     if (todayLog) {
       setTodayRecord(todayLog);
       setSelectedStatus(todayLog.status);
       setNotes(todayLog.notes || "");
-      if (todayLog.subject) {
-        setSelectedSubject(todayLog.subject);
-      }
     } else {
       setTodayRecord(null);
-      if (studentEnrolledSubjects.length > 0) {
-        setSelectedSubject(studentEnrolledSubjects[0].subject);
-      } else {
-        setSelectedSubject("");
-      }
     }
 
     // Calculate stats for the selected class
-    const calculatedStats = calculateStudentStats(user.id, effectiveSubject || undefined);
+    const calculatedStats = calculateStudentStats(user.id, effectiveClassId || undefined);
     setStats(calculatedStats);
   };
 
-  const handleApplySubject = (subjectName: string) => {
-    const allUsers = getUsers();
-    const idx = allUsers.findIndex((u) => u.id.toLowerCase() === user.id.toLowerCase());
-    if (idx !== -1) {
-      const currentApplied = allUsers[idx].appliedSubjects || [];
-      if (!currentApplied.includes(subjectName)) {
-        const updated = { ...allUsers[idx], appliedSubjects: [...currentApplied, subjectName] };
-        saveUser(updated);
-        // Update the UI immediately rather than waiting for the Firestore
-        // round-trip to come back through the realtime listener - that
-        // trip can occasionally lag or land out of order, which is why
-        // this used to only show up correctly after a manual refresh.
-        setDbUser(updated);
-      }
-    }
+  const handleSelectActiveClass = (id: string) => {
+    setActiveClassId(id);
+    localStorage.setItem("attendance_active_class_" + user.id, id);
   };
 
   useEffect(() => {
@@ -295,17 +274,18 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
       window.removeEventListener("db_updated", handleDbUpdate);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user.id, dashboardSubject]);
+  }, [user.id, activeClassId]);
 
   const handleRecordAttendance = (e: React.FormEvent) => {
     e.preventDefault();
-    
+    if (!activeClassId) return;
+
     const record = recordTodayAttendance(
       user.id,
       user.name,
       selectedStatus,
       notes.trim() || undefined,
-      selectedSubject || "General Class"
+      activeClassId
     );
 
     setTodayRecord(record);
@@ -317,10 +297,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
     }, 4000);
   };
 
-  const enrolledList = dbUser.enrolledSubjects || [];
-  const studentEnrolledSubjects = availableSubjects.filter((item) =>
-    enrolledList.includes(item.subject)
-  );
+  const activeClass = myClasses.find((c) => c.id === activeClassId);
 
   return (
     <>
@@ -418,18 +395,27 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
           <label htmlFor="dashboard-subject-filter" className="text-xs font-bold text-ink-soft/70 whitespace-nowrap">
             Select Class:
           </label>
-          <select
-            id="dashboard-subject-filter"
-            value={dashboardSubject}
-            onChange={(e) => setDashboardSubject(e.target.value)}
-            className="w-full sm:w-auto px-4 py-2.5 text-xs bg-cream-dim/60 border border-ink-soft/15 rounded-xl focus:outline-none focus:border-teal-500 focus:bg-white text-ink font-bold shadow-sm cursor-pointer transition-all"
-          >
-            {availableSubjects.map((item, idx) => (
-              <option key={idx} value={item.subject}>
-                {item.subject} (Prof. {item.teacherName})
-              </option>
-            ))}
-          </select>
+          {myClasses.length > 0 ? (
+            <select
+              id="dashboard-subject-filter"
+              value={activeClassId}
+              onChange={(e) => handleSelectActiveClass(e.target.value)}
+              className="w-full sm:w-auto px-4 py-2.5 text-xs bg-cream-dim/60 border border-ink-soft/15 rounded-xl focus:outline-none focus:border-teal-500 focus:bg-white text-ink font-bold shadow-sm cursor-pointer transition-all"
+            >
+              {myClasses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} (Prof. {c.teacherName})
+                </option>
+              ))}
+            </select>
+          ) : (
+            <button
+              onClick={() => setShowClassroom(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition-all cursor-pointer"
+            >
+              <BookOpen className="h-3.5 w-3.5" /> Join a class
+            </button>
+          )}
         </div>
       </div>
 
@@ -476,22 +462,22 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                 )}
               </div>
 
-              {/* Classroom/Subject Selection */}
+              {/* Class Selection */}
               <div className="space-y-1.5 animate-fade-in">
                 <label className="text-xs font-bold text-ink-soft block">
-                  Select Class / Subject
+                  Select Class
                 </label>
-                {studentEnrolledSubjects.length > 0 ? (
+                {myClasses.length > 0 ? (
                   <div className="relative">
                     <select
-                      value={selectedSubject}
-                      onChange={(e) => setSelectedSubject(e.target.value)}
+                      value={activeClassId}
+                      onChange={(e) => handleSelectActiveClass(e.target.value)}
                       disabled={!!todayRecord}
                       className="w-full px-3.5 py-2.5 text-xs bg-cream-dim/60 border border-ink-soft/15 rounded-xl focus:outline-none focus:border-teal-500 focus:bg-white text-ink font-medium cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed transition-all"
                     >
-                      {studentEnrolledSubjects.map((item, idx) => (
-                        <option key={idx} value={item.subject}>
-                          {item.subject} ({item.teacherName})
+                      {myClasses.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} ({c.teacherName})
                         </option>
                       ))}
                     </select>
@@ -504,14 +490,18 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                 ) : (
                   <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-center space-y-2">
                     <p className="text-xs text-amber-800 font-bold flex items-center justify-center gap-1.5">
-                      <AlertCircle className="h-4 w-4" /> No Approved Enrolled Classes
+                      <AlertCircle className="h-4 w-4" /> No Classes Joined
                     </p>
                     <p className="text-[11px] text-amber-700/90 leading-relaxed">
-                      You must apply and be approved by a teacher before you can submit attendance logs.
+                      Ask your teacher for their class join code, then join it below to start logging attendance.
                     </p>
-                    <p className="text-[10px] text-amber-600 font-semibold uppercase tracking-wider mt-1 block">
-                      Use the "Class Applications" Panel below
-                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowClassroom(true)}
+                      className="inline-flex items-center gap-1.5 mt-1 px-3.5 py-2 text-xs font-bold text-white bg-teal-500 hover:bg-teal-600 rounded-lg transition-all cursor-pointer"
+                    >
+                      <BookOpen className="h-3.5 w-3.5" /> Join a Class
+                    </button>
                   </div>
                 )}
               </div>
@@ -580,7 +570,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
 
               <button
                 type="submit"
-                disabled={studentEnrolledSubjects.length === 0}
+                disabled={myClasses.length === 0}
                 className={`w-full py-3 rounded-full text-sm font-semibold text-white transition-all cursor-pointer bg-teal-500 hover:bg-teal-600 active:bg-teal-700 shadow-teal hover:-translate-y-0.5 flex items-center justify-center gap-1 disabled:opacity-45 disabled:cursor-not-allowed disabled:translate-y-0`}
                 id="submit-attendance-btn"
               >
@@ -590,61 +580,59 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
             </form>
           </div>
 
-          {/* Class Applications & Enrollments Card */}
+          {/* My Classes Card */}
           <div className="bg-white border border-ink-soft/10 rounded-2xl p-6 shadow-sm space-y-4">
-            <h2 className="text-sm font-bold text-ink flex items-center gap-2">
-              <BookOpen className="h-4.5 w-4.5 text-teal-500" />
-              Class Applications
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-ink flex items-center gap-2">
+                <BookOpen className="h-4.5 w-4.5 text-teal-500" />
+                My Classes
+              </h2>
+              <button
+                onClick={() => setShowClassroom(true)}
+                className="inline-flex items-center gap-1 text-[10px] font-bold text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-2 py-1 rounded-lg transition-all cursor-pointer"
+              >
+                <Plus className="h-3 w-3" /> Join
+              </button>
+            </div>
             <p className="text-[11px] text-ink-soft/70 leading-normal">
-              To log attendance for a class, apply first. Once your teacher approves you, it'll show up in your check-in list.
+              Joining is instant with a class's join code - no approval needed. Attendance logs against whichever class you pick above.
             </p>
 
             <div className="space-y-3">
-              {availableSubjects.length === 0 ? (
+              {myClasses.length === 0 ? (
                 <div className="p-4 border border-dashed border-ink-soft/15 rounded-xl text-center text-ink-soft/50 text-[11px]">
-                  No classes are available to join yet.
+                  You haven't joined any classes yet. Get a join code from your teacher.
                 </div>
               ) : (
-                availableSubjects.map((item, idx) => {
-                  const isEnrolled = (dbUser.enrolledSubjects || []).includes(item.subject);
-                  const isPending = (dbUser.appliedSubjects || []).includes(item.subject);
-
-                  return (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between p-3 bg-cream-dim/60/50 border border-ink-soft/10 rounded-xl animate-fade-in"
-                    >
-                      <div className="space-y-0.5">
-                        <span className="text-xs font-bold text-ink block">
-                          {item.subject}
-                        </span>
-                        <span className="text-[10px] text-ink-soft/50 block font-medium">
-                          Teacher: {item.teacherName}
-                        </span>
-                      </div>
-
-                      <div>
-                        {isEnrolled ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold bg-teal-50 text-teal-600 border border-teal-100">
-                            <CheckCircle className="h-3 w-3" /> Enrolled
-                          </span>
-                        ) : isPending ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 animate-pulse">
-                            <Hourglass className="h-3 w-3" /> Pending
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => handleApplySubject(item.subject)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-white bg-teal-500 hover:bg-teal-600 rounded-lg transition-all cursor-pointer shadow-sm shadow-teal-100"
-                          >
-                            <Plus className="h-3 w-3" /> Apply
-                          </button>
-                        )}
-                      </div>
+                myClasses.map((c) => (
+                  <div
+                    key={c.id}
+                    className={`flex items-center justify-between p-3 border rounded-xl animate-fade-in transition-all ${
+                      c.id === activeClassId ? "bg-teal-50/60 border-teal-200" : "bg-cream-dim/40 border-ink-soft/10"
+                    }`}
+                  >
+                    <div className="space-y-0.5">
+                      <span className="text-xs font-bold text-ink block">
+                        {c.name}
+                      </span>
+                      <span className="text-[10px] text-ink-soft/50 block font-medium">
+                        Teacher: {c.teacherName}{c.subject ? ` · ${c.subject}` : ""}
+                      </span>
                     </div>
-                  );
-                })
+                    {c.id === activeClassId ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold bg-teal-100 text-teal-700 border border-teal-200">
+                        <CheckCircle className="h-3 w-3" /> Selected
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleSelectActiveClass(c.id)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-teal-700 bg-white border border-teal-200 hover:bg-teal-50 rounded-lg transition-all cursor-pointer"
+                      >
+                        Select
+                      </button>
+                    )}
+                  </div>
+                ))
               )}
             </div>
           </div>
