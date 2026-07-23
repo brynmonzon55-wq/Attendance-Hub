@@ -32,12 +32,14 @@ import {
   Key,
   RefreshCw,
   Clock,
-  Eye
+  Eye,
+  X,
+  Megaphone
 } from "lucide-react";
 import { User, AttendanceRecord, AttendanceStatus, StudentStats, SecurityLog, ClassRoom } from "../types";
 import type { AppTheme } from "../App";
 import StudentProfile from "./StudentProfile";
-import Classroom from "./Classroom";
+import Classroom, { PostsPanel } from "./Classroom";
 import {
   getUsers,
   saveUser,
@@ -83,8 +85,12 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
   const isApprovedUser = dbUser.isApproved === true || dbUser.id.toLowerCase() === "teacher1";
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<"roster" | "audit" | "reports" | "security" | "faculty" | "classes">("roster");
+  const [activeTab, setActiveTab] = useState<"roster" | "announcements" | "assignments" | "audit" | "reports" | "security" | "faculty">("roster");
   const [viewingStudent, setViewingStudent] = useState<User | null>(null);
+  // Class creation/deletion now lives in a modal off the header's class
+  // picker instead of its own nested tab - "Announcements" and "Assignments"
+  // take that tab slot instead, scoped to whichever class is active.
+  const [showClassManager, setShowClassManager] = useState(false);
 
   // Active class: which of this teacher's ClassRooms attendance actions
   // (roster, daily sheet, reports) apply to right now. Replaces the old
@@ -618,7 +624,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
               </span>
             )}
             <button
-              onClick={() => setActiveTab("classes")}
+              onClick={() => setShowClassManager(true)}
               className="inline-flex items-center gap-1 text-xs font-bold text-violet-500 hover:text-violet-700 hover:bg-violet-50 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
             >
               <Sliders className="h-3 w-3" /> {classes.length > 0 ? "Manage classes" : "Create a class"}
@@ -738,7 +744,8 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
             <option value="roster">
               Class Roster ({enrolledStudents.length})
             </option>
-            <option value="classes">Classes</option>
+            <option value="announcements">Announcements</option>
+            <option value="assignments">Assignments</option>
             <option value="audit">Daily Sheet & Overrides</option>
             <option value="reports">Performance Reports</option>
             <option value="security">
@@ -765,15 +772,26 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
           Class Roster ({enrolledStudents.length})
         </button>
         <button
-          onClick={() => setActiveTab("classes")}
-          className={`pb-3 text-sm font-bold border-b-2 transition-all cursor-pointer shrink-0 ${
-            activeTab === "classes"
+          onClick={() => setActiveTab("announcements")}
+          className={`pb-3 text-sm font-bold border-b-2 transition-all cursor-pointer inline-flex items-center gap-1.5 shrink-0 ${
+            activeTab === "announcements"
               ? "border-violet-500 text-violet-500"
               : "border-transparent text-ink-soft/50 hover:text-ink-soft"
           }`}
-          id="tab-classes-btn"
+          id="tab-announcements-btn"
         >
-          Classes
+          <Megaphone className="h-3.5 w-3.5" /> Announcements
+        </button>
+        <button
+          onClick={() => setActiveTab("assignments")}
+          className={`pb-3 text-sm font-bold border-b-2 transition-all cursor-pointer inline-flex items-center gap-1.5 shrink-0 ${
+            activeTab === "assignments"
+              ? "border-violet-500 text-violet-500"
+              : "border-transparent text-ink-soft/50 hover:text-ink-soft"
+          }`}
+          id="tab-assignments-btn"
+        >
+          <FileSpreadsheet className="h-3.5 w-3.5" /> Assignments
         </button>
         <button
           onClick={() => setActiveTab("audit")}
@@ -834,15 +852,14 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
       {/* Render Active Tab */}
       <div className="space-y-6" id="active-tab-container">
 
-        {/* TAB: CLASSES (Google-Classroom-style sections) */}
-        {activeTab === "classes" && (
-          <Classroom
-            currentUser={user}
-            onOpenAttendance={(id) => {
-              handleSelectActiveClass(id);
-              setActiveTab("roster");
-            }}
-          />
+        {/* TAB: ANNOUNCEMENTS - flat, scoped to whichever class is active in the header picker */}
+        {activeTab === "announcements" && (
+          <PostsPanel currentUser={user} cls={activeClass} filterType="announcement" />
+        )}
+
+        {/* TAB: ASSIGNMENTS - flat, scoped to whichever class is active in the header picker */}
+        {activeTab === "assignments" && (
+          <PostsPanel currentUser={user} cls={activeClass} filterType="assignment" />
         )}
 
         {/* TAB 1: STUDENT ROSTER */}
@@ -852,7 +869,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
             <div>
               <h3 className="font-bold text-ink">Create your first class</h3>
               <p className="text-sm text-ink-soft/70 mt-1">
-                A class holds its own roster, attendance, and stream. You can create more later.
+                A class holds its own roster, attendance, announcements, and assignments. You can create more later.
               </p>
             </div>
             <div className="text-left space-y-2.5">
@@ -2301,6 +2318,39 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
           </div>
         )}
       </AnimatePresence>
+
+      {/* MODAL: MANAGE CLASSES - create/delete classes and manage per-class
+          rosters. Reached from the header's "Manage classes" button instead
+          of living in the main tab bar. */}
+      {showClassManager && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+          onClick={() => setShowClassManager(false)}
+        >
+          <div
+            className="bg-cream rounded-3xl border border-ink-soft/10 shadow-xl p-4 md:p-6 w-full max-w-3xl max-h-[85vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-ink text-lg">Manage classes</h3>
+              <button
+                onClick={() => setShowClassManager(false)}
+                className="text-ink-soft/50 hover:text-ink cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <Classroom
+              currentUser={user}
+              onOpenAttendance={(id) => {
+                handleSelectActiveClass(id);
+                setActiveTab("roster");
+                setShowClassManager(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 }
