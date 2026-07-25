@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState } from "react";
 import { UserRole } from "../types";
 import { User as UserIcon } from "lucide-react";

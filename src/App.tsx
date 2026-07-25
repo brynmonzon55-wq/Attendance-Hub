@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { useState, useEffect } from "react";
 import { User, UserRole } from "./types";
 import { initDB, logoutUser, attachRealtimeListeners, loginUser } from "./lib/db";

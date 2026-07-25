@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 export type UserRole = "student" | "teacher";
 
 export type AttendanceStatus = "Present" | "Absent" | "Late";

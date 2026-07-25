@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { User, UserRole, AttendanceRecord, AttendanceStatus, StudentStats, SecurityLog, ClassRoom, ClassPost, PostComment, AssignmentSubmission } from "../types";
 import { db, auth, idToAuthEmail, createUserWithoutSigningIn, googleProvider } from "./firebase";
 import { doc, setDoc, deleteDoc, collection, onSnapshot, getDoc } from "firebase/firestore";

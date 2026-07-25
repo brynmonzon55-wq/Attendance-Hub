@@ -1,8 +1,3 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import { motion } from "motion/react";
 import { GraduationCap, Briefcase, ChevronRight } from "lucide-react";
 import { UserRole } from "../types";
