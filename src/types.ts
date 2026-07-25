@@ -14,6 +14,7 @@ export interface User {
   password?: string; // Legacy field only - no longer written for new accounts, kept optional for old seed data
   role: UserRole;
   createdAt: string;
+  avatarUrl?: string; // Profile picture URL (e.g. from Google Account or custom selection)
   isApproved?: boolean; // New student accounts start as false, pre-seeded starts as true
   subject?: string; // For teachers, the active subject they teach (e.g. Mathematics, Science)
   appliedSubjects?: string[]; // List of subject names applied for but not yet approved
@@ -71,22 +72,24 @@ export type ClassPostType = "announcement" | "assignment";
 
 export interface ClassPost {
   id: string;
-  classId: string;
+  classId?: string;
   type: ClassPostType;
   authorId: string;
   authorName: string;
-  title?: string; // assignments use this as the assignment title
+  title?: string; // assignments use this as title
   content: string; // announcement body or assignment instructions
   createdAt: string;
-  dueDate?: string; // assignments only, YYYY-MM-DD
+  dueDate?: string; // YYYY-MM-DD
+  subject?: string; // optional subject category (e.g. Computer Science, Science)
+  maxPoints?: number; // max points (e.g. 100)
   attachmentName?: string;
-  attachmentDataUrl?: string; // small file/photo attachments, base64 data URL
+  attachmentDataUrl?: string; // base64 data URL
 }
 
 export interface PostComment {
   id: string;
   postId: string;
-  classId: string;
+  classId?: string;
   authorId: string;
   authorName: string;
   content: string;
@@ -96,11 +99,14 @@ export interface PostComment {
 export interface AssignmentSubmission {
   id: string;
   postId: string;
-  classId: string;
+  classId?: string;
   studentId: string;
   studentName: string;
   submittedAt: string;
   content?: string;
   attachmentName?: string;
   attachmentDataUrl?: string;
+  score?: number | string; // e.g. 95 or "A"
+  feedback?: string; // Teacher feedback note
+  status?: "Submitted" | "Graded";
 }

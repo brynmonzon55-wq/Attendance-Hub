@@ -7,7 +7,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { ArrowLeft, Key, User as UserIcon, LogIn, AlertCircle, Sparkles, Mail, MapPin } from "lucide-react";
 import { UserRole, User } from "../types";
-import { getUsers, addSecurityLog, registerUser, loginUser } from "../lib/db";
+import { getUsers, addSecurityLog, registerUser, loginUser, loginWithGoogle, loginWithGoogleDemo } from "../lib/db";
 
 interface LoginFormProps {
   role: UserRole;
@@ -26,7 +26,6 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
   const [, setTick] = useState(0);
 
   useEffect(() => {
-    // Initialize DB connection so listeners trigger immediately
     getUsers(); 
     const handleDbUpdate = () => {
       setTick(t => t + 1);
@@ -78,17 +77,12 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
     setIsSubmitting(true);
     try {
       if (isRegister) {
-        // Sign-up flow - creates a real Firebase Auth account. Password is
-        // hashed and stored by Firebase, never written to Firestore.
         const newUser = await registerUser(cleanUsername, cleanName, cleanPassword, role, {
           email: isStudent ? cleanEmail : undefined,
           location: isStudent ? cleanLocation : undefined,
         });
         onLoginSuccess(newUser);
       } else {
-        // Login flow - a student trying the Teacher portal will simply fail
-        // to authenticate there (their account has role "student"), but we
-        // still want the friendlier, logged message for that case.
         const users = getUsers();
         if (role === "teacher") {
           const potentialStudent = users.find(
@@ -121,13 +115,13 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
       if (code === "auth/email-already-in-use") {
         setError(`This ${role === "student" ? "Student ID" : "Teacher ID"} is already registered.`);
       } else if (code === "wrong-portal") {
-        setError(`This ID is registered under the other role. Please use the correct login page.`);
-      } else if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") {
-        setError(`Invalid ${role === "student" ? "Student ID" : "Teacher ID"} or password.`);
+        setError(`This ID is registered under the other role. Please switch portals to log in.`);
+      } else if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found" || code === "auth/invalid-email") {
+        setError(`Invalid ${role === "student" ? "Student ID" : "Teacher ID"} or password. If you haven't created an account yet, click "Create Account" below.`);
       } else if (code === "auth/weak-password") {
         setError("Password is too weak. Please use at least 6 characters.");
       } else {
-        setError("Something went wrong. Please try again.");
+        setError(err?.message || "Authentication failed. Please check your network and credentials.");
       }
     } finally {
       setIsSubmitting(false);
@@ -137,58 +131,188 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
   const isStudent = role === "student";
 
   return (
-    <div className="flex min-h-[85vh] items-center justify-center p-4 bg-mesh">
+    <div className="flex flex-1 items-center justify-center p-2 sm:p-4 bg-mesh my-auto w-full">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
-        className={`w-full max-w-md bg-white border rounded-3xl shadow-lg overflow-hidden ${isStudent ? "border-teal-100/60 shadow-teal" : "border-violet-100/60 shadow-violet"}`}
+        className={`w-full max-w-md bg-slate-900/95 backdrop-blur-2xl border rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden my-auto ${
+          isStudent
+            ? "border-cyan-400/50 shadow-[0_0_35px_rgba(0,240,255,0.25)]"
+            : "border-fuchsia-400/50 shadow-[0_0_35px_rgba(217,70,239,0.25)]"
+        }`}
         id="login-container"
       >
         {/* Card Header with Theme color based on role */}
         <div
-          className={`px-8 py-6 text-white ${
-            isStudent ? "bg-teal-500" : "bg-violet-500"
+          className={`px-4 py-3.5 sm:px-8 sm:py-5 text-white ${
+            isStudent
+              ? "bg-gradient-to-r from-cyan-600 via-teal-600 to-emerald-600 shadow-[0_4px_25px_rgba(0,240,255,0.4)] border-b border-cyan-400/50"
+              : "bg-gradient-to-r from-fuchsia-500 via-pink-500 to-purple-600 shadow-[0_4px_25px_rgba(217,70,239,0.4)] border-b border-fuchsia-400/50"
           } relative overflow-hidden`}
         >
-          <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 opacity-10">
-            <Sparkles className="h-40 w-40" />
+          <div className="absolute right-0 top-0 translate-x-10 -translate-y-10 opacity-35 pointer-events-none">
+            <Sparkles className={`h-36 w-36 sm:h-40 sm:w-40 text-white ${isStudent ? "drop-shadow-[0_0_18px_rgba(0,240,255,0.9)]" : "drop-shadow-[0_0_18px_rgba(217,70,239,0.9)]"}`} />
           </div>
 
           <button
             onClick={onBack}
-            className="inline-flex items-center text-xs font-medium text-white/80 hover:text-white transition-colors mb-4 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg cursor-pointer"
+            className={`inline-flex items-center text-[11px] sm:text-xs font-extrabold text-white transition-all mb-2 sm:mb-3 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl cursor-pointer backdrop-blur-md shadow-md ${
+              isStudent
+                ? "bg-slate-950/60 hover:bg-slate-950/90 border border-cyan-400/50 hover:border-cyan-300 text-cyan-200 shadow-[0_0_12px_rgba(0,240,255,0.3)]"
+                : "bg-slate-950/60 hover:bg-slate-950/90 border border-fuchsia-400/50 hover:border-fuchsia-300 text-fuchsia-200 shadow-[0_0_12px_rgba(217,70,239,0.3)]"
+            }`}
             id="back-role-btn"
           >
-            <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Choose Role
+            <ArrowLeft className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 stroke-[2.5]" /> Choose Role
           </button>
 
-          <h2 className="text-2xl font-bold tracking-tight font-display">
+          <h2 className="text-lg sm:text-2xl font-black tracking-tight font-display text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.8)]">
             {isRegister ? "Create Account" : "Welcome Back"}
           </h2>
-          <p className="text-xs text-white/80 mt-1 font-sans">
-            {isStudent ? "Student Login" : "Teacher Login"}
+          <p className={`text-[11px] sm:text-xs font-bold mt-0.5 sm:mt-1 font-sans ${isStudent ? "text-cyan-100 drop-shadow-[0_0_8px_rgba(0,240,255,0.7)]" : "text-fuchsia-100 drop-shadow-[0_0_8px_rgba(217,70,239,0.7)]"}`}>
+            {isStudent ? "Student Portal Sign In" : "Teacher Portal Sign In"}
           </p>
         </div>
 
         {/* Form area */}
-        <form onSubmit={handleSubmit} className="p-8 space-y-5" id="login-form">
+        <form onSubmit={handleSubmit} className="p-3.5 sm:p-7 space-y-2.5 sm:space-y-4" id="login-form">
+          {!isRegister && (
+            <div className={`p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border flex items-center justify-between gap-2 text-xs backdrop-blur-md ${
+              isStudent
+                ? "bg-cyan-500/10 border-cyan-400/40 text-cyan-200 shadow-[0_0_20px_rgba(0,240,255,0.15)]"
+                : "bg-fuchsia-500/10 border-fuchsia-400/40 text-fuchsia-200 shadow-[0_0_20px_rgba(217,70,239,0.15)]"
+            }`}>
+              <div className="min-w-0">
+                <span className="font-bold flex items-center gap-1 text-white text-[11px] sm:text-xs">
+                  ⚡ Easy Demo Access
+                </span>
+                <span className="text-slate-300 text-[10px] sm:text-[11px] truncate block">
+                  ID: <code className={`font-mono font-bold bg-slate-950/90 px-1 py-0.2 rounded border ${isStudent ? "text-cyan-300 border-cyan-500/40 shadow-[0_0_8px_rgba(0,240,255,0.3)]" : "text-fuchsia-300 border-fuchsia-500/40 shadow-[0_0_8px_rgba(217,70,239,0.3)]"}`}>{isStudent ? "student101" : "teacher1"}</code> | Pass: <code className={`font-mono font-bold bg-slate-950/90 px-1 py-0.2 rounded border ${isStudent ? "text-cyan-300 border-cyan-500/40 shadow-[0_0_8px_rgba(0,240,255,0.3)]" : "text-fuchsia-300 border-fuchsia-500/40 shadow-[0_0_8px_rgba(217,70,239,0.3)]"}`}>{isStudent ? "student103" : "teacher123"}</code>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  const demoUser = isStudent ? "student101" : "teacher1";
+                  const demoPass = isStudent ? "student103" : "teacher123";
+                  setUsername(demoUser);
+                  setPassword(demoPass);
+                  setIsSubmitting(true);
+                  setError(null);
+                  try {
+                    const u = await loginUser(demoUser, demoPass, role);
+                    onLoginSuccess(u);
+                  } catch (err: any) {
+                    setError("Demo login failed. Please try again.");
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                }}
+                className={`px-2.5 py-1.5 font-black rounded-lg sm:rounded-xl text-[10px] sm:text-[11px] shrink-0 cursor-pointer transition-all shadow-md flex items-center gap-1 ${
+                  isStudent
+                    ? "bg-cyan-400 text-slate-950 hover:bg-cyan-300 shadow-[0_0_12px_rgba(0,240,255,0.4)]"
+                    : "bg-fuchsia-400 text-slate-950 hover:bg-fuchsia-300 shadow-[0_0_12px_rgba(217,70,239,0.4)]"
+                }`}
+              >
+                1-Click Log In
+              </button>
+            </div>
+          )}
+
+          {/* Google Sign In Button */}
+          <div className="space-y-2">
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={async () => {
+                setIsSubmitting(true);
+                setError(null);
+                try {
+                  const gUser = await loginWithGoogle(role);
+                  onLoginSuccess(gUser);
+                } catch (err: any) {
+                  if (err.message === "wrong-portal") {
+                    setError(`This Google account is registered as a ${role === "student" ? "Teacher" : "Student"}. Please switch portals.`);
+                  } else if (err.code === "auth/popup-blocked" || err.code === "auth/cancelled-popup-request" || err.message?.includes("popup") || err.message?.includes("closed")) {
+                    setError("Google popup was blocked by browser iframe settings. Open in new tab or click 'Google Demo Login' below.");
+                  } else {
+                    setError("Google popups can be blocked inside embedded previews. Click 'Google Demo Login' below to test with a real Google profile.");
+                  }
+                } finally {
+                  setIsSubmitting(false);
+                }
+              }}
+              className="w-full py-3 px-4 bg-slate-800/90 hover:bg-slate-700/90 text-white font-bold text-xs rounded-2xl border border-slate-700 shadow-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.99]"
+            >
+              <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                />
+              </svg>
+              <span>Sign in with Google Account</span>
+            </button>
+
+            {/* Direct Google Demo Account Fallback */}
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={async () => {
+                setIsSubmitting(true);
+                setError(null);
+                try {
+                  const demoUser = await loginWithGoogleDemo(role);
+                  onLoginSuccess(demoUser);
+                } catch (err: any) {
+                  setError("Failed to log in with Google demo account.");
+                } finally {
+                  setIsSubmitting(false);
+                }
+              }}
+              className={`w-full text-center text-[11px] font-bold hover:underline cursor-pointer py-1 block transition-all ${
+                isStudent
+                  ? "text-cyan-400 hover:text-cyan-300 drop-shadow-[0_0_8px_rgba(0,240,255,0.5)]"
+                  : "text-fuchsia-400 hover:text-fuchsia-300 drop-shadow-[0_0_8px_rgba(255,0,127,0.5)]"
+              }`}
+            >
+              ⚡ Instant Google Demo Account (Bypasses iframe popup block)
+            </button>
+
+            <div className="flex items-center gap-3 my-2">
+              <div className="h-[1px] bg-slate-700 flex-1" />
+              <span className="text-[10px] font-black tracking-wider text-slate-400 uppercase">OR WITH ID</span>
+              <div className="h-[1px] bg-slate-700 flex-1" />
+            </div>
+          </div>
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-3.5 bg-red-50 border border-red-100 text-red-700 text-xs rounded-xl flex items-start gap-2.5"
+              className="p-3.5 bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs font-bold rounded-2xl flex items-start gap-2.5 shadow-[0_0_15px_rgba(244,63,94,0.2)]"
               id="login-error-banner"
             >
-              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-400" />
               <span>{error}</span>
             </motion.div>
           )}
 
           {isRegister && (
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-gray-700" htmlFor="reg-name">
-                Full Name <span className="text-red-500">*</span>
+              <label className="text-xs font-bold text-slate-200 flex items-center justify-between" htmlFor="reg-name">
+                <span>Full Name <span className="text-rose-400">*</span></span>
               </label>
               <div className="relative">
                 <input
@@ -197,9 +321,13 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
                   placeholder="e.g. Jane Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 text-sm bg-cream-dim/50 border border-ink-soft/15 rounded-2xl focus:outline-none focus:border-coral-400 focus:bg-white transition-all text-ink"
+                  className={`w-full pl-10 pr-4 py-2.5 text-sm bg-slate-950/80 border border-slate-700 rounded-2xl focus:outline-none transition-all text-white placeholder:text-slate-500 ${
+                    isStudent
+                      ? "focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,240,255,0.35)]"
+                      : "focus:border-fuchsia-400 focus:shadow-[0_0_15px_rgba(217,70,239,0.35)]"
+                  }`}
                 />
-                <UserIcon className="absolute left-3 top-3 h-4.5 w-4.5 text-gray-400" />
+                <UserIcon className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
               </div>
             </div>
           )}
@@ -207,8 +335,8 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
           {isRegister && isStudent && (
             <>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-700" htmlFor="reg-email">
-                  Email <span className="text-red-500">*</span>
+                <label className="text-xs font-bold text-slate-200 flex items-center justify-between" htmlFor="reg-email">
+                  <span>Email <span className="text-rose-400">*</span></span>
                 </label>
                 <div className="relative">
                   <input
@@ -217,37 +345,35 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-cream-dim/50 border border-ink-soft/15 rounded-2xl focus:outline-none focus:border-coral-400 focus:bg-white transition-all text-ink"
+                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-950/80 border border-slate-700 rounded-2xl focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,240,255,0.35)] transition-all text-white placeholder:text-slate-500"
                   />
-                  <Mail className="absolute left-3 top-3 h-4.5 w-4.5 text-gray-400" />
+                  <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
                 </div>
-                <p className="text-[11px] text-gray-400">So your teacher can reach you. You can change this later in Settings.</p>
+                <p className="text-[11px] text-slate-400">So your teacher can reach you. You can change this later in Settings.</p>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-gray-700" htmlFor="reg-location">
-                  Location <span className="text-red-500">*</span>
+                <label className="text-xs font-bold text-slate-200 flex items-center justify-between" htmlFor="reg-location">
+                  <span>Location <span className="text-rose-400">*</span></span>
                 </label>
                 <div className="relative">
                   <input
                     id="reg-location"
                     type="text"
-                    placeholder="e.g. Makati City, Philippines"
+                    placeholder="e.g. Manila, Philippines"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-cream-dim/50 border border-ink-soft/15 rounded-2xl focus:outline-none focus:border-coral-400 focus:bg-white transition-all text-ink"
+                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-950/80 border border-slate-700 rounded-2xl focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,240,255,0.35)] transition-all text-white placeholder:text-slate-500"
                   />
-                  <MapPin className="absolute left-3 top-3 h-4.5 w-4.5 text-gray-400" />
+                  <MapPin className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
                 </div>
               </div>
             </>
           )}
 
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-700" htmlFor="login-username">
-              {isStudent ? "Student ID / Username" : "Teacher ID / Username"}{" "}
-              <span className="text-red-500">*</span>
+          <div className="space-y-1 sm:space-y-1.5">
+            <label className="text-xs font-bold text-slate-200 flex items-center justify-between" htmlFor="login-username">
+              <span>{isStudent ? "Student ID / Username" : "Teacher ID / Username"} <span className="text-rose-400">*</span></span>
             </label>
             <div className="relative">
               <input
@@ -256,22 +382,26 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
                 placeholder={isStudent ? "student101" : "teacher1"}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 text-sm bg-cream-dim/50 border border-ink-soft/15 rounded-2xl focus:outline-none focus:border-coral-400 focus:bg-white transition-all text-ink"
+                className={`w-full pl-9 pr-3 py-2 sm:py-2.5 text-xs sm:text-sm bg-slate-950/80 border rounded-xl sm:rounded-2xl focus:outline-none transition-all text-white placeholder:text-slate-500 ${
+                  isStudent
+                    ? "border-slate-700/80 focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,240,255,0.35)]"
+                    : "border-slate-700/80 focus:border-fuchsia-400 focus:shadow-[0_0_15px_rgba(255,0,127,0.35)]"
+                }`}
               />
-              <UserIcon className="absolute left-3 top-3 h-4.5 w-4.5 text-gray-400" />
+              <UserIcon className="absolute left-3 top-2.5 sm:top-3 h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-400" />
             </div>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1 sm:space-y-1.5">
             <div className="flex justify-between items-center">
-              <label className="text-xs font-semibold text-gray-700" htmlFor="login-password">
-                Password <span className="text-red-500">*</span>
+              <label className="text-xs font-bold text-slate-200" htmlFor="login-password">
+                Password <span className="text-rose-400">*</span>
               </label>
               {!isRegister && (
                 <button
                   type="button"
                   onClick={() => setShowForgotPasswordNote((v) => !v)}
-                  className="text-[11px] font-semibold text-gray-400 hover:text-gray-600 cursor-pointer"
+                  className="text-[10px] sm:text-[11px] font-bold text-slate-400 hover:text-white cursor-pointer transition-colors"
                 >
                   Forgot password?
                 </button>
@@ -284,15 +414,18 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 text-sm bg-cream-dim/50 border border-ink-soft/15 rounded-2xl focus:outline-none focus:border-coral-400 focus:bg-white transition-all text-ink"
+                className={`w-full pl-9 pr-3 py-2 sm:py-2.5 text-xs sm:text-sm bg-slate-950/80 border rounded-xl sm:rounded-2xl focus:outline-none transition-all text-white placeholder:text-slate-500 ${
+                  isStudent
+                    ? "border-slate-700/80 focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,240,255,0.35)]"
+                    : "border-slate-700/80 focus:border-fuchsia-400 focus:shadow-[0_0_15px_rgba(217,70,239,0.35)]"
+                }`}
               />
-              <Key className="absolute left-3 top-3 h-4.5 w-4.5 text-gray-400" />
+              <Key className="absolute left-3 top-2.5 sm:top-3 h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-400" />
             </div>
             {!isRegister && showForgotPasswordNote && (
-              <p className="text-[11px] text-gray-500 bg-gray-50 border border-gray-100 rounded-lg p-2.5 leading-relaxed">
+              <p className="text-[10px] sm:text-[11px] text-slate-300 bg-slate-950/90 border border-slate-700 rounded-xl p-2.5 leading-relaxed">
                 There's no self-service email reset for this app. If you're logged in elsewhere, change it from
-                Settings once you're in. Otherwise, ask {isStudent ? "your teacher" : "another verified teacher"} -
-                they can remove your account so you can register again with a new password.
+                Settings once you're in.
               </p>
             )}
           </div>
@@ -300,18 +433,18 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
           <button
             type="submit"
             disabled={isSubmitting}
-            className={`w-full py-3 text-sm font-semibold text-white rounded-full transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed hover:-translate-y-0.5 ${
+            className={`w-full py-2.5 sm:py-3.5 text-xs sm:text-sm font-black rounded-xl sm:rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0 ${
               isStudent
-                ? "bg-teal-500 hover:bg-teal-600 active:bg-teal-700 shadow-teal"
-                : "bg-violet-500 hover:bg-violet-600 active:bg-violet-700 shadow-violet"
+                ? "bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 text-slate-950 shadow-[0_0_20px_rgba(0,240,255,0.4)]"
+                : "bg-gradient-to-r from-fuchsia-400 via-pink-400 to-fuchsia-300 hover:from-fuchsia-300 hover:to-pink-200 text-slate-950 shadow-[0_0_20px_rgba(217,70,239,0.45)]"
             }`}
             id="login-submit-btn"
           >
-            <LogIn className="h-4 w-4" />
+            <LogIn className="h-3.5 w-3.5 sm:h-4 sm:w-4 stroke-[2.5]" />
             {isSubmitting ? "Please wait..." : isRegister ? "Register & Enter" : "Sign In"}
           </button>
 
-          <div className="pt-2 border-t border-gray-100 text-center">
+          <div className="pt-3 border-t border-slate-800 text-center">
             <button
               type="button"
               onClick={() => {
@@ -321,8 +454,8 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
                 setPassword("");
                 setName("");
               }}
-              className={`text-xs font-medium cursor-pointer ${
-                isStudent ? "text-teal-500 hover:text-teal-600" : "text-violet-500 hover:text-violet-600"
+              className={`text-xs font-black cursor-pointer transition-colors ${
+                isStudent ? "text-cyan-400 hover:text-cyan-300" : "text-fuchsia-400 hover:text-fuchsia-300"
               }`}
               id="toggle-register-btn"
             >
@@ -336,3 +469,4 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
     </div>
   );
 }
+

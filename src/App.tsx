@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from "react";
 import { User, UserRole } from "./types";
-import { initDB, logoutUser, attachRealtimeListeners } from "./lib/db";
+import { initDB, logoutUser, attachRealtimeListeners, loginUser } from "./lib/db";
 import { auth, db } from "./lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
@@ -13,6 +13,7 @@ import RoleSelection from "./components/RoleSelection";
 import LoginForm from "./components/LoginForm";
 import StudentDashboard from "./components/StudentDashboard";
 import TeacherDashboard from "./components/TeacherDashboard";
+import AnimatedThemeBackground from "./components/AnimatedThemeBackground";
 
 export type AppTheme = "default" | "dark";
 
@@ -21,14 +22,9 @@ const THEME_STORAGE_KEY = "attendance_system_theme";
 function getStoredTheme(): AppTheme {
   const stored = localStorage.getItem(THEME_STORAGE_KEY);
   if (stored === "default" || stored === "dark") {
-    // The person has explicitly picked a theme before - always respect that,
-    // even if it happens to be "default" while their system is in dark mode.
     return stored;
   }
-  // No explicit choice saved yet - default to the phone/browser's own
-  // dark mode setting instead of always forcing the light theme.
-  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-  return prefersDark ? "dark" : "default";
+  return "dark";
 }
 
 export default function App() {
@@ -38,46 +34,21 @@ export default function App() {
   const [theme, setTheme] = useState<AppTheme>(getStoredTheme);
 
   useEffect(() => {
-    // Toggle the real "dark" class on <html> itself (not an inner wrapper
-    // div) - <html> IS the viewport, so it can't become the wrong
-    // containing block for position:fixed descendants like modals the
-    // way a wrapper div could. This class swaps actual CSS custom
-    // property values (see index.css) rather than the old approach of
-    // inverting the whole page with a CSS filter.
+    document.documentElement.classList.toggle("theme-darker", theme === "dark");
+    document.documentElement.classList.toggle("theme-default", theme === "default");
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
 
-  useEffect(() => {
-    // Keep following the phone/browser's dark-mode setting live, but only
-    // for as long as the person hasn't explicitly picked a theme
-    // themselves - an explicit choice always wins from then on.
-    if (localStorage.getItem(THEME_STORAGE_KEY)) return;
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleChange = (e: MediaQueryListEvent) => {
-      setTheme(e.matches ? "dark" : "default");
-    };
-    mq.addEventListener("change", handleChange);
-    return () => mq.removeEventListener("change", handleChange);
-  }, []);
-
-  // Explicit theme pick from Settings - this is what actually gets
-  // remembered as the person's own choice, overriding system preference.
+  // Explicit theme pick from Settings
   const handleThemeChange = (newTheme: AppTheme) => {
     setTheme(newTheme);
     localStorage.setItem(THEME_STORAGE_KEY, newTheme);
   };
 
   useEffect(() => {
-    // Initialize the Database (seed with mock student and logs if first time)
+    // Initialize the Database
     initDB();
 
-    // Restore the session on page refresh - Firebase Auth keeps you signed
-    // in across reloads by default, we just need to re-fetch the profile.
-    // This also fires right after a fresh login/registration, which is
-    // also the correct, single moment to start listening for live
-    // Firestore updates - subscribing any earlier (while signed out)
-    // causes Firestore to reject the listener outright, and it never
-    // recovers on its own even once you do sign in afterward.
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         attachRealtimeListeners();
@@ -104,19 +75,36 @@ export default function App() {
     logoutUser().catch((err) => console.error("Error signing out:", err));
   };
 
+  const handleQuickTestLogin = async (role: UserRole) => {
+    try {
+      const demoId = role === "student" ? "student101" : "teacher1";
+      const demoPass = role === "student" ? "student103" : "teacher123";
+      const user = await loginUser(demoId, demoPass, role);
+      setCurrentUser(user);
+      setSelectedRole(role);
+    } catch (err) {
+      console.error("Error logging in via quick test:", err);
+    }
+  };
+
   if (checkingSession) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-sm text-white/70 font-semibold font-display">Loading...</div>
+        <div className="text-sm text-cyan-400 font-bold font-display animate-pulse">Loading Attendance Hub...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen text-ink selection:bg-coral-100 selection:text-coral-700 antialiased font-sans flex flex-col justify-between" id="app-root">
-      <main className="flex-grow flex flex-col">
+    <div className="min-h-[100dvh] text-ink selection:bg-cyan-500/30 selection:text-cyan-300 antialiased font-sans flex flex-col justify-between relative overflow-x-hidden" id="app-root">
+      <AnimatedThemeBackground theme={theme} />
+
+      <main className="flex-grow flex flex-col justify-center relative z-10 w-full">
         {selectedRole === null && (
-          <RoleSelection onSelectRole={(role) => setSelectedRole(role)} />
+          <RoleSelection
+            onSelectRole={(role) => setSelectedRole(role)}
+            onQuickTestLogin={handleQuickTestLogin}
+          />
         )}
 
         {selectedRole !== null && currentUser === null && (
@@ -136,9 +124,10 @@ export default function App() {
         )}
       </main>
 
-      <footer className="py-6 border-t border-white/15 text-center text-xs text-white/60 font-medium font-sans">
-        &copy; {new Date().getFullYear()} Attendance Hub &bull; Designed by Team ByteForce
+      <footer className="py-2.5 sm:py-3 mb-2 sm:mb-3 border-t border-white/10 text-center text-[10px] sm:text-xs text-slate-400/60 font-medium font-sans relative z-10 backdrop-blur-md bg-slate-950/30 shrink-0 opacity-60 pb-[calc(10px+env(safe-area-inset-bottom))]">
+        &copy; {new Date().getFullYear()} Attendance Hub &bull; Neon Edition by Bryn Monzon
       </footer>
     </div>
   );
 }
+

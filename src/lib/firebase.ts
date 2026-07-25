@@ -1,26 +1,25 @@
 import { initializeApp, getApps, deleteApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
-import { getAuth, createUserWithEmailAndPassword, signOut } from "firebase/auth";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCtlb57kP93BsljhENGTa3PqIUxtBu3iAU",
-  authDomain: "attendance-hub-63224.firebaseapp.com",
-  projectId: "attendance-hub-63224",
-  storageBucket: "attendance-hub-63224.firebasestorage.app",
-  messagingSenderId: "229603714382",
-  appId: "1:229603714382:web:08d51076b38ee54998aa1f",
-  measurementId: "G-L7991S8RGF"
-};
+import { getAuth, createUserWithEmailAndPassword, signOut, GoogleAuthProvider } from "firebase/auth";
+import firebaseConfig from "../../firebase-config.json";
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore (default database)
-export const db = getFirestore(app);
+// Initialize Firestore. Uses a named database if the config specifies one
+// (firestoreDatabaseId), otherwise falls back to the project's "(default)"
+// database.
+export const db = "firestoreDatabaseId" in firebaseConfig
+  ? getFirestore(app, (firebaseConfig as { firestoreDatabaseId: string }).firestoreDatabaseId)
+  : getFirestore(app);
 
 // Real Firebase Authentication - passwords are hashed & managed by Firebase,
 // never stored in or synced from Firestore.
 export const auth = getAuth(app);
+
+// Google Auth Provider
+export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: "select_account" });
 
 // The Firebase Auth client SDK signs you in as whatever account you just
 // created. That's a problem when a TEACHER creates a STUDENT account from

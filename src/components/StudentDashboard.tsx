@@ -7,39 +7,53 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   LogOut,
-  Calendar,
   CheckCircle,
   XCircle,
   Clock,
-  MessageSquare,
-  TrendingUp,
-  Award,
+  Calendar,
   AlertCircle,
-  ClipboardList,
-  BookOpen,
-  Send,
-  Plus,
-  Trash2,
   Settings as SettingsIcon,
+  MessageSquare,
+  ClipboardList,
+  Sparkles,
+  BookOpen,
+  Megaphone,
+  FileText,
+  Upload,
+  Paperclip,
+  Send,
+  Search,
+  CheckCircle2,
+  Award,
   Key,
-  RefreshCw,
-  Users2
+  X,
+  Eye,
+  UserCheck,
+  Zap,
+  TrendingUp,
+  Moon,
+  Sun
 } from "lucide-react";
-import { User, AttendanceRecord, AttendanceStatus, StudentStats, ClassRoom } from "../types";
+import { User, AttendanceRecord, AttendanceStatus, StudentStats, ClassPost, PostComment, AssignmentSubmission } from "../types";
 import type { AppTheme } from "../App";
-import Classroom from "./Classroom";
+import AnimatedThemeBackground from "./AnimatedThemeBackground";
+import SettingsTab from "./SettingsTab";
+import UserAvatar from "./UserAvatar";
 import {
   getUsers,
   getAttendanceRecords,
   recordTodayAttendance,
   calculateStudentStats,
-  attendanceMatchesClass,
   formatDate,
-  saveUser,
   deleteOwnAccount,
   changeOwnPassword,
   forceReconnect,
-  getClassesForStudent
+  getAnnouncements,
+  getAssignments,
+  getCommentsForPost,
+  addComment,
+  getSubmissionForStudent,
+  submitAssignment,
 } from "../lib/db";
 
 interface StudentDashboardProps {
@@ -49,14 +63,9 @@ interface StudentDashboardProps {
   onThemeChange: (theme: AppTheme) => void;
 }
 
-const THEME_OPTIONS: { id: AppTheme; label: string; swatch: string }[] = [
-  { id: "default", label: "Glass", swatch: "bg-gradient-to-br from-violet-400 via-teal-400 to-coral-400" },
-  { id: "dark", label: "Blood Moon", swatch: "bg-gradient-to-br from-neutral-900 via-red-900 to-black" },
-];
-
 export default function StudentDashboard({ user, onLogout, theme, onThemeChange }: StudentDashboardProps) {
+  // DB & State
   const [dbUser, setDbUser] = useState<User>(user);
-  const [showClassroom, setShowClassroom] = useState(false);
   const [history, setHistory] = useState<AttendanceRecord[]>([]);
   const [stats, setStats] = useState<StudentStats>({
     presentCount: 0,
@@ -66,202 +75,118 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
     percentage: 100,
   });
 
-  const [todayRecord, setTodayRecord] = useState<AttendanceRecord | null>(null);
+  const [activeTab, setActiveTab] = useState<"attendance" | "announcements" | "assignments" | "settings">("attendance");
+
+  // Teacher Filter & Selector state
+  const [teachers, setTeachers] = useState<User[]>([]);
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>("all");
+
+  // Daily attendance state
   const [selectedStatus, setSelectedStatus] = useState<AttendanceStatus>("Present");
   const [notes, setNotes] = useState("");
+  const [todayRecord, setTodayRecord] = useState<AttendanceRecord | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  // Classes this student has actually joined (via code or added by a
-  // teacher) - the real roster, replacing the old apply-to-subject flow.
-  const [myClasses, setMyClasses] = useState<ClassRoom[]>([]);
-  const [activeClassId, setActiveClassId] = useState<string>(
-    () => localStorage.getItem("attendance_active_class_" + user.id) || ""
-  );
 
-  // Settings modal state (profile edit, sign out, delete account)
+  // Announcements state
+  const [announcements, setAnnouncements] = useState<ClassPost[]>([]);
+  const [announcementSearch, setAnnouncementSearch] = useState("");
+  const [expandedCommentsPostId, setExpandedCommentsPostId] = useState<string | null>(null);
+  const [commentsMap, setCommentsMap] = useState<Record<string, PostComment[]>>({});
+  const [newCommentInput, setNewCommentInput] = useState("");
+
+  // Assignments state
+  const [assignments, setAssignments] = useState<ClassPost[]>([]);
+  const [assignmentSearch, setAssignmentSearch] = useState("");
+  const [assignmentFilter, setAssignmentFilter] = useState<"All" | "Pending" | "Submitted" | "Graded">("All");
+  const [selectedAssignmentForSubmission, setSelectedAssignmentForSubmission] = useState<ClassPost | null>(null);
+  const [submissionsMap, setSubmissionsMap] = useState<Record<string, AssignmentSubmission | undefined>>({});
+
+  // Submission Form State
+  const [submissionText, setSubmissionText] = useState("");
+  const [attachmentName, setAttachmentName] = useState("");
+  const [attachmentDataUrl, setAttachmentDataUrl] = useState("");
+  const [isSubmittingWork, setIsSubmittingWork] = useState(false);
+  const [submissionSuccess, setSubmissionSuccess] = useState<string | null>(null);
+
+  // Profile & Settings modals
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [editNameValue, setEditNameValue] = useState(user.name);
-  const [editEmailValue, setEditEmailValue] = useState(user.email || "");
-  const [editLocationValue, setEditLocationValue] = useState(user.location || "");
-  const [settingsError, setSettingsError] = useState<string | null>(null);
-  const [settingsSuccess, setSettingsSuccess] = useState<string | null>(null);
-  const [isSavingName, setIsSavingName] = useState(false);
+  const [editNameValue, setEditNameValue] = useState("");
+  const [editEmailValue, setEditEmailValue] = useState("");
+  const [editLocationValue, setEditLocationValue] = useState("");
 
-  // Danger zone is tucked away and only expands when explicitly opened
-  const [showDangerZone, setShowDangerZone] = useState(false);
-  const [deleteAccountPassword, setDeleteAccountPassword] = useState("");
-  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
-
-  const handleSaveName = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSettingsError(null);
-    setSettingsSuccess(null);
-    const cleanName = editNameValue.trim();
-    const cleanEmail = editEmailValue.trim();
-    const cleanLocation = editLocationValue.trim();
-
-    if (!cleanName) {
-      setSettingsError("Name cannot be empty.");
-      return;
-    }
-    if (!cleanEmail || !cleanLocation) {
-      setSettingsError("Email and location are required so your teacher can reach you.");
-      return;
-    }
-    if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) {
-      setSettingsError("Please enter a valid email address.");
-      return;
-    }
-
-    setIsSavingName(true);
-    try {
-      const allUsers = getUsers();
-      const idx = allUsers.findIndex((u) => u.id.toLowerCase() === user.id.toLowerCase());
-      if (idx !== -1) {
-        const updated = { ...allUsers[idx], name: cleanName, email: cleanEmail, location: cleanLocation };
-        saveUser(updated);
-        setDbUser(updated);
-        setSettingsSuccess("Profile updated.");
-      }
-    } finally {
-      setIsSavingName(false);
-    }
-  };
-
-  const handleDeleteOwnAccount = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setDeleteAccountError(null);
-    if (!deleteAccountPassword) {
-      setDeleteAccountError("Please enter your password to confirm.");
-      return;
-    }
-    setIsDeletingAccount(true);
-    try {
-      await deleteOwnAccount(deleteAccountPassword);
-      onLogout();
-    } catch (err: any) {
-      const code = err?.code || err?.message || "";
-      if (code === "auth/invalid-credential" || code === "auth/wrong-password") {
-        setDeleteAccountError("Incorrect password.");
-      } else {
-        setDeleteAccountError("Something went wrong. Please try again.");
-      }
-    } finally {
-      setIsDeletingAccount(false);
-    }
-  };
-
-  // Change password state (Settings, separate from delete-account danger zone)
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [currentPasswordInput, setCurrentPasswordInput] = useState("");
   const [newPasswordInput, setNewPasswordInput] = useState("");
   const [changePasswordError, setChangePasswordError] = useState<string | null>(null);
   const [changePasswordSuccess, setChangePasswordSuccess] = useState<string | null>(null);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setChangePasswordError(null);
-    setChangePasswordSuccess(null);
-    if (!currentPasswordInput || !newPasswordInput) {
-      setChangePasswordError("Please fill out both fields.");
-      return;
-    }
-    if (newPasswordInput.length < 6) {
-      setChangePasswordError("New password must be at least 6 characters.");
-      return;
-    }
-    setIsChangingPassword(true);
-    try {
-      await changeOwnPassword(currentPasswordInput, newPasswordInput);
-      setChangePasswordSuccess("Password updated.");
-      setCurrentPasswordInput("");
-      setNewPasswordInput("");
-    } catch (err: any) {
-      const code = err?.code || err?.message || "";
-      if (code === "auth/invalid-credential" || code === "auth/wrong-password") {
-        setChangePasswordError("Current password is incorrect.");
-      } else if (code === "auth/weak-password") {
-        setChangePasswordError("New password is too weak.");
-      } else {
-        setChangePasswordError("Something went wrong. Please try again.");
-      }
-    } finally {
-      setIsChangingPassword(false);
-    }
-  };
-
-  // Manual "refresh live connection" fallback
-  const [isReconnecting, setIsReconnecting] = useState(false);
-  const [reconnectMessage, setReconnectMessage] = useState<string | null>(null);
-  const handleForceReconnect = () => {
-    setIsReconnecting(true);
-    setReconnectMessage(null);
-    forceReconnect();
-    loadData();
-    setTimeout(() => {
-      setIsReconnecting(false);
-      setReconnectMessage("Connection refreshed.");
-    }, 600);
-  };
 
   const todayStr = formatDate(new Date());
 
   const loadData = () => {
-    // Get fresh user record from database
     const allUsers = getUsers();
     const freshUser = allUsers.find((u) => u.id.toLowerCase() === user.id.toLowerCase());
     if (freshUser) {
       setDbUser(freshUser);
     }
 
-    // Classes this student has actually joined
-    const joinedClasses = getClassesForStudent(user.id);
-    setMyClasses(joinedClasses);
-
-    // Default (and keep valid) the active class - falls back to the first
-    // joined class, or clears if the student left/was removed from the
-    // one they had selected.
-    let effectiveClassId = activeClassId;
-    if (!effectiveClassId || !joinedClasses.some((c) => c.id === effectiveClassId)) {
-      effectiveClassId = joinedClasses[0]?.id || "";
-      setActiveClassId(effectiveClassId);
-      if (effectiveClassId) localStorage.setItem("attendance_active_class_" + user.id, effectiveClassId);
-    }
-    const effectiveClass = joinedClasses.find((c) => c.id === effectiveClassId);
-
+    // Attendance
     const allRecords = getAttendanceRecords();
     const studentRecords = allRecords
       .filter((r) => r.studentId.toLowerCase() === user.id.toLowerCase())
       .sort((a, b) => b.date.localeCompare(a.date));
 
-    // Filter history to the selected class
-    const filteredHistory = !effectiveClass
-      ? studentRecords
-      : studentRecords.filter((r) => attendanceMatchesClass(r, effectiveClass));
+    setHistory(studentRecords);
 
-    setHistory(filteredHistory);
-
-    // Find if already recorded today
-    const todayLog = effectiveClass
-      ? studentRecords.find((r) => r.date === todayStr && attendanceMatchesClass(r, effectiveClass))
-      : studentRecords.find((r) => r.date === todayStr && !r.classId);
-    if (todayLog) {
-      setTodayRecord(todayLog);
-      setSelectedStatus(todayLog.status);
-      setNotes(todayLog.notes || "");
+    const logToday = studentRecords.find((r) => r.date === todayStr);
+    if (logToday) {
+      setTodayRecord(logToday);
+      setSelectedStatus(logToday.status);
+      setNotes(logToday.notes || "");
     } else {
       setTodayRecord(null);
     }
 
-    // Calculate stats for the selected class
-    const calculatedStats = calculateStudentStats(user.id, effectiveClassId || undefined);
+    const calculatedStats = calculateStudentStats(user.id);
     setStats(calculatedStats);
-  };
 
-  const handleSelectActiveClass = (id: string) => {
-    setActiveClassId(id);
-    localStorage.setItem("attendance_active_class_" + user.id, id);
+    // Announcements & Assignments
+    const ann = getAnnouncements();
+    setAnnouncements(ann);
+
+    const ass = getAssignments();
+    setAssignments(ass);
+
+    // Load Teachers
+    const teacherUsers = allUsers.filter((u) => u.role === "teacher");
+    const teacherMap = new Map<string, User>();
+    teacherUsers.forEach((t) => {
+      const key = (t.id || t.uid || "").toLowerCase();
+      if (key) teacherMap.set(key, t);
+    });
+
+    const posts = [...ann, ...ass];
+    posts.forEach((p) => {
+      const key = (p.authorId || "").toLowerCase();
+      if (key && !teacherMap.has(key)) {
+        teacherMap.set(key, {
+          id: p.authorId,
+          name: p.authorName || "Teacher",
+          role: "teacher",
+          createdAt: p.createdAt,
+          subject: p.subject || "General Education",
+        });
+      }
+    });
+
+    setTeachers(Array.from(teacherMap.values()));
+
+    // Map student submissions
+    const subMap: Record<string, AssignmentSubmission | undefined> = {};
+    ass.forEach((post) => {
+      subMap[post.id] = getSubmissionForStudent(post.id, user.id);
+    });
+    setSubmissionsMap(subMap);
   };
 
   useEffect(() => {
@@ -270,786 +195,1040 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
       loadData();
     };
     window.addEventListener("db_updated", handleDbUpdate);
-    return () => {
-      window.removeEventListener("db_updated", handleDbUpdate);
-    };
+    return () => window.removeEventListener("db_updated", handleDbUpdate);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user.id, activeClassId]);
+  }, [user.id]);
 
+  // Attendance submit
   const handleRecordAttendance = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeClassId) return;
+
+    const customSubjectTag =
+      selectedTeacherId !== "all" && selectedTeacher ? selectedTeacher.subject || selectedTeacher.name : undefined;
 
     const record = recordTodayAttendance(
       user.id,
       user.name,
       selectedStatus,
       notes.trim() || undefined,
-      activeClassId
+      undefined,
+      customSubjectTag
     );
-
     setTodayRecord(record);
-    setSuccessMsg(`Attendance successfully logged as ${selectedStatus}!`);
+    setShowCelebration(true);
+    setSuccessMsg(`Attendance logged as ${selectedStatus}${customSubjectTag ? ` (${customSubjectTag})` : ""}!`);
     loadData();
 
     setTimeout(() => {
-      setSuccessMsg(null);
-    }, 4000);
+      setShowCelebration(false);
+    }, 3000);
   };
 
-  const activeClass = myClasses.find((c) => c.id === activeClassId);
+  // Toggle comment section
+  const handleToggleComments = (postId: string) => {
+    if (expandedCommentsPostId === postId) {
+      setExpandedCommentsPostId(null);
+    } else {
+      setExpandedCommentsPostId(postId);
+      const comments = getCommentsForPost(postId);
+      setCommentsMap((prev) => ({ ...prev, [postId]: comments }));
+    }
+  };
+
+  // Submit comment
+  const handleAddComment = (postId: string) => {
+    if (!newCommentInput.trim()) return;
+    addComment({
+      postId,
+      authorId: user.id,
+      authorName: dbUser.name,
+      content: newCommentInput.trim(),
+    });
+    setNewCommentInput("");
+    const updated = getCommentsForPost(postId);
+    setCommentsMap((prev) => ({ ...prev, [postId]: updated }));
+  };
+
+  // Handle file attachment upload
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 3 * 1024 * 1024) {
+      alert("File size exceeds 3MB limit.");
+      return;
+    }
+
+    setAttachmentName(file.name);
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      setAttachmentDataUrl(evt.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Open submission modal
+  const handleOpenSubmissionModal = (assignment: ClassPost) => {
+    setSelectedAssignmentForSubmission(assignment);
+    const existing = submissionsMap[assignment.id];
+    if (existing) {
+      setSubmissionText(existing.content || "");
+      setAttachmentName(existing.attachmentName || "");
+      setAttachmentDataUrl(existing.attachmentDataUrl || "");
+    } else {
+      setSubmissionText("");
+      setAttachmentName("");
+      setAttachmentDataUrl("");
+    }
+    setSubmissionSuccess(null);
+  };
+
+  // Submit assignment work
+  const handleSubmitWork = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAssignmentForSubmission) return;
+
+    setIsSubmittingWork(true);
+    submitAssignment({
+      postId: selectedAssignmentForSubmission.id,
+      studentId: user.id,
+      studentName: dbUser.name,
+      content: submissionText,
+      attachmentName: attachmentName || undefined,
+      attachmentDataUrl: attachmentDataUrl || undefined,
+    });
+
+    setIsSubmittingWork(false);
+    setSubmissionSuccess("Assignment submitted successfully!");
+    loadData();
+
+    setTimeout(() => {
+      setSubmissionSuccess(null);
+      setSelectedAssignmentForSubmission(null);
+    }, 1800);
+  };
+
+  // Password update handler
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setChangePasswordError(null);
+    setChangePasswordSuccess(null);
+    if (!currentPasswordInput || !newPasswordInput) {
+      setChangePasswordError("Please fill out both fields.");
+      return;
+    }
+    try {
+      await changeOwnPassword(currentPasswordInput, newPasswordInput);
+      setChangePasswordSuccess("Password updated successfully.");
+      setCurrentPasswordInput("");
+      setNewPasswordInput("");
+    } catch (err: any) {
+      setChangePasswordError("Failed to update password. Please check your current password.");
+    }
+  };
+
+  // Selected Teacher Object
+  const selectedTeacher = teachers.find(
+    (t) =>
+      (t.id || "").toLowerCase() === selectedTeacherId.toLowerCase() ||
+      (t.uid || "").toLowerCase() === selectedTeacherId.toLowerCase()
+  );
+
+  const isPostFromSelectedTeacher = (p: ClassPost) => {
+    if (selectedTeacherId === "all" || !selectedTeacher) return true;
+    const authorMatch =
+      p.authorId?.toLowerCase() === selectedTeacherId.toLowerCase() ||
+      (selectedTeacher.uid && p.authorId?.toLowerCase() === selectedTeacher.uid.toLowerCase()) ||
+      p.authorName?.toLowerCase() === selectedTeacher.name.toLowerCase();
+
+    const subjectMatch =
+      selectedTeacher.subject &&
+      p.subject &&
+      p.subject.toLowerCase() === selectedTeacher.subject.toLowerCase();
+
+    return authorMatch || subjectMatch;
+  };
+
+  // Filtered lists
+  const filteredAnnouncements = announcements.filter((p) => {
+    if (!isPostFromSelectedTeacher(p)) return false;
+    return (
+      p.title?.toLowerCase().includes(announcementSearch.toLowerCase()) ||
+      p.content.toLowerCase().includes(announcementSearch.toLowerCase()) ||
+      p.subject?.toLowerCase().includes(announcementSearch.toLowerCase())
+    );
+  });
+
+  const filteredAssignments = assignments.filter((p) => {
+    if (!isPostFromSelectedTeacher(p)) return false;
+    const matchQuery =
+      p.title?.toLowerCase().includes(assignmentSearch.toLowerCase()) ||
+      p.content.toLowerCase().includes(assignmentSearch.toLowerCase()) ||
+      p.subject?.toLowerCase().includes(assignmentSearch.toLowerCase());
+
+    if (!matchQuery) return false;
+
+    const sub = submissionsMap[p.id];
+    if (assignmentFilter === "Pending") return !sub;
+    if (assignmentFilter === "Submitted") return sub && sub.status !== "Graded";
+    if (assignmentFilter === "Graded") return sub && sub.status === "Graded";
+    return true;
+  });
+
+  // Filtered Attendance & Stats for selected teacher
+  const displayHistory = history.filter((r) => {
+    if (selectedTeacherId === "all" || !selectedTeacher) return true;
+    if (r.subject && selectedTeacher.subject && r.subject.toLowerCase() === selectedTeacher.subject.toLowerCase()) return true;
+    if (r.subject && r.subject.toLowerCase() === selectedTeacher.name.toLowerCase()) return true;
+    return false;
+  });
+
+  const presentCount = displayHistory.filter((r) => r.status === "Present").length;
+  const absentCount = displayHistory.filter((r) => r.status === "Absent").length;
+  const lateCount = displayHistory.filter((r) => r.status === "Late").length;
+  const totalDays = displayHistory.length;
+  const percentage = totalDays > 0 ? Math.round(((presentCount + lateCount) / totalDays) * 100) : 100;
+
+  const displayStats: StudentStats =
+    selectedTeacherId === "all"
+      ? stats
+      : {
+          presentCount,
+          absentCount,
+          lateCount,
+          totalDays,
+          percentage,
+        };
 
   return (
-    <>
-    <div className="max-w-6xl mx-auto px-4 py-8">
-    <div className="bg-cream rounded-3xl border border-ink-soft/10 shadow-xl p-4 md:p-8 space-y-8" id="student-dashboard">
-      {/* Header section */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-ink-soft/10 pb-6">
-        <div>
-          <span className="px-2.5 py-1 text-xs font-semibold bg-teal-50 text-teal-600 rounded-full border border-teal-100">
-            Student Dashboard
-          </span>
-          <h1 className="text-3xl font-black text-ink tracking-tight mt-2" id="student-welcome-title">
-            Hello, {user.name}
-          </h1>
-          <p className="text-sm text-ink-soft/70 font-sans mt-0.5">
-            Student ID: <span className="font-mono font-medium text-ink-soft">{user.id}</span>
-          </p>
-        </div>
+    <div className="relative min-h-screen pb-16 pt-4 sm:pt-6 px-2.5 sm:px-6 max-w-7xl mx-auto w-full min-w-0 overflow-x-hidden">
+      <AnimatedThemeBackground theme={theme} />
 
-        <div className="self-start md:self-center flex items-center gap-2">
-          <button
-            onClick={() => setShowClassroom((v) => !v)}
-            className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-xl shadow-sm transition-all cursor-pointer ${
-              showClassroom
-                ? "bg-violet-500 text-white"
-                : "text-ink-soft bg-white border border-ink-soft/15 hover:bg-cream-dim/60 hover:text-ink"
-            }`}
-            id="student-classes-btn"
-          >
-            <Users2 className="h-4 w-4" /> Classes
-          </button>
-          <button
-            onClick={() => {
-              setEditNameValue(dbUser.name);
-              setEditEmailValue(dbUser.email || "");
-              setEditLocationValue(dbUser.location || "");
-              setSettingsError(null);
-              setSettingsSuccess(null);
-              setShowSettingsModal(true);
-            }}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-ink-soft bg-white border border-ink-soft/15 rounded-xl hover:bg-cream-dim/60 hover:text-ink shadow-sm transition-all cursor-pointer"
-            id="student-settings-btn"
-          >
-            <SettingsIcon className="h-4 w-4" /> Settings
-          </button>
-        </div>
-      </div>
-
-      {/* Classroom (Google-Classroom-style classes: join/create, stream, classmates) */}
-      {showClassroom && (
-        <div className="bg-white border border-ink-soft/10 rounded-2xl p-5 shadow-sm">
-          <Classroom currentUser={dbUser} />
-        </div>
-      )}
-
-      {/* Pending Approval Warning Banner */}
-      {!dbUser.isApproved && (
+      <div className="relative z-10 space-y-4 sm:space-y-6 w-full min-w-0">
+        {/* Top Navbar Header */}
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: -15 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl flex items-start gap-3 shadow-sm"
-          id="student-pending-verification-banner"
+          className="bg-cream rounded-3xl border border-ink-soft/10 p-4 sm:p-5 shadow-xl flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4 min-w-0 overflow-hidden"
         >
-          <AlertCircle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
-          <div className="text-xs space-y-1">
-            <h4 className="font-bold">Account Verification Pending</h4>
-            <p className="text-amber-700/90 leading-relaxed">
-              Your account is still waiting on a teacher to verify it. You can check in and update your attendance in the meantime - it'll just show as pending until you're approved.
-            </p>
+          <div className="flex items-center gap-3 min-w-0">
+            <UserAvatar name={dbUser.name} avatarUrl={dbUser.avatarUrl} role="student" size="lg" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold bg-teal-50 text-teal-600 rounded-full border border-teal-200 shrink-0">
+                  Student Portal
+                </span>
+                <span className="text-xs font-mono text-ink-soft/70 truncate">ID: {user.id}</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black text-ink tracking-tight mt-0.5 truncate">
+                Hello, {dbUser.name}
+              </h1>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end">
+            {/* Theme Toggle Button */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => onThemeChange(theme === "dark" ? "default" : "dark")}
+              className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold transition-all cursor-pointer ${
+                theme === "dark"
+                  ? "bg-black/80 text-fuchsia-300 border-fuchsia-500/50 hover:bg-slate-900 shadow-[0_0_15px_rgba(217,70,239,0.3)]"
+                  : "bg-slate-900/90 text-cyan-300 border-cyan-500/50 hover:bg-slate-800 shadow-[0_0_15px_rgba(0,240,255,0.3)]"
+              }`}
+              title="Switch Theme Mode"
+            >
+              {theme === "dark" ? (
+                <>
+                  <Moon className="h-4 w-4 shrink-0 text-fuchsia-400 drop-shadow-[0_0_6px_rgba(217,70,239,0.8)]" />
+                  <span className="hidden sm:inline font-mono">Obsidian Neon</span>
+                </>
+              ) : (
+                <>
+                  <Zap className="h-4 w-4 shrink-0 text-cyan-400 drop-shadow-[0_0_6px_rgba(0,240,255,0.8)]" />
+                  <span className="hidden sm:inline font-mono">Cyber Neon</span>
+                </>
+              )}
+            </motion.button>
+
+            {/* Logout Button */}
+            <button
+              onClick={onLogout}
+              className="inline-flex items-center gap-1.5 px-3 py-2 sm:px-3.5 sm:py-2.5 text-xs font-bold text-coral-600 bg-coral-50 border border-coral-200 rounded-xl hover:bg-coral-100 transition-all cursor-pointer shadow-sm shrink-0"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Sign Out</span>
+            </button>
           </div>
         </motion.div>
-      )}
 
-      {/* Class Switcher Panel */}
-      <div className="bg-white border border-ink-soft/10 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4" id="class-focus-container">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-teal-50 text-teal-500 rounded-xl shrink-0">
-            <ClipboardList className="h-5 w-5" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-ink flex items-center gap-2">
-              Your Class
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                dbUser.isApproved
-                  ? "bg-teal-50 text-teal-600 border border-teal-100"
-                  : "bg-amber-50 text-amber-700 border border-amber-100 animate-pulse"
-              }`}>
-                {dbUser.isApproved ? "Verified Profile" : "Pending Verification"}
-              </span>
-            </h3>
-            <p className="text-xs text-ink-soft/50">Switch classes to see your attendance and status for each one</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto self-stretch md:self-center">
-          <label htmlFor="dashboard-subject-filter" className="text-xs font-bold text-ink-soft/70 whitespace-nowrap">
-            Select Class:
-          </label>
-          {myClasses.length > 0 ? (
-            <select
-              id="dashboard-subject-filter"
-              value={activeClassId}
-              onChange={(e) => handleSelectActiveClass(e.target.value)}
-              className="w-full sm:w-auto px-4 py-2.5 text-xs bg-cream-dim/60 border border-ink-soft/15 rounded-xl focus:outline-none focus:border-teal-500 focus:bg-white text-ink font-bold shadow-sm cursor-pointer transition-all"
-            >
-              {myClasses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} (Prof. {c.teacherName})
-                </option>
-              ))}
-            </select>
-          ) : (
-            <button
-              onClick={() => setShowClassroom(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition-all cursor-pointer"
-            >
-              <BookOpen className="h-3.5 w-3.5" /> Join a class
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Grid for Stats and Quick Logging */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Left column: Quick Log Attendance */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white border border-ink-soft/10 rounded-2xl p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-ink flex items-center gap-2 mb-4">
-              <Calendar className="h-5 w-5 text-teal-500" />
-              Today's Attendance
-            </h2>
-
-            {successMsg && (
-              <motion.div
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-4 p-3 bg-teal-50 border border-teal-100 text-teal-700 text-xs rounded-xl flex items-center gap-2"
-                id="attendance-success-banner"
-              >
-                <CheckCircle className="h-4 w-4 shrink-0 text-teal-500" />
-                <span>{successMsg}</span>
-              </motion.div>
-            )}
-
-            <form onSubmit={handleRecordAttendance} className="space-y-5" id="attendance-record-form">
-              <div className="bg-cream-dim/60 rounded-xl p-3.5 text-center">
-                <span className="text-[10px] font-bold text-ink-soft/50 uppercase tracking-wider block">
-                  Current Date
-                </span>
-                <span className="text-base font-extrabold text-ink block mt-0.5">
-                  {new Date().toLocaleDateString("en-US", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </span>
-                {todayRecord && (
-                  <span className="inline-flex items-center gap-1 mt-2 text-xs font-medium text-ink-soft/70">
-                    <Clock className="h-3 w-3" /> Logged at {todayRecord.time}
-                  </span>
-                )}
-              </div>
-
-              {/* Class Selection */}
-              <div className="space-y-1.5 animate-fade-in">
-                <label className="text-xs font-bold text-ink-soft block">
-                  Select Class
-                </label>
-                {myClasses.length > 0 ? (
-                  <div className="relative">
-                    <select
-                      value={activeClassId}
-                      onChange={(e) => handleSelectActiveClass(e.target.value)}
-                      disabled={!!todayRecord}
-                      className="w-full px-3.5 py-2.5 text-xs bg-cream-dim/60 border border-ink-soft/15 rounded-xl focus:outline-none focus:border-teal-500 focus:bg-white text-ink font-medium cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed transition-all"
-                    >
-                      {myClasses.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} ({c.teacherName})
-                        </option>
-                      ))}
-                    </select>
-                    {todayRecord && (
-                      <p className="text-[10px] text-ink-soft/50 mt-1">
-                        Attendance already submitted for this class today.
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-center space-y-2">
-                    <p className="text-xs text-amber-800 font-bold flex items-center justify-center gap-1.5">
-                      <AlertCircle className="h-4 w-4" /> No Classes Joined
-                    </p>
-                    <p className="text-[11px] text-amber-700/90 leading-relaxed">
-                      Ask your teacher for their class join code, then join it below to start logging attendance.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setShowClassroom(true)}
-                      className="inline-flex items-center gap-1.5 mt-1 px-3.5 py-2 text-xs font-bold text-white bg-teal-500 hover:bg-teal-600 rounded-lg transition-all cursor-pointer"
-                    >
-                      <BookOpen className="h-3.5 w-3.5" /> Join a Class
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-ink-soft block">
-                  Select Status
-                </label>
-                <div className="grid grid-cols-3 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedStatus("Present")}
-                    className={`py-3 px-2 rounded-xl border text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all ${
-                      selectedStatus === "Present"
-                        ? "border-teal-500 bg-teal-50/50 text-teal-600 shadow-sm"
-                        : "border-ink-soft/15 bg-white text-ink-soft hover:bg-cream-dim/60"
-                    }`}
-                    id="set-present-btn"
-                  >
-                    <CheckCircle className={`h-5 w-5 ${selectedStatus === "Present" ? "text-teal-500" : "text-ink-soft/50"}`} />
-                    Present
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedStatus("Late")}
-                    className={`py-3 px-2 rounded-xl border text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all ${
-                      selectedStatus === "Late"
-                        ? "border-amber-500 bg-amber-50/50 text-amber-700 shadow-sm"
-                        : "border-ink-soft/15 bg-white text-ink-soft hover:bg-cream-dim/60"
-                    }`}
-                    id="set-late-btn"
-                  >
-                    <Clock className={`h-5 w-5 ${selectedStatus === "Late" ? "text-amber-500" : "text-ink-soft/50"}`} />
-                    Late
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedStatus("Absent")}
-                    className={`py-3 px-2 rounded-xl border text-xs sm:text-sm font-bold flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all ${
-                      selectedStatus === "Absent"
-                        ? "border-rose-500 bg-rose-50/50 text-rose-700 shadow-sm"
-                        : "border-ink-soft/15 bg-white text-ink-soft hover:bg-cream-dim/60"
-                    }`}
-                    id="set-absent-btn"
-                  >
-                    <XCircle className={`h-5 w-5 ${selectedStatus === "Absent" ? "text-rose-500" : "text-ink-soft/50"}`} />
-                    Absent
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-ink-soft flex items-center gap-1" htmlFor="attendance-notes">
-                  <MessageSquare className="h-3.5 w-3.5 text-ink-soft/50" />
-                  Optional Note
-                </label>
-                <textarea
-                  id="attendance-notes"
-                  placeholder="e.g. Arrived 5 mins late due to bus lag, doctor's appointment etc."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={2}
-                  className="w-full p-3 text-xs bg-cream-dim/60 border border-ink-soft/15 rounded-xl focus:outline-none focus:border-gray-300 focus:bg-white transition-all text-ink resize-none"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={myClasses.length === 0}
-                className={`w-full py-3 rounded-full text-sm font-semibold text-white transition-all cursor-pointer bg-teal-500 hover:bg-teal-600 active:bg-teal-700 shadow-teal hover:-translate-y-0.5 flex items-center justify-center gap-1 disabled:opacity-45 disabled:cursor-not-allowed disabled:translate-y-0`}
-                id="submit-attendance-btn"
-              >
-                <ClipboardList className="h-4 w-4" />
-                {todayRecord ? "Update Attendance" : "Submit Attendance"}
-              </button>
-            </form>
-          </div>
-
-          {/* My Classes Card */}
-          <div className="bg-white border border-ink-soft/10 rounded-2xl p-6 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-ink flex items-center gap-2">
-                <BookOpen className="h-4.5 w-4.5 text-teal-500" />
-                My Classes
-              </h2>
-              <button
-                onClick={() => setShowClassroom(true)}
-                className="inline-flex items-center gap-1 text-[10px] font-bold text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-2 py-1 rounded-lg transition-all cursor-pointer"
-              >
-                <Plus className="h-3 w-3" /> Join
-              </button>
-            </div>
-            <p className="text-[11px] text-ink-soft/70 leading-normal">
-              Joining is instant with a class's join code - no approval needed. Attendance logs against whichever class you pick above.
-            </p>
-
-            <div className="space-y-3">
-              {myClasses.length === 0 ? (
-                <div className="p-4 border border-dashed border-ink-soft/15 rounded-xl text-center text-ink-soft/50 text-[11px]">
-                  You haven't joined any classes yet. Get a join code from your teacher.
-                </div>
-              ) : (
-                myClasses.map((c) => (
-                  <div
-                    key={c.id}
-                    className={`flex items-center justify-between p-3 border rounded-xl animate-fade-in transition-all ${
-                      c.id === activeClassId ? "bg-teal-50/60 border-teal-200" : "bg-cream-dim/40 border-ink-soft/10"
-                    }`}
-                  >
-                    <div className="space-y-0.5">
-                      <span className="text-xs font-bold text-ink block">
-                        {c.name}
-                      </span>
-                      <span className="text-[10px] text-ink-soft/50 block font-medium">
-                        Teacher: {c.teacherName}{c.subject ? ` · ${c.subject}` : ""}
-                      </span>
-                    </div>
-                    {c.id === activeClassId ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold bg-teal-100 text-teal-700 border border-teal-200">
-                        <CheckCircle className="h-3 w-3" /> Selected
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => handleSelectActiveClass(c.id)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-teal-700 bg-white border border-teal-200 hover:bg-teal-50 rounded-lg transition-all cursor-pointer"
-                      >
-                        Select
-                      </button>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right columns: Stats Cards & Table */}
-        <div className="lg:col-span-2 space-y-6">
-          
-          {/* Key Metrics row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            
-            <div className="bg-white border border-ink-soft/10 rounded-2xl p-5 shadow-sm flex items-center gap-4">
-              <div className="p-3 bg-teal-50 text-teal-500 rounded-xl shrink-0">
-                <CheckCircle className="h-6 w-6" />
-              </div>
-              <div>
-                <span className="text-xs font-medium text-ink-soft/50 block">Present Days</span>
-                <span className="text-2xl font-black text-ink block mt-0.5" id="stats-present-count">
-                  {stats.presentCount}
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-white border border-ink-soft/10 rounded-2xl p-5 shadow-sm flex items-center gap-4">
-              <div className="p-3 bg-amber-50 text-amber-600 rounded-xl shrink-0">
-                <Clock className="h-6 w-6" />
-              </div>
-              <div>
-                <span className="text-xs font-medium text-ink-soft/50 block">Late Days</span>
-                <span className="text-2xl font-black text-ink block mt-0.5" id="stats-late-count">
-                  {stats.lateCount}
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-white border border-ink-soft/10 rounded-2xl p-5 shadow-sm flex items-center gap-4">
-              <div className="p-3 bg-rose-50 text-rose-500 rounded-xl shrink-0">
-                <XCircle className="h-6 w-6" />
-              </div>
-              <div>
-                <span className="text-xs font-medium text-ink-soft/50 block">Absent Days</span>
-                <span className="text-2xl font-black text-ink block mt-0.5" id="stats-absent-count">
-                  {stats.absentCount}
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-white border border-ink-soft/10 rounded-2xl p-5 shadow-sm flex items-center gap-4">
-              <div className="p-3 bg-violet-50 text-violet-500 rounded-xl shrink-0">
-                <TrendingUp className="h-6 w-6" />
-              </div>
-              <div>
-                <span className="text-xs font-medium text-ink-soft/50 block">Attendance Rate</span>
-                <span className="text-2xl font-black text-ink block mt-0.5" id="stats-percentage">
-                  {stats.percentage}%
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Progress gauge card */}
-          <div className="bg-white border border-ink-soft/10 rounded-2xl p-6 shadow-sm">
-            <h3 className="text-sm font-bold text-ink flex items-center gap-1.5 mb-4">
-              <Award className="h-4.5 w-4.5 text-violet-500" />
-              Attendance Overview
-            </h3>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-ink-soft/70">Current Attendance Rating</span>
-                <span className="font-bold font-mono text-ink">{stats.percentage}%</span>
-              </div>
-              <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    stats.percentage >= 90
-                      ? "bg-teal-500"
-                      : stats.percentage >= 75
-                      ? "bg-amber-500"
-                      : "bg-rose-500"
-                  }`}
-                  style={{ width: `${stats.percentage}%` }}
-                />
-              </div>
-              <p className="text-[11px] text-ink-soft/50 font-sans mt-1">
-                {stats.percentage >= 90
-                  ? "Excellent! You are maintaining an elite attendance record."
-                  : stats.percentage >= 75
-                  ? "Good progress. Try to attend more consistently to stay above 90%."
-                  : "Caution: Your attendance is below the standard minimum requirement (75%)."}
-              </p>
-            </div>
-          </div>
-
-          {/* Attendance History list */}
-          <div className="bg-white border border-ink-soft/10 rounded-2xl p-6 shadow-sm">
-            <h3 className="text-base font-bold text-ink mb-4">
-              Personal Attendance Logs
-            </h3>
-
-            {history.length === 0 ? (
-              <div className="text-center py-10 text-ink-soft/50 text-sm">
-                <AlertCircle className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                No attendance records found yet.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse" id="student-history-table">
-                  <thead>
-                    <tr className="border-b border-ink-soft/10 text-xs text-ink-soft/50 font-bold uppercase tracking-wider">
-                      <th className="pb-3 font-semibold">Date</th>
-                      <th className="pb-3 font-semibold">Class / Subject</th>
-                      <th className="pb-3 font-semibold">Check-in Time</th>
-                      <th className="pb-3 font-semibold">Status</th>
-                      <th className="pb-3 font-semibold">Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50 text-xs text-ink-soft">
-                    {history.map((record) => (
-                      <tr key={record.id} className="hover:bg-cream-dim/60/50 transition-colors">
-                        <td className="py-3.5 font-medium text-ink">
-                          {new Date(record.date).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </td>
-                        <td className="py-3.5 font-semibold text-ink-soft">
-                          {record.subject || "General Class"}
-                        </td>
-                        <td className="py-3.5 text-ink-soft/70 font-mono">
-                          {record.status !== "Absent" ? record.time : "—"}
-                        </td>
-                        <td className="py-3.5">
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              record.status === "Present"
-                                ? "bg-teal-50 text-teal-600 border border-teal-100"
-                                : record.status === "Late"
-                                ? "bg-amber-50 text-amber-700 border border-amber-100"
-                                : "bg-rose-50 text-rose-700 border border-rose-100"
-                            }`}
-                          >
-                            {record.status}
-                          </span>
-                        </td>
-                        <td className="py-3.5 text-ink-soft/70 italic max-w-xs truncate" title={record.notes}>
-                          {record.notes || "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-    </div>
-
-      {/* MODAL: SETTINGS */}
-      {/* Rendered outside the glass panel above on purpose - it uses
-          position:fixed to cover the whole screen, and backdrop-filter on
-          an ancestor (the glass panel's blur) would trap it inside that
-          panel's box instead of the real viewport. */}
-      <AnimatePresence>
-        {showSettingsModal && (
-          <div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-            onClick={() => {
-              setShowSettingsModal(false);
-              setShowDangerZone(false);
-              setDeleteAccountPassword("");
-              setDeleteAccountError(null);
-              setSettingsError(null);
-              setSettingsSuccess(null);
-            }}
+        {/* Navigation Tabs - Responsive Grid on Mobile, Flex Row on Desktop */}
+        <div className="bg-cream/80 backdrop-blur-xl p-1.5 rounded-2xl border border-ink-soft/10 shadow-lg grid grid-cols-2 sm:flex sm:items-center sm:justify-start gap-1.5 max-w-full">
+          <button
+            onClick={() => setActiveTab("attendance")}
+            className={`relative flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 py-2.5 sm:px-4 text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto ${
+              activeTab === "attendance" ? "text-teal-600" : "text-ink-soft hover:text-ink"
+            }`}
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl shadow-xl border border-ink-soft/10 max-w-md w-full max-h-[85vh] overflow-hidden flex flex-col"
-              id="settings-modal"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="bg-teal-500 px-6 py-4 text-white flex items-center justify-between shrink-0">
-                <h3 className="font-extrabold text-lg flex items-center gap-1.5">
-                  <SettingsIcon className="h-5 w-5" /> Settings
-                </h3>
-                <button
-                  onClick={() => {
-                    setShowSettingsModal(false);
-                    setShowDangerZone(false);
-                    setDeleteAccountPassword("");
-                    setDeleteAccountError(null);
-                    setSettingsError(null);
-                    setSettingsSuccess(null);
-                  }}
-                  className="text-teal-100 hover:text-white cursor-pointer"
-                  aria-label="Close settings"
-                >
-                  <XCircle className="h-5 w-5" />
-                </button>
+            {activeTab === "attendance" && (
+              <motion.div
+                layoutId="studentActiveTabPill"
+                className="absolute inset-0 bg-teal-500/15 border border-teal-500/30 rounded-xl"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+            )}
+            <ClipboardList className="h-4 w-4 relative z-10 shrink-0" />
+            <span className="relative z-10 truncate">Attendance</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("announcements")}
+            className={`relative flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 py-2.5 sm:px-4 text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto ${
+              activeTab === "announcements" ? "text-teal-600" : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            {activeTab === "announcements" && (
+              <motion.div
+                layoutId="studentActiveTabPill"
+                className="absolute inset-0 bg-teal-500/15 border border-teal-500/30 rounded-xl"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+            )}
+            <Megaphone className="h-4 w-4 relative z-10 shrink-0" />
+            <span className="relative z-10 truncate">Announcements</span>
+            {filteredAnnouncements.length > 0 && (
+              <span className="relative z-10 ml-0.5 px-1.5 py-0.2 text-[10px] font-extrabold bg-teal-500 text-white rounded-full shrink-0">
+                {filteredAnnouncements.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab("assignments")}
+            className={`relative flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 py-2.5 sm:px-4 text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto ${
+              activeTab === "assignments" ? "text-teal-600" : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            {activeTab === "assignments" && (
+              <motion.div
+                layoutId="studentActiveTabPill"
+                className="absolute inset-0 bg-teal-500/15 border border-teal-500/30 rounded-xl"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+            )}
+            <FileText className="h-4 w-4 relative z-10 shrink-0" />
+            <span className="relative z-10 truncate">Assignments</span>
+            {filteredAssignments.length > 0 && (
+              <span className="relative z-10 ml-0.5 px-1.5 py-0.2 text-[10px] font-extrabold bg-teal-500 text-white rounded-full shrink-0">
+                {filteredAssignments.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab("settings")}
+            className={`relative flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 py-2.5 sm:px-4 text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto ${
+              activeTab === "settings" ? "text-teal-600" : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            {activeTab === "settings" && (
+              <motion.div
+                layoutId="studentActiveTabPill"
+                className="absolute inset-0 bg-teal-500/15 border border-teal-500/30 rounded-xl"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+            )}
+            <SettingsIcon className="h-4 w-4 relative z-10 shrink-0" />
+            <span className="relative z-10 truncate">Settings</span>
+          </button>
+        </div>
+
+        {/* Teacher / Class Selector Bar */}
+        {activeTab !== "settings" && (
+          <motion.div
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-cream/90 backdrop-blur-xl border border-ink-soft/10 rounded-2xl p-3.5 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-2.5 bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-300 rounded-xl shrink-0">
+                <UserCheck className="h-5 w-5" />
               </div>
-
-              <div className="p-6 space-y-6 overflow-y-auto">
-                {/* Profile section */}
-                <form onSubmit={handleSaveName} className="space-y-3">
-                  <h4 className="text-xs font-black text-ink-soft uppercase tracking-wide">Profile</h4>
-                  {settingsError && (
-                    <div className="p-3 bg-red-50 border border-red-100 text-red-700 text-xs rounded-lg flex items-start gap-2">
-                      <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                      <span>{settingsError}</span>
-                    </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-ink-soft/60">
+                    Switch Teacher / Class View
+                  </span>
+                  {selectedTeacherId !== "all" && (
+                    <span className="px-2 py-0.2 text-[10px] font-bold bg-violet-500 text-white rounded-full">
+                      Filtered View
+                    </span>
                   )}
-                  {settingsSuccess && (
-                    <div className="p-3 bg-teal-50 border border-teal-100 text-teal-600 text-xs rounded-lg flex items-start gap-2">
-                      <CheckCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                      <span>{settingsSuccess}</span>
-                    </div>
+                </div>
+                <p className="text-xs sm:text-sm font-extrabold text-ink truncate mt-0.5">
+                  {selectedTeacherId === "all" ? (
+                    <span className="text-teal-600 dark:text-teal-400">
+                      Viewing combined feed from All Teachers & Classes
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5 flex-wrap">
+                      <span>Viewing Feed of: </span>
+                      <span className="text-violet-600 dark:text-violet-400 font-black">
+                        {selectedTeacher?.name}
+                      </span>
+                      {selectedTeacher?.subject && (
+                        <span className="px-2 py-0.5 text-[10px] bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 rounded-lg border border-violet-200 dark:border-violet-800">
+                          {selectedTeacher.subject}
+                        </span>
+                      )}
+                    </span>
                   )}
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-ink-soft" htmlFor="edit-name">Full Name</label>
-                    <input
-                      id="edit-name"
-                      type="text"
-                      value={editNameValue}
-                      onChange={(e) => setEditNameValue(e.target.value)}
-                      className="w-full px-3 py-2 text-xs border border-ink-soft/15 rounded-xl focus:outline-none focus:border-teal-400 text-ink"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-ink-soft" htmlFor="edit-email">Email</label>
-                    <input
-                      id="edit-email"
-                      type="email"
-                      value={editEmailValue}
-                      onChange={(e) => setEditEmailValue(e.target.value)}
-                      className="w-full px-3 py-2 text-xs border border-ink-soft/15 rounded-xl focus:outline-none focus:border-teal-400 text-ink"
-                    />
-                    <p className="text-[11px] text-ink-soft/50">Visible to your teacher so they can reach you.</p>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-ink-soft" htmlFor="edit-location">Location</label>
-                    <input
-                      id="edit-location"
-                      type="text"
-                      value={editLocationValue}
-                      onChange={(e) => setEditLocationValue(e.target.value)}
-                      className="w-full px-3 py-2 text-xs border border-ink-soft/15 rounded-xl focus:outline-none focus:border-teal-400 text-ink"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={isSavingName}
-                    className="px-4 py-2 text-xs font-bold text-white bg-teal-500 hover:bg-teal-600 rounded-xl cursor-pointer disabled:opacity-60"
-                  >
-                    {isSavingName ? "Saving..." : "Save Changes"}
-                  </button>
-                </form>
+                </p>
+              </div>
+            </div>
 
-                <div className="border-t border-ink-soft/10 pt-4">
-                  <h4 className="text-xs font-black text-ink-soft uppercase tracking-wide mb-3">Appearance</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {THEME_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.id}
-                        onClick={() => onThemeChange(opt.id)}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                          theme === opt.id
-                            ? "border-teal-400 bg-teal-50 text-teal-600"
-                            : "border-ink-soft/15 bg-white text-ink-soft hover:bg-cream-dim/60"
+            <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
+              <label htmlFor="teacher-select" className="text-xs font-bold text-ink-soft hidden sm:inline shrink-0">
+                Teacher:
+              </label>
+              <select
+                id="teacher-select"
+                value={selectedTeacherId}
+                onChange={(e) => setSelectedTeacherId(e.target.value)}
+                className="w-full md:w-auto px-3.5 py-2 text-xs font-bold bg-white dark:bg-slate-800 border border-ink-soft/20 rounded-xl text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
+              >
+                <option value="all">🌟 All Teachers & Classes</option>
+                {teachers.map((t) => (
+                  <option key={t.id || t.uid} value={t.id || t.uid}>
+                    👨‍🏫 {t.name} {t.subject ? `(${t.subject})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </motion.div>
+        )}
+
+        {/* TAB 1: ATTENDANCE & STATS */}
+        {activeTab === "attendance" && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+          >
+            {/* Quick Check-In Form */}
+            <div className="lg:col-span-1 space-y-4 sm:space-y-6 min-w-0">
+              <div className="bg-cream border border-ink-soft/10 rounded-3xl p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-5 relative overflow-hidden min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="text-base sm:text-lg font-black text-ink flex items-center gap-2 truncate">
+                    <Calendar className="h-5 w-5 text-teal-500 shrink-0" />
+                    Daily Check-In
+                  </h2>
+                  <span className="text-[10px] sm:text-[11px] font-mono font-bold bg-teal-50 text-teal-600 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border border-teal-100 shrink-0">
+                    {todayStr}
+                  </span>
+                </div>
+
+                {/* Celebratory Banner */}
+                <AnimatePresence>
+                  {showCelebration && (
+                    <motion.div
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.8, opacity: 0 }}
+                      className="p-3 sm:p-4 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-2xl shadow-lg flex items-center gap-2.5 sm:gap-3"
+                    >
+                      <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 animate-bounce shrink-0" />
+                      <div className="min-w-0">
+                        <h4 className="font-extrabold text-xs sm:text-sm">Checked In!</h4>
+                        <p className="text-[11px] sm:text-xs opacity-90 truncate">{successMsg}</p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <form onSubmit={handleRecordAttendance} className="space-y-3 sm:space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-ink-soft block">
+                      Select Status for Today:
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setSelectedStatus("Present")}
+                        className={`py-2.5 px-1 sm:py-3 sm:px-2 rounded-2xl border text-xs font-bold flex flex-col items-center gap-1 cursor-pointer transition-all ${
+                          selectedStatus === "Present"
+                            ? "border-cyan-400 bg-cyan-500/20 text-cyan-300 shadow-[0_0_15px_rgba(0,240,255,0.3)]"
+                            : "border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-slate-600 hover:text-white"
                         }`}
                       >
-                        <span className={`h-4 w-4 rounded-full shrink-0 ${opt.swatch}`} />
-                        {opt.label}
-                      </button>
-                    ))}
+                        <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-400" />
+                        <span>Present</span>
+                      </motion.button>
+
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setSelectedStatus("Late")}
+                        className={`py-2.5 px-1 sm:py-3 sm:px-2 rounded-2xl border text-xs font-bold flex flex-col items-center gap-1 cursor-pointer transition-all ${
+                          selectedStatus === "Late"
+                            ? "border-amber-400 bg-amber-500/20 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
+                            : "border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-slate-600 hover:text-white"
+                        }`}
+                      >
+                        <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-amber-400" />
+                        <span>Late</span>
+                      </motion.button>
+
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setSelectedStatus("Absent")}
+                        className={`py-2.5 px-1 sm:py-3 sm:px-2 rounded-2xl border text-xs font-bold flex flex-col items-center gap-1 cursor-pointer transition-all ${
+                          selectedStatus === "Absent"
+                            ? "border-rose-400 bg-rose-500/20 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.3)]"
+                            : "border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-slate-600 hover:text-white"
+                        }`}
+                      >
+                        <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-rose-400" />
+                        <span>Absent</span>
+                      </motion.button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-300 block">
+                      Optional Note:
+                    </label>
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="e.g. Arrived 5 mins late due to traffic"
+                      rows={2}
+                      className="w-full p-2.5 sm:p-3 text-xs bg-slate-950/80 border border-slate-700/80 rounded-2xl focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,240,255,0.3)] text-white placeholder-slate-400 resize-none transition-all"
+                    />
+                  </div>
+
+                  <motion.button
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    type="submit"
+                    className="w-full py-3 sm:py-3.5 rounded-2xl text-xs font-extrabold text-white bg-teal-500 hover:bg-teal-600 shadow-lg shadow-teal-500/25 transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>{todayRecord ? "Update Today's Status" : "Log Attendance Now"}</span>
+                  </motion.button>
+                </form>
+              </div>
+
+              {/* Stats Overview */}
+              <div className="bg-cream border border-ink-soft/10 rounded-3xl p-4 sm:p-6 shadow-xl space-y-3 sm:space-y-4 min-w-0 overflow-hidden">
+                <h3 className="text-sm font-black text-ink flex items-center gap-2">
+                  <TrendingUp className="h-4.5 w-4.5 text-teal-500 shrink-0" />
+                  <span>Attendance Record Summary</span>
+                </h3>
+
+                <div className="grid grid-cols-2 gap-2 sm:gap-3 min-w-0">
+                  <div className="p-2.5 sm:p-3.5 bg-teal-500/10 rounded-2xl border border-teal-500/20 text-center min-w-0">
+                    <span className="text-[10px] font-bold text-teal-700 block uppercase tracking-normal sm:tracking-wider truncate">
+                      Present
+                    </span>
+                    <span className="text-lg sm:text-xl font-black text-teal-600 mt-0.5 block">
+                      {displayStats.presentCount}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 sm:p-3.5 bg-amber-500/10 rounded-2xl border border-amber-500/20 text-center min-w-0">
+                    <span className="text-[10px] font-bold text-amber-700 block uppercase tracking-normal sm:tracking-wider truncate">
+                      Late
+                    </span>
+                    <span className="text-lg sm:text-xl font-black text-amber-600 mt-0.5 block">
+                      {displayStats.lateCount}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 sm:p-3.5 bg-coral-500/10 rounded-2xl border border-coral-500/20 text-center min-w-0">
+                    <span className="text-[10px] font-bold text-coral-700 block uppercase tracking-normal sm:tracking-wider truncate">
+                      Absent
+                    </span>
+                    <span className="text-lg sm:text-xl font-black text-coral-600 mt-0.5 block">
+                      {displayStats.absentCount}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 sm:p-3.5 bg-violet-500/10 rounded-2xl border border-violet-500/20 text-center min-w-0">
+                    <span className="text-[10px] font-bold text-violet-700 block uppercase tracking-normal sm:tracking-wider truncate">
+                      Punctuality Rate
+                    </span>
+                    <span className="text-lg sm:text-xl font-black text-violet-600 mt-0.5 block">
+                      {displayStats.percentage}%
+                    </span>
                   </div>
                 </div>
+              </div>
+            </div>
 
-                <div className="border-t border-ink-soft/10 pt-4">
-                  <h4 className="text-xs font-black text-ink-soft uppercase tracking-wide mb-3">Password</h4>
-                  {!showChangePassword ? (
-                    <button
-                      onClick={() => {
-                        setShowChangePassword(true);
-                        setChangePasswordError(null);
-                        setChangePasswordSuccess(null);
-                      }}
-                      className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-semibold text-ink-soft bg-cream-dim/60 border border-ink-soft/15 rounded-xl hover:bg-cream-dim hover:text-ink transition-all cursor-pointer"
-                    >
-                      <Key className="h-4 w-4" /> Change Password
-                    </button>
-                  ) : (
-                    <form onSubmit={handleChangePassword} className="space-y-3">
-                      {changePasswordError && (
-                        <div className="p-3 bg-red-50 border border-red-100 text-red-700 text-xs rounded-lg flex items-start gap-2">
-                          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                          <span>{changePasswordError}</span>
+            {/* Right Column: Attendance History Table */}
+            <div className="lg:col-span-2 bg-slate-900/80 border border-slate-700/60 rounded-3xl p-4 sm:p-6 shadow-xl space-y-4 min-w-0 overflow-hidden backdrop-blur-xl">
+              <h2 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                <Clock className="h-5 w-5 text-cyan-400 shrink-0" />
+                <span>Attendance Log History</span>
+              </h2>
+
+              {displayHistory.length === 0 ? (
+                <div className="p-10 text-center text-slate-400 space-y-2">
+                  <ClipboardList className="h-8 w-8 mx-auto text-slate-500" />
+                  <p className="text-xs font-semibold">No attendance logged for this view yet.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-700/60 text-slate-400 font-bold uppercase tracking-wider text-[11px]">
+                        <th className="pb-3 px-3 whitespace-nowrap">Date</th>
+                        <th className="pb-3 px-3 whitespace-nowrap">Time</th>
+                        <th className="pb-3 px-3 whitespace-nowrap">Subject / Class</th>
+                        <th className="pb-3 px-3 whitespace-nowrap">Status</th>
+                        <th className="pb-3 px-3 whitespace-nowrap">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700/60">
+                      {displayHistory.map((record) => (
+                        <tr key={record.id} className="hover:bg-cyan-500/5 transition-colors">
+                          <td className="py-3 px-3 font-mono font-bold text-white whitespace-nowrap">{record.date}</td>
+                          <td className="py-3 px-3 text-slate-300 font-mono whitespace-nowrap">{record.time}</td>
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <span className="px-2.5 py-1 bg-violet-500/20 text-violet-300 font-extrabold text-[10px] rounded-lg border border-violet-500/40 shadow-[0_0_10px_rgba(168,85,247,0.2)] whitespace-nowrap inline-block">
+                              {record.subject || "General Class"}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold whitespace-nowrap ${
+                                record.status === "Present"
+                                  ? "bg-teal-500/20 text-teal-300 border border-teal-500/40 shadow-[0_0_10px_rgba(20,184,166,0.2)]"
+                                  : record.status === "Late"
+                                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+                                  : "bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-[0_0_10px_rgba(244,63,94,0.2)]"
+                              }`}
+                            >
+                              {record.status === "Present" && <CheckCircle className="h-3.5 w-3.5" />}
+                              {record.status === "Late" && <Clock className="h-3.5 w-3.5" />}
+                              {record.status === "Absent" && <XCircle className="h-3.5 w-3.5" />}
+                              {record.status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-slate-300 italic max-w-xs truncate font-medium">
+                            {record.notes || "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* TAB 2: ANNOUNCEMENTS */}
+        {activeTab === "announcements" && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            {/* Search Bar */}
+            <div className="bg-cream border border-ink-soft/10 rounded-2xl p-4 shadow-lg flex items-center gap-3">
+              <Search className="h-5 w-5 text-teal-500 shrink-0" />
+              <input
+                type="text"
+                value={announcementSearch}
+                onChange={(e) => setAnnouncementSearch(e.target.value)}
+                placeholder="Search announcements by title or content..."
+                className="w-full text-xs font-semibold bg-transparent focus:outline-none text-ink placeholder-ink-soft/50"
+              />
+            </div>
+
+            {filteredAnnouncements.length === 0 ? (
+              <div className="bg-cream border border-ink-soft/10 rounded-3xl p-12 text-center text-ink-soft/60 space-y-2">
+                <Megaphone className="h-10 w-10 mx-auto text-ink-soft/30" />
+                <p className="text-sm font-bold text-ink">No announcements found.</p>
+                <p className="text-xs">Check back later for course updates from your teachers.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6">
+                {filteredAnnouncements.map((post, idx) => (
+                  <motion.div
+                    key={post.id}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    className="bg-cream border border-ink-soft/10 rounded-3xl p-6 shadow-xl space-y-4"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-ink-soft/10 pb-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-teal-50 text-teal-700 rounded-full border border-teal-200">
+                            Announcement
+                          </span>
+                          {post.subject && (
+                            <span className="px-2.5 py-0.5 text-[10px] font-bold bg-violet-50 text-violet-700 rounded-full border border-violet-200">
+                              {post.subject}
+                            </span>
+                          )}
                         </div>
-                      )}
-                      {changePasswordSuccess && (
-                        <div className="p-3 bg-teal-50 border border-teal-100 text-teal-600 text-xs rounded-lg flex items-start gap-2">
-                          <CheckCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                          <span>{changePasswordSuccess}</span>
+                        <h2 className="text-lg font-black text-ink tracking-tight mt-1">
+                          {post.title || "Course Announcement"}
+                        </h2>
+                      </div>
+                      <span className="text-xs font-mono text-ink-soft/60">
+                        {new Date(post.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+
+                    <p className="text-xs leading-relaxed text-ink/90 whitespace-pre-wrap font-sans">
+                      {post.content}
+                    </p>
+
+                    {/* Attachment preview if any */}
+                    {post.attachmentDataUrl && (
+                      <div className="p-3 bg-white/60 border border-ink-soft/15 rounded-2xl flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-xs font-bold text-ink">
+                          <Paperclip className="h-4 w-4 text-teal-500" />
+                          <span>{post.attachmentName || "Attachment"}</span>
                         </div>
-                      )}
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-ink-soft" htmlFor="current-password">Current Password</label>
-                        <input
-                          id="current-password"
-                          type="password"
-                          value={currentPasswordInput}
-                          onChange={(e) => setCurrentPasswordInput(e.target.value)}
-                          className="w-full px-3 py-2 text-xs border border-ink-soft/15 rounded-xl focus:outline-none focus:border-teal-400 text-ink"
-                        />
+                        <a
+                          href={post.attachmentDataUrl}
+                          download={post.attachmentName || "attachment"}
+                          className="px-3 py-1 text-xs font-extrabold text-teal-600 bg-teal-50 border border-teal-200 rounded-xl hover:bg-teal-100 transition-all cursor-pointer"
+                        >
+                          Download
+                        </a>
                       </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-ink-soft" htmlFor="new-password">New Password</label>
-                        <input
-                          id="new-password"
-                          type="password"
-                          value={newPasswordInput}
-                          onChange={(e) => setNewPasswordInput(e.target.value)}
-                          className="w-full px-3 py-2 text-xs border border-ink-soft/15 rounded-xl focus:outline-none focus:border-teal-400 text-ink"
-                        />
-                      </div>
+                    )}
+
+                    {/* Comment Thread Trigger */}
+                    <div className="pt-2 flex items-center justify-between border-t border-ink-soft/10">
+                      <span className="text-xs font-medium text-ink-soft">
+                        Posted by <strong className="text-ink">{post.authorName}</strong>
+                      </span>
+
                       <button
-                        type="submit"
-                        disabled={isChangingPassword}
-                        className="w-full px-4 py-2 text-xs font-bold text-white bg-teal-500 hover:bg-teal-600 rounded-xl cursor-pointer disabled:opacity-60"
+                        onClick={() => handleToggleComments(post.id)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded-xl hover:bg-violet-100 transition-all cursor-pointer"
                       >
-                        {isChangingPassword ? "Updating..." : "Update Password"}
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        Comments
                       </button>
-                    </form>
-                  )}
+                    </div>
+
+                    {/* Expanded Comments */}
+                    {expandedCommentsPostId === post.id && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        className="p-4 bg-white/60 border border-ink-soft/10 rounded-2xl space-y-3"
+                      >
+                        <h4 className="text-xs font-extrabold text-ink">Discussion</h4>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {(commentsMap[post.id] || []).length === 0 ? (
+                            <p className="text-[11px] text-ink-soft/50 italic">No comments yet. Start the conversation!</p>
+                          ) : (
+                            (commentsMap[post.id] || []).map((c) => (
+                              <div key={c.id} className="p-2.5 bg-cream/80 rounded-xl text-xs space-y-0.5">
+                                <div className="flex items-center justify-between font-bold text-ink text-[11px]">
+                                  <span>{c.authorName}</span>
+                                  <span className="text-[10px] font-mono text-ink-soft/50">
+                                    {new Date(c.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                  </span>
+                                </div>
+                                <p className="text-ink-soft">{c.content}</p>
+                              </div>
+                            ))
+                          )}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={newCommentInput}
+                            onChange={(e) => setNewCommentInput(e.target.value)}
+                            placeholder="Write a comment..."
+                            className="w-full px-3 py-2 text-xs bg-cream border border-ink-soft/15 rounded-xl focus:outline-none focus:border-teal-500 text-ink"
+                            onKeyDown={(e) => e.key === "Enter" && handleAddComment(post.id)}
+                          />
+                          <button
+                            onClick={() => handleAddComment(post.id)}
+                            className="px-3.5 py-2 text-xs font-bold text-white bg-teal-500 rounded-xl hover:bg-teal-600 cursor-pointer"
+                          >
+                            <Send className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* TAB 3: ASSIGNMENTS */}
+        {activeTab === "assignments" && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            {/* Search & Filter Header */}
+            <div className="bg-slate-900/80 border border-slate-700/60 rounded-2xl p-4 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4 backdrop-blur-xl">
+              <div className="flex items-center gap-3 flex-1 bg-slate-950/80 px-3.5 py-2.5 rounded-xl border border-slate-700/60 focus-within:border-cyan-400 focus-within:shadow-[0_0_15px_rgba(0,240,255,0.3)] transition-all">
+                <Search className="h-5 w-5 text-cyan-400 shrink-0" />
+                <input
+                  type="text"
+                  value={assignmentSearch}
+                  onChange={(e) => setAssignmentSearch(e.target.value)}
+                  placeholder="Search assignments by title..."
+                  className="w-full text-xs font-semibold bg-transparent border-0 focus:bg-transparent focus:outline-none focus:ring-0 text-white placeholder-slate-400"
+                />
+              </div>
+
+              <div className="flex items-center gap-1.5 self-start md:self-center">
+                {(["All", "Pending", "Submitted", "Graded"] as const).map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setAssignmentFilter(st)}
+                    className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                      assignmentFilter === st
+                        ? "bg-cyan-400 text-slate-950 font-black shadow-[0_0_12px_rgba(0,240,255,0.4)]"
+                        : "bg-slate-900/80 border border-slate-700/60 text-slate-300 hover:bg-slate-800 hover:text-white hover:border-slate-500"
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {filteredAssignments.length === 0 ? (
+              <div className="bg-cream border border-ink-soft/10 rounded-3xl p-12 text-center text-ink-soft/60 space-y-2">
+                <FileText className="h-10 w-10 mx-auto text-ink-soft/30" />
+                <p className="text-sm font-bold text-ink">No assignments found.</p>
+                <p className="text-xs">Your teacher has not posted any assignments in this view yet.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {filteredAssignments.map((assignment, idx) => {
+                  const sub = submissionsMap[assignment.id];
+                  const isGraded = sub?.status === "Graded";
+                  const isSubmitted = !!sub;
+
+                  return (
+                    <motion.div
+                      key={assignment.id}
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className="bg-cream border border-ink-soft/10 rounded-3xl p-6 shadow-xl flex flex-col justify-between space-y-4"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span
+                            className={`px-2.5 py-0.5 text-[10px] font-extrabold rounded-full border ${
+                              isGraded
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : isSubmitted
+                                ? "bg-teal-50 text-teal-700 border-teal-200"
+                                : "bg-amber-50 text-amber-700 border border-amber-200"
+                            }`}
+                          >
+                            {isGraded ? "Graded" : isSubmitted ? "Submitted" : "Pending"}
+                          </span>
+
+                          {assignment.dueDate && (
+                            <span className="text-[11px] font-mono font-bold text-ink-soft">
+                              Due: {assignment.dueDate}
+                            </span>
+                          )}
+                        </div>
+
+                        <h3 className="text-base font-black text-ink">{assignment.title}</h3>
+                        <p className="text-xs text-ink/80 leading-relaxed font-sans line-clamp-3">
+                          {assignment.content}
+                        </p>
+                      </div>
+
+                      {/* Grade feedback display if graded */}
+                      {isGraded && (
+                        <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-xs space-y-1">
+                          <div className="flex items-center justify-between font-extrabold text-emerald-800">
+                            <span className="flex items-center gap-1">
+                              <Award className="h-4 w-4 text-emerald-600" /> Grade Received:
+                            </span>
+                            <span className="text-sm font-mono">{sub.score} / {assignment.maxPoints || 100}</span>
+                          </div>
+                          {sub.feedback && (
+                            <p className="text-[11px] text-emerald-700/90 italic">
+                              "{sub.feedback}"
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Submit Action Button */}
+                      <motion.button
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                        onClick={() => handleOpenSubmissionModal(assignment)}
+                        className={`w-full py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                          isGraded
+                            ? "bg-emerald-500/15 text-emerald-700 border border-emerald-300 hover:bg-emerald-500/25"
+                            : isSubmitted
+                            ? "bg-teal-500/15 text-teal-700 border border-teal-300 hover:bg-teal-500/25"
+                            : "bg-teal-500 text-white hover:bg-teal-600 shadow-md shadow-teal-500/20"
+                        }`}
+                      >
+                        <Upload className="h-4 w-4" />
+                        {isGraded ? "View Submission" : isSubmitted ? "View / Re-submit Work" : "Submit Assignment"}
+                      </motion.button>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* TAB 4: SETTINGS */}
+        {activeTab === "settings" && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <SettingsTab
+              currentUser={dbUser}
+              onLogout={onLogout}
+              theme={theme}
+              onThemeChange={onThemeChange}
+              onProfileUpdated={loadData}
+            />
+          </motion.div>
+        )}
+        <AnimatePresence>
+          {selectedAssignmentForSubmission && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto"
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+                className="bg-cream border border-ink-soft/15 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-5 my-8"
+              >
+                <div className="flex items-center justify-between border-b border-ink-soft/10 pb-4">
+                  <div>
+                    <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-teal-50 text-teal-600 rounded-full border border-teal-200">
+                      Assignment Submission
+                    </span>
+                    <h2 className="text-lg font-black text-ink mt-1">
+                      {selectedAssignmentForSubmission.title}
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() => setSelectedAssignmentForSubmission(null)}
+                    className="p-1.5 text-ink-soft hover:text-ink rounded-full hover:bg-black/5 cursor-pointer"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
                 </div>
 
-                <div className="border-t border-ink-soft/10 pt-4">
-                  <h4 className="text-xs font-black text-ink-soft uppercase tracking-wide mb-3">Connection</h4>
-                  <button
-                    onClick={handleForceReconnect}
-                    disabled={isReconnecting}
-                    className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-semibold text-ink-soft bg-cream-dim/60 border border-ink-soft/15 rounded-xl hover:bg-cream-dim hover:text-ink transition-all cursor-pointer disabled:opacity-60"
-                  >
-                    <RefreshCw className={`h-4 w-4 ${isReconnecting ? "animate-spin" : ""}`} />
-                    {isReconnecting ? "Refreshing..." : "Refresh Live Connection"}
-                  </button>
-                  {reconnectMessage && (
-                    <p className="text-[11px] text-teal-500 mt-1.5 text-center">{reconnectMessage}</p>
-                  )}
-                  <p className="text-[11px] text-ink-soft/50 mt-1.5">
-                    If new data isn't showing up automatically, use this instead of reloading the page.
+                <div className="p-3.5 bg-white/60 border border-ink-soft/10 rounded-2xl text-xs space-y-1">
+                  <h4 className="font-bold text-ink">Instructions:</h4>
+                  <p className="text-ink-soft/90 leading-relaxed font-sans">
+                    {selectedAssignmentForSubmission.content}
                   </p>
                 </div>
 
-                <div className="border-t border-ink-soft/10 pt-4">
-                  <h4 className="text-xs font-black text-ink-soft uppercase tracking-wide mb-3">Account</h4>
-                  <button
-                    onClick={onLogout}
-                    className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-semibold text-ink-soft bg-cream-dim/60 border border-ink-soft/15 rounded-xl hover:bg-cream-dim hover:text-ink transition-all cursor-pointer"
-                  >
-                    <LogOut className="h-4 w-4" /> Sign Out
-                  </button>
-                </div>
+                {submissionSuccess && (
+                  <div className="p-3 bg-teal-50 border border-teal-200 text-teal-700 text-xs font-bold rounded-xl flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-teal-500" />
+                    <span>{submissionSuccess}</span>
+                  </div>
+                )}
 
-                {/* Danger zone - tucked away, requires an extra click to reveal */}
-                <div className="border-t border-ink-soft/10 pt-4">
-                  {!showDangerZone ? (
-                    <button
-                      onClick={() => setShowDangerZone(true)}
-                      className="text-xs font-semibold text-ink-soft/50 hover:text-red-500 cursor-pointer transition-colors"
-                    >
-                      Advanced options
-                    </button>
-                  ) : (
-                    <form onSubmit={handleDeleteOwnAccount} className="space-y-3">
-                      <h4 className="text-xs font-black text-red-600 uppercase tracking-wide">Danger Zone</h4>
-                      <p className="text-[11px] text-ink-soft/70">
-                        Permanently deletes your account, login, and attendance history. This cannot be undone.
-                      </p>
-                      {deleteAccountError && (
-                        <div className="p-3 bg-red-50 border border-red-100 text-red-700 text-xs rounded-lg flex items-start gap-2">
-                          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                          <span>{deleteAccountError}</span>
-                        </div>
-                      )}
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-ink-soft" htmlFor="delete-account-password">
-                          Enter your password to confirm
-                        </label>
+                <form onSubmit={handleSubmitWork} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-ink-soft block">
+                      Your Solution / Work Description:
+                    </label>
+                    <textarea
+                      value={submissionText}
+                      onChange={(e) => setSubmissionText(e.target.value)}
+                      placeholder="Type your response or answers here..."
+                      rows={5}
+                      required
+                      className="w-full p-3 text-xs bg-white/70 border border-ink-soft/15 rounded-2xl focus:outline-none focus:border-teal-500 text-ink resize-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-ink-soft block">
+                      Attach File / Photo (optional):
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <label className="px-4 py-2.5 text-xs font-extrabold text-teal-700 bg-teal-50 border border-teal-200 hover:bg-teal-100 rounded-xl cursor-pointer transition-all flex items-center gap-1.5">
+                        <Paperclip className="h-4 w-4" />
+                        Choose File
                         <input
-                          id="delete-account-password"
-                          type="password"
-                          value={deleteAccountPassword}
-                          onChange={(e) => setDeleteAccountPassword(e.target.value)}
-                          className="w-full px-3 py-2 text-xs border border-ink-soft/15 rounded-xl focus:outline-none focus:border-red-300 text-ink"
+                          type="file"
+                          onChange={handleFileChange}
+                          className="hidden"
+                          accept="image/*,.pdf,.doc,.docx,.txt"
                         />
-                      </div>
-                      <button
-                        type="submit"
-                        disabled={isDeletingAccount}
-                        className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl cursor-pointer disabled:opacity-60"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        {isDeletingAccount ? "Deleting..." : "Permanently Delete My Account"}
-                      </button>
-                    </form>
-                  )}
-                </div>
-              </div>
+                      </label>
+                      <span className="text-xs font-mono text-ink-soft truncate">
+                        {attachmentName || "No file attached"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2 border-t border-ink-soft/10">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedAssignmentForSubmission(null)}
+                      className="px-4 py-2.5 text-xs font-bold text-ink-soft bg-white border border-ink-soft/15 rounded-xl hover:bg-black/5 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmittingWork}
+                      className="px-5 py-2.5 text-xs font-extrabold text-white bg-teal-500 rounded-xl hover:bg-teal-600 cursor-pointer shadow-md shadow-teal-500/20 flex items-center gap-2"
+                    >
+                      <Send className="h-4 w-4" />
+                      Submit Assignment
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
             </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
   );
 }

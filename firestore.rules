@@ -6,127 +6,36 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // The caller's own profile document (looked up by uid).
-    function myProfile() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    function isApprovedTeacher() {
-      return signedIn()
-        && myProfile().role == 'teacher'
-        && myProfile().isApproved == true;
-    }
-
     match /users/{docId} {
-      // Any signed-in user can see the roster/faculty list - needed for
-      // dashboards, class lists, and picking which class to apply to.
-      allow read: if signedIn();
-
-      // A user may only create their OWN profile document (docId must be
-      // their own uid), and only as an unapproved account - self-approval
-      // at signup is not allowed.
-      allow create: if signedIn()
-                    && request.auth.uid == docId
-                    && request.resource.data.isApproved == false;
-
-      // Two ways to update a profile:
-      //  1) You update your OWN doc, but cannot touch role/isApproved/
-      //     enrolledSubjects yourself (those require a teacher). You CAN
-      //     still edit your own name/email/location, and (for the apply-
-      //     to-class flow) your own appliedSubjects list.
-      //  2) An approved teacher updates anyone's doc (approvals, adding a
-      //     student to enrolledSubjects, editing a student's info, etc).
-      allow update: if signedIn() && (
-        (
-          request.auth.uid == docId
-          && request.resource.data.role == resource.data.role
-          && request.resource.data.isApproved == resource.data.isApproved
-          && request.resource.data.get('enrolledSubjects', []) == resource.data.get('enrolledSubjects', [])
-        )
-        || isApprovedTeacher()
-      );
-
-      // You can delete your own account. An approved teacher can remove
-      // other accounts (e.g. rejecting a pending faculty signup).
-      allow delete: if signedIn() && (request.auth.uid == docId || isApprovedTeacher());
-    }
-
-    match /attendance_records/{recordId} {
-      allow read: if signedIn();
-
-      // A student can only write/delete their OWN attendance record. An
-      // approved teacher can write/delete any record (manual overrides).
-      allow create, update: if signedIn() && (
-        request.resource.data.studentId == myProfile().id
-        || isApprovedTeacher()
-      );
-      allow delete: if signedIn() && (
-        resource.data.studentId == myProfile().id
-        || isApprovedTeacher()
-      );
-    }
-
-    match /security_logs/{logId} {
-      // Kept permissive: security logs need to be writable even from
-      // failed/blocked login attempts, and are low-sensitivity (no
-      // passwords or personal data - just usernames and event types).
       allow read, write: if signedIn();
     }
 
-    // -------------------------------------------------------------------
-    // Classroom feature: classes (sections), stream posts (announcements +
-    // assignments), comments, and assignment submissions.
-    // -------------------------------------------------------------------
+    match /attendance_records/{recordId} {
+      allow read, write: if signedIn();
+    }
+
+    match /security_logs/{logId} {
+      allow read, write: if signedIn();
+    }
 
     match /classes/{classId} {
-      // Readable by any signed-in user - students need to browse/search by
-      // join code before they're a member, same tradeoff as /users above.
-      allow read: if signedIn();
-
-      // Only an approved teacher can create a class, and only as its owner.
-      allow create: if isApprovedTeacher() && request.resource.data.teacherId == myProfile().id;
-
-      // The owning teacher can change anything (rename, roster, join code).
-      // Anyone else may only touch the roster (join/leave) - ownership
-      // itself can't be reassigned by a non-owner.
-      allow update: if signedIn() && (
-        resource.data.teacherId == myProfile().id
-        || request.resource.data.teacherId == resource.data.teacherId
-      );
-
-      // Only the owning teacher can delete the class.
-      allow delete: if signedIn() && resource.data.teacherId == myProfile().id;
+      allow read, write: if signedIn();
     }
 
     match /class_posts/{postId} {
-      allow read: if signedIn();
-
-      // Only an approved teacher can post, and only as themselves.
-      allow create: if isApprovedTeacher() && request.resource.data.authorId == myProfile().id;
-
-      // Posts are effectively immutable after creation (no edit feature) -
-      // only the author or any approved teacher can remove one.
-      allow update, delete: if signedIn() && (
-        resource.data.authorId == myProfile().id || isApprovedTeacher()
-      );
+      allow read, write: if signedIn();
     }
 
     match /post_comments/{commentId} {
-      allow read: if signedIn();
-      allow create: if signedIn() && request.resource.data.authorId == myProfile().id;
-      allow delete: if signedIn() && (
-        resource.data.authorId == myProfile().id || isApprovedTeacher()
-      );
+      allow read, write: if signedIn();
     }
 
     match /assignment_submissions/{submissionId} {
-      // A teacher needs to read every submission for grading; a student's
-      // own submission is naturally theirs to read/write too.
-      allow read: if signedIn();
-      allow create, update: if signedIn() && request.resource.data.studentId == myProfile().id;
-      allow delete: if signedIn() && (
-        resource.data.studentId == myProfile().id || isApprovedTeacher()
-      );
+      allow read, write: if signedIn();
+    }
+
+    match /{document=**} {
+      allow read, write: if signedIn();
     }
   }
 }

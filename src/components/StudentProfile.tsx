@@ -18,10 +18,12 @@ import {
 } from "lucide-react";
 import { User, AttendanceRecord, AttendanceStatus } from "../types";
 import { getAttendanceRecords, calculateStudentStats, formatDate } from "../lib/db";
+import UserAvatar from "./UserAvatar";
 
 interface StudentProfileProps {
   student: User;
-  onBack: () => void;
+  onBack?: () => void;
+  onClose?: () => void;
 }
 
 const WEEKDAY_LABELS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -39,7 +41,11 @@ function getMonthGrid(year: number, month: number): (number | null)[] {
   return cells;
 }
 
-export default function StudentProfile({ student, onBack }: StudentProfileProps) {
+export default function StudentProfile({ student, onBack, onClose }: StudentProfileProps) {
+  const handleClose = () => {
+    if (onClose) onClose();
+    else if (onBack) onBack();
+  };
   const [monthOffset, setMonthOffset] = useState(0);
 
   // Real attendance history for this student, pulled from the same live-synced
@@ -171,7 +177,7 @@ export default function StudentProfile({ student, onBack }: StudentProfileProps)
   return (
     <div className="space-y-6" id="student-profile">
       <button
-        onClick={onBack}
+        onClick={handleClose}
         className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-500 hover:text-violet-700 transition-colors cursor-pointer"
         id="profile-back-btn"
       >
@@ -184,14 +190,7 @@ export default function StudentProfile({ student, onBack }: StudentProfileProps)
         animate={{ opacity: 1, y: 0 }}
         className="bg-white border border-violet-100/60 rounded-3xl p-6 shadow-violet flex flex-col md:flex-row md:items-center gap-5"
       >
-        <div className="h-20 w-20 rounded-2xl bg-violet-50 text-violet-500 flex items-center justify-center text-2xl font-bold font-display shrink-0">
-          {student.name
-            .split(" ")
-            .map((n) => n[0])
-            .slice(0, 2)
-            .join("")
-            .toUpperCase()}
-        </div>
+        <UserAvatar name={student.name} avatarUrl={student.avatarUrl} role={student.role} size="2xl" />
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-2xl font-bold text-ink font-display truncate">{student.name}</h2>
