@@ -2,6 +2,14 @@ export type UserRole = "student" | "teacher";
 
 export type AttendanceStatus = "Present" | "Absent" | "Late";
 
+export interface SocialAccounts {
+  facebook?: string;
+  twitter?: string;
+  linkedin?: string;
+  github?: string;
+  instagram?: string;
+}
+
 export interface User {
   id: string; // This is the username/unique ID
   uid?: string; // Firebase Auth UID (also the Firestore doc id) - present on accounts created via Firebase Auth
@@ -15,7 +23,11 @@ export interface User {
   appliedSubjects?: string[]; // List of subject names applied for but not yet approved
   enrolledSubjects?: string[]; // List of subject names currently enrolled/approved in
   email?: string; // Contact email (students) so teachers can reach them
-  location?: string; // Student's location, visible to teachers
+  phone?: string; // Contact phone number
+  address?: string; // Residential or mailing address
+  department?: string; // Student/Faculty Department or Course (e.g. DCPE, DCS, Computer Engineering, Computer Science)
+  location?: string; // Legacy location field
+  socialAccounts?: SocialAccounts; // Linked social media profiles (Facebook, Twitter, LinkedIn, GitHub, Instagram)
 }
 
 export interface AttendanceRecord {
@@ -35,7 +47,7 @@ export interface SecurityLog {
   timestamp: string;
   usernameAttempted: string;
   details: string;
-  type: "Impersonation Attempt" | "Invalid Registration" | "Unauthorized Access";
+  type: "Impersonation Attempt" | "Invalid Registration" | "Unauthorized Access" | "Verification Status Changed" | "Account Deleted";
 }
 
 export interface StudentStats {

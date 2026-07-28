@@ -46,11 +46,14 @@ html, html.theme-default {
     radial-gradient(circle at 85% 25%, rgba(255, 0, 127, 0.35), transparent 50%),
     radial-gradient(circle at 50% 85%, rgba(168, 85, 247, 0.3), transparent 55%),
     linear-gradient(135deg, #050814, #0a0f24, #08112e);
-  background-attachment: fixed;
   transition: background-color 0.4s ease, background-image 0.4s ease;
   color-scheme: dark;
   overflow-x: hidden;
   max-width: 100vw;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeSpeed;
 }
 
 /* Obsidian Neon Theme (Darker Version) */
@@ -69,6 +72,7 @@ body, #root, #app-root {
   width: 100%;
   max-width: 100vw;
   color: var(--color-ink);
+  -webkit-overflow-scrolling: touch;
 }
 
 h1, h2, h3, .font-display {
@@ -79,9 +83,16 @@ h1, h2, h3, .font-display {
 .bg-cream,
 .bg-cream-dim {
   background-color: rgba(13, 17, 28, 0.82) !important;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Hardware-Accelerated Smooth GPU Transforms */
+.gpu-smooth {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000px;
 }
 
 /* Neon Glow Utility Classes */
@@ -130,6 +141,27 @@ textarea {
   color: var(--color-ink);
   background-color: rgba(18, 24, 38, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+input.bg-transparent,
+input[class*="bg-transparent"],
+input[class*="border-0"],
+input[class*="border-none"],
+input.border-none {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+input.bg-transparent:focus,
+input[class*="bg-transparent"]:focus,
+input[class*="border-0"]:focus,
+input[class*="border-none"]:focus,
+input.border-none:focus {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 input::placeholder,

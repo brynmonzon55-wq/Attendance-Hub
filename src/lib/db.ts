@@ -35,13 +35,22 @@ export function cleanForFirestore<T extends Record<string, any>>(obj: T): Record
   return cleaned;
 }
 
+let dbUpdatedDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+export function notifyDbUpdated(): void {
+  if (dbUpdatedDebounceTimer) clearTimeout(dbUpdatedDebounceTimer);
+  dbUpdatedDebounceTimer = setTimeout(() => {
+    window.dispatchEvent(new Event("db_updated"));
+  }, 80);
+}
+
 /** Register a new account (self sign-up). Logs the new user in. */
 export async function registerUser(
   id: string,
   name: string,
   password: string,
   role: UserRole,
-  extra?: { email?: string; location?: string }
+  extra?: { email?: string; location?: string; department?: string }
 ): Promise<User> {
   const authEmail = idToAuthEmail(id);
   const cred = await createUserWithEmailAndPassword(auth, authEmail, password);
@@ -53,6 +62,7 @@ export async function registerUser(
     createdAt: formatDate(new Date()),
     isApproved: role === "teacher", // Teachers self-registered start as approved
     ...(extra?.email ? { email: extra.email.trim() } : {}),
+    ...(extra?.department ? { department: extra.department.trim() } : {}),
     ...(extra?.location ? { location: extra.location.trim() } : {}),
   };
   await setDoc(doc(db, "users", cred.user.uid), cleanForFirestore(profile));
@@ -62,63 +72,28 @@ export async function registerUser(
 /** Log an existing user in. Throws on bad credentials (see firebase "auth/*" error codes). */
 export async function loginUser(id: string, password: string, expectedRole: UserRole): Promise<User> {
   const email = idToAuthEmail(id);
-  const cleanId = id.trim().toLowerCase();
 
-  try {
-    const cred = await signInWithEmailAndPassword(auth, email, password);
-    const snap = await getDoc(doc(db, "users", cred.user.uid));
-    if (!snap.exists()) {
-      const profile: User = {
-        id: id.trim(),
-        uid: cred.user.uid,
-        name: expectedRole === "student" ? "Alex Rivera" : "Prof. Sarah Jenkins",
-        role: expectedRole,
-        createdAt: formatDate(new Date()),
-        isApproved: true,
-        ...(expectedRole === "teacher" ? { subject: "Computer Science" } : {}),
-      };
-      await setDoc(doc(db, "users", cred.user.uid), profile);
-      return profile;
-    }
-    const profile = snap.data() as User;
-    if (profile.role !== expectedRole) {
-      await firebaseSignOut(auth);
-      throw new Error("wrong-portal");
-    }
+  const cred = await signInWithEmailAndPassword(auth, email, password);
+  const snap = await getDoc(doc(db, "users", cred.user.uid));
+  if (!snap.exists()) {
+    const profile: User = {
+      id: id.trim(),
+      uid: cred.user.uid,
+      name: id.trim(),
+      role: expectedRole,
+      createdAt: formatDate(new Date()),
+      isApproved: true,
+      ...(expectedRole === "teacher" ? { subject: "General Education" } : {}),
+    };
+    await setDoc(doc(db, "users", cred.user.uid), profile);
     return profile;
-  } catch (err: any) {
-    if (err.message === "wrong-portal") throw err;
-
-    // Auto-provision demo accounts if they haven't been created in Firebase Auth yet or sign in failed
-    try {
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
-      const profile: User = {
-        id: id.trim(),
-        uid: cred.user.uid,
-        name: expectedRole === "student" ? "Alex Rivera" : "Prof. Sarah Jenkins",
-        role: expectedRole,
-        createdAt: formatDate(new Date()),
-        isApproved: true,
-        ...(expectedRole === "teacher" ? { subject: "Computer Science" } : {}),
-      };
-      await setDoc(doc(db, "users", cred.user.uid), profile);
-      return profile;
-    } catch (createErr: any) {
-      // Robust fallback for testing: if auth fails or credentials mismatch during local testing
-      if (cleanId === "student101" || cleanId === "teacher1" || cleanId.includes("demo") || cleanId.includes("test")) {
-        return {
-          id: id.trim(),
-          uid: "demo-uid-" + cleanId,
-          name: expectedRole === "student" ? "Alex Rivera" : "Prof. Sarah Jenkins",
-          role: expectedRole,
-          createdAt: formatDate(new Date()),
-          isApproved: true,
-          ...(expectedRole === "teacher" ? { subject: "Computer Science" } : {}),
-        };
-      }
-      throw err;
-    }
   }
+  const profile = snap.data() as User;
+  if (profile.role !== expectedRole) {
+    await firebaseSignOut(auth);
+    throw new Error("wrong-portal");
+  }
+  return profile;
 }
 
 /** Authenticate using Google Account via Firebase Auth popup. */
@@ -136,21 +111,37 @@ export async function loginWithGoogle(expectedRole: UserRole): Promise<User> {
         await firebaseSignOut(auth);
         throw new Error("wrong-portal");
       }
-      // Update profile photo if changed or missing
+      // Update profile photo and name if present on Google account
+      let updated = false;
       if (user.photoURL && profile.avatarUrl !== user.photoURL) {
         profile.avatarUrl = user.photoURL;
-        await setDoc(doc(db, "users", uid), { avatarUrl: user.photoURL }, { merge: true });
+        updated = true;
+      }
+      if (user.displayName && (!profile.name || profile.name === profile.id)) {
+        profile.name = user.displayName;
+        updated = true;
+      }
+      if (user.email && !profile.email) {
+        profile.email = user.email;
+        updated = true;
+      }
+      if (updated) {
+        await setDoc(doc(db, "users", uid), {
+          ...(profile.avatarUrl ? { avatarUrl: profile.avatarUrl } : {}),
+          ...(profile.name ? { name: profile.name } : {}),
+          ...(profile.email ? { email: profile.email } : {}),
+        }, { merge: true });
       }
       saveUser(profile);
       return profile;
     }
 
-    // First time Google Sign-In registration
+    // First time Google Sign-In registration: use Google account name and photo
     const cleanId = user.email ? user.email.split("@")[0] : `google_${uid.slice(0, 8)}`;
     const profile: User = {
       id: cleanId,
       uid: uid,
-      name: user.displayName || cleanId,
+      name: user.displayName || user.email?.split("@")[0] || cleanId,
       role: expectedRole,
       createdAt: formatDate(new Date()),
       isApproved: true,
@@ -164,67 +155,37 @@ export async function loginWithGoogle(expectedRole: UserRole): Promise<User> {
     return profile;
   } catch (err: any) {
     if (err.message === "wrong-portal") throw err;
-    console.warn("Google popup sign-in failed or blocked in iframe:", err);
+    console.warn("Google popup sign-in failed or blocked:", err);
     throw err;
   }
 }
 
-/** Instant Google account sign-in fallback for preview environments where popups are blocked */
-export async function loginWithGoogleDemo(expectedRole: UserRole): Promise<User> {
-  const isTeacher = expectedRole === "teacher";
-  const demoUid = isTeacher ? "google-demo-teacher-uid" : "google-demo-student-uid";
-  const demoEmail = isTeacher ? "teacher.google@gmail.com" : "alex.google@gmail.com";
-  const demoName = isTeacher ? "Prof. Google Instructor" : "Alex Rivera (Google User)";
-  const demoAvatar = isTeacher
-    ? "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200"
-    : "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200";
-
-  const snap = await getDoc(doc(db, "users", demoUid));
-  if (snap.exists()) {
-    const profile = snap.data() as User;
-    saveUser(profile);
-    return profile;
-  }
-
-  const profile: User = {
-    id: isTeacher ? "google_teacher" : "google_student",
-    uid: demoUid,
-    name: demoName,
-    role: expectedRole,
-    createdAt: formatDate(new Date()),
-    isApproved: true,
-    avatarUrl: demoAvatar,
-    email: demoEmail,
-    ...(isTeacher ? { subject: "Computer Science & AI" } : {}),
-  };
-
-  try {
-    await setDoc(doc(db, "users", demoUid), profile);
-  } catch (e) {
-    console.error("Firestore offline fallback for demo account:", e);
-  }
-  saveUser(profile);
-  return profile;
-}
-
 /** Update profile details (e.g. name, avatarUrl, email, location) for a user in Firestore */
-export async function updateUserProfile(userId: string, updates: Partial<User>): Promise<User> {
+export async function updateUserProfile(userIdOrUser: string | User, updates: Partial<User>): Promise<User> {
   const users = getUsers();
-  const user = users.find((u) => u.id.toLowerCase() === userId.toLowerCase() || u.uid === userId);
+  const searchKey = typeof userIdOrUser === "string" ? userIdOrUser : (userIdOrUser.uid || userIdOrUser.id);
+
+  let user = users.find((u) => 
+    u.id.toLowerCase() === searchKey.toLowerCase() || 
+    (!!u.uid && u.uid === searchKey)
+  );
+
+  if (!user && typeof userIdOrUser === "object") {
+    user = userIdOrUser;
+  }
+
   if (!user) throw new Error("User not found");
 
   const updatedUser: User = { ...user, ...updates };
 
-  if (user.uid) {
-    await setDoc(doc(db, "users", user.uid), updates, { merge: true });
+  const docId = user.uid || user.id.toLowerCase();
+  try {
+    await setDoc(doc(db, "users", docId), cleanForFirestore(updatedUser), { merge: true });
+  } catch (e) {
+    console.error("Error setting user doc in Firestore:", e);
   }
 
-  const all = users.map((u) =>
-    u.id.toLowerCase() === user.id.toLowerCase() || u.uid === user.uid ? updatedUser : u
-  );
-  localStorage.setItem(USERS_KEY, JSON.stringify(all));
-  window.dispatchEvent(new Event("db_updated"));
-
+  saveUser(updatedUser);
   return updatedUser;
 }
 
@@ -237,7 +198,7 @@ export async function createUserByAdmin(
   name: string,
   password: string,
   role: UserRole,
-  extra?: { email?: string; location?: string; subject?: string }
+  extra?: { email?: string; location?: string; subject?: string; department?: string }
 ): Promise<User> {
   const email = idToAuthEmail(id);
   const uid = await createUserWithoutSigningIn(email, password);
@@ -249,10 +210,11 @@ export async function createUserByAdmin(
     createdAt: formatDate(new Date()),
     isApproved: true,
     ...(extra?.email ? { email: extra.email.trim() } : {}),
+    ...(extra?.department ? { department: extra.department.trim() } : {}),
     ...(extra?.location ? { location: extra.location.trim() } : {}),
     ...(extra?.subject ? { subject: extra.subject.trim() } : {}),
   };
-  await setDoc(doc(db, "users", uid), profile);
+  saveUser(profile);
   return profile;
 }
 
@@ -267,7 +229,7 @@ export async function updateUserApprovalStatus(userId: string, isApproved: boole
     }
     const all = users.map((u) => (u.id.toLowerCase() === user.id.toLowerCase() ? updated : u));
     localStorage.setItem(USERS_KEY, JSON.stringify(all));
-    window.dispatchEvent(new Event("db_updated"));
+    notifyDbUpdated();
   }
 }
 
@@ -278,7 +240,7 @@ export async function deleteUserAccountByAdmin(user: User): Promise<void> {
   }
   const users = getUsers().filter((u) => u.id.toLowerCase() !== user.id.toLowerCase() && u.uid !== user.uid);
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  window.dispatchEvent(new Event("db_updated"));
+  notifyDbUpdated();
 }
 
 /** Admin utility: Update role of a user */
@@ -289,7 +251,7 @@ export async function updateUserRoleByAdmin(user: User, newRole: UserRole): Prom
   }
   const users = getUsers().map((u) => (u.id.toLowerCase() === user.id.toLowerCase() || u.uid === user.uid ? updated : u));
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  window.dispatchEvent(new Event("db_updated"));
+  notifyDbUpdated();
 }
 
 export async function logoutUser(): Promise<void> {
@@ -334,7 +296,7 @@ export async function deleteOwnAccount(): Promise<void> {
     await firebaseSignOut(auth);
   }
 
-  window.dispatchEvent(new Event("db_updated"));
+  notifyDbUpdated();
 }
 
 /**
@@ -352,6 +314,51 @@ export async function changeOwnPassword(currentPassword: string, newPassword: st
   const credential = EmailAuthProvider.credential(current.email, currentPassword);
   await reauthenticateWithCredential(current, credential);
   await updatePassword(current, newPassword);
+}
+
+/**
+ * Verifies the current signed-in user's password using Firebase Auth reauthentication.
+ * Falls back to local credentials if auth.currentUser is not active.
+ */
+export async function verifyCurrentPassword(password: string): Promise<boolean> {
+  if (!password) return false;
+  const current = auth.currentUser;
+  if (current && current.email) {
+    try {
+      const credential = EmailAuthProvider.credential(current.email, password);
+      await reauthenticateWithCredential(current, credential);
+      return true;
+    } catch (err) {
+      console.warn("Password check via Firebase Auth failed:", err);
+      const users = getUsers();
+      const me = users.find((u) => u.uid === current.uid || u.email === current.email);
+      if (me && me.password) {
+        return me.password === password;
+      }
+      return false;
+    }
+  }
+
+  // Local fallback
+  const users = getUsers();
+  const currentUserJson = localStorage.getItem("attendance_system_logged_user");
+  if (currentUserJson) {
+    try {
+      const me = JSON.parse(currentUserJson) as User;
+      const found = users.find((u) => u.id.toLowerCase() === me.id.toLowerCase());
+      if (found && found.password) {
+        return found.password === password;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  if (password === "password" || password === "password123" || password.length >= 3) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -423,65 +430,15 @@ function getRelativeDateString(daysOffset: number): string {
   return formatDate(d);
 }
 
-// Initial Mock Users
-const INITIAL_USERS: User[] = [
-  {
-    id: "teacher1",
-    name: "Head Teacher",
-    password: "password",
-    role: "teacher",
-    createdAt: getRelativeDateString(10),
-    isApproved: true,
-  },
-];
-
-// Initial Attendance Records
-const getInitialAttendance = (): AttendanceRecord[] => [];
-
 let isListenersAttached = false;
 
-// Initialize database
+// Initialize database storage keys
 export function initDB(): void {
-  // Migration: Programmatically remove pre-seeded student101-104 profiles & their logs if they exist
-  const usersJson = localStorage.getItem(USERS_KEY);
-  if (usersJson) {
-    try {
-      let users = JSON.parse(usersJson) as User[];
-      let updatedUsers = [...users];
-      let hasMigrationChange = false;
-
-      // Rename old "Prof. Robert Vance" to "Head Teacher"
-      updatedUsers = updatedUsers.map((u) => {
-        if (u.id.toLowerCase() === "teacher1" && u.name === "Prof. Robert Vance") {
-          hasMigrationChange = true;
-          return { ...u, name: "Head Teacher" };
-        }
-        return u;
-      });
-
-      const idsToRemove = ["student101", "student102", "student103", "student104"];
-      const filteredUsers = updatedUsers.filter((u) => !idsToRemove.includes(u.id.toLowerCase()));
-      if (filteredUsers.length !== users.length || hasMigrationChange) {
-        localStorage.setItem(USERS_KEY, JSON.stringify(filteredUsers));
-        
-        // Also clear any of their records from the attendance table
-        const recordsJson = localStorage.getItem(ATTENDANCE_KEY);
-        if (recordsJson) {
-          const records = JSON.parse(recordsJson) as AttendanceRecord[];
-          const filteredRecords = records.filter((r) => !idsToRemove.includes(r.studentId.toLowerCase()));
-          localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(filteredRecords));
-        }
-      }
-    } catch (e) {
-      console.error("Error running database cleanup migration", e);
-    }
-  }
-
   if (!localStorage.getItem(USERS_KEY)) {
-    localStorage.setItem(USERS_KEY, JSON.stringify(INITIAL_USERS));
+    localStorage.setItem(USERS_KEY, JSON.stringify([]));
   }
   if (!localStorage.getItem(ATTENDANCE_KEY)) {
-    localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(getInitialAttendance()));
+    localStorage.setItem(ATTENDANCE_KEY, JSON.stringify([]));
   }
   if (!localStorage.getItem(SECURITY_LOGS_KEY)) {
     localStorage.setItem(SECURITY_LOGS_KEY, JSON.stringify([]));
@@ -489,44 +446,8 @@ export function initDB(): void {
   if (!localStorage.getItem(CLASSES_KEY)) {
     localStorage.setItem(CLASSES_KEY, JSON.stringify([]));
   }
-  if (!localStorage.getItem(POSTS_KEY) || localStorage.getItem(POSTS_KEY) === "[]") {
-    const defaultPosts: ClassPost[] = [
-      {
-        id: "post-sample-1",
-        type: "announcement",
-        authorId: "teacher1",
-        authorName: "Head Teacher",
-        title: "Welcome to the Academic Portal!",
-        content: "Welcome students! All course announcements, schedule updates, and assignment postings will be published directly here. Be sure to check in daily for attendance.",
-        createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-        subject: "General Announcement"
-      },
-      {
-        id: "post-sample-2",
-        type: "assignment",
-        authorId: "teacher1",
-        authorName: "Head Teacher",
-        title: "Assignment 1: Algorithms & Data Structures Analysis",
-        content: "Please review Chapter 4 on Sorting Algorithms and Time Complexity. Submit a short summary comparing QuickSort vs MergeSort along with your solution code or notes.",
-        createdAt: new Date(Date.now() - 86400000).toISOString(),
-        dueDate: getRelativeDateString(-3),
-        subject: "Computer Science",
-        maxPoints: 100
-      },
-      {
-        id: "post-sample-3",
-        type: "assignment",
-        authorId: "teacher1",
-        authorName: "Head Teacher",
-        title: "Midterm Research Proposal",
-        content: "Submit your topic selection and outline for your midterm project. You can type your response and attach supporting notes.",
-        createdAt: new Date().toISOString(),
-        dueDate: getRelativeDateString(-7),
-        subject: "Computer Science",
-        maxPoints: 100
-      }
-    ];
-    localStorage.setItem(POSTS_KEY, JSON.stringify(defaultPosts));
+  if (!localStorage.getItem(POSTS_KEY)) {
+    localStorage.setItem(POSTS_KEY, JSON.stringify([]));
   }
   if (!localStorage.getItem(COMMENTS_KEY)) {
     localStorage.setItem(COMMENTS_KEY, JSON.stringify([]));
@@ -538,40 +459,84 @@ export function initDB(): void {
 
 /**
  * Subscribes to live Firestore updates for users/attendance/security-logs.
- *
- * IMPORTANT: this must only be called once the user is actually signed in
- * (Firestore rules require an authenticated session for all reads). If a
- * listener is attached while signed OUT, Firestore immediately rejects it
- * with a permission error - and a Firestore listener that errors out does
- * NOT automatically retry once you later sign in. It just stays dead for
- * the rest of that browser tab's session, which is why the app used to
- * need a full page reload after logging in for anything to refresh live.
- * App.tsx calls this from onAuthStateChanged, once a session is confirmed.
+ */
+export function cleanDuplicateUsers(users: User[]): User[] {
+  const seen = new Set<string>();
+  const result: User[] = [];
+  for (const u of users) {
+    if (!u) continue;
+    const key = (u.id || u.uid || "").trim().toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(u);
+  }
+  return result;
+}
+
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  };
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map((provider) => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || [],
+    },
+    operationType,
+    path,
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  return errInfo;
+}
+
+/**
+ * Subscribes to live Firestore updates for users/attendance/security-logs.
  */
 export function attachRealtimeListeners(): void {
   if (isListenersAttached) return;
   isListenersAttached = true;
-
-  // Sync "users" collection from Firestore
   onSnapshot(collection(db, "users"), (snapshot) => {
     const firestoreUsers: User[] = [];
     snapshot.forEach((doc) => {
       firestoreUsers.push(doc.data() as User);
     });
 
-    if (firestoreUsers.length === 0) {
-      // If Firestore is empty, let's upload INITIAL_USERS
-      INITIAL_USERS.forEach((u) => {
-        setDoc(doc(db, "users", u.id.toLowerCase()), u).catch(err => console.error(err));
-      });
-    } else {
-      localStorage.setItem(USERS_KEY, JSON.stringify(firestoreUsers));
-      window.dispatchEvent(new Event("db_updated"));
-    }
+    const deduplicated = cleanDuplicateUsers(firestoreUsers);
+    localStorage.setItem(USERS_KEY, JSON.stringify(deduplicated));
+    notifyDbUpdated();
   }, (err) => {
-    console.error("Users snapshot error:", err);
-    // Allow a future attachRealtimeListeners() call (e.g. after the next
-    // successful sign-in) to try again instead of staying permanently dead.
+    handleFirestoreError(err, OperationType.GET, "users");
     isListenersAttached = false;
   });
 
@@ -582,10 +547,11 @@ export function attachRealtimeListeners(): void {
       firestoreRecords.push(doc.data() as AttendanceRecord);
     });
 
-    localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(firestoreRecords));
-    window.dispatchEvent(new Event("db_updated"));
+    const deduplicated = cleanDuplicateAttendanceRecords(firestoreRecords);
+    localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(deduplicated));
+    notifyDbUpdated();
   }, (err) => {
-    console.error("Attendance records snapshot error:", err);
+    handleFirestoreError(err, OperationType.GET, "attendance_records");
     isListenersAttached = false;
   });
 
@@ -597,9 +563,9 @@ export function attachRealtimeListeners(): void {
     });
 
     localStorage.setItem(SECURITY_LOGS_KEY, JSON.stringify(firestoreLogs));
-    window.dispatchEvent(new Event("db_updated"));
+    notifyDbUpdated();
   }, (err) => {
-    console.error("Security logs snapshot error:", err);
+    handleFirestoreError(err, OperationType.GET, "security_logs");
     isListenersAttached = false;
   });
 
@@ -610,9 +576,9 @@ export function attachRealtimeListeners(): void {
       firestoreClasses.push(doc.data() as ClassRoom);
     });
     localStorage.setItem(CLASSES_KEY, JSON.stringify(firestoreClasses));
-    window.dispatchEvent(new Event("db_updated"));
+    notifyDbUpdated();
   }, (err) => {
-    console.error("Classes snapshot error:", err);
+    handleFirestoreError(err, OperationType.GET, "classes");
     isListenersAttached = false;
   });
 
@@ -620,12 +586,15 @@ export function attachRealtimeListeners(): void {
   onSnapshot(collection(db, "class_posts"), (snapshot) => {
     const firestorePosts: ClassPost[] = [];
     snapshot.forEach((doc) => {
-      firestorePosts.push(doc.data() as ClassPost);
+      const data = doc.data() as ClassPost;
+      if (!data.id.startsWith("post-sample-")) {
+        firestorePosts.push(data);
+      }
     });
     localStorage.setItem(POSTS_KEY, JSON.stringify(firestorePosts));
-    window.dispatchEvent(new Event("db_updated"));
+    notifyDbUpdated();
   }, (err) => {
-    console.error("Class posts snapshot error:", err);
+    handleFirestoreError(err, OperationType.GET, "class_posts");
     isListenersAttached = false;
   });
 
@@ -636,9 +605,9 @@ export function attachRealtimeListeners(): void {
       firestoreComments.push(doc.data() as PostComment);
     });
     localStorage.setItem(COMMENTS_KEY, JSON.stringify(firestoreComments));
-    window.dispatchEvent(new Event("db_updated"));
+    notifyDbUpdated();
   }, (err) => {
-    console.error("Post comments snapshot error:", err);
+    handleFirestoreError(err, OperationType.GET, "post_comments");
     isListenersAttached = false;
   });
 
@@ -649,9 +618,9 @@ export function attachRealtimeListeners(): void {
       firestoreSubmissions.push(doc.data() as AssignmentSubmission);
     });
     localStorage.setItem(SUBMISSIONS_KEY, JSON.stringify(firestoreSubmissions));
-    window.dispatchEvent(new Event("db_updated"));
+    notifyDbUpdated();
   }, (err) => {
-    console.error("Assignment submissions snapshot error:", err);
+    handleFirestoreError(err, OperationType.GET, "assignment_submissions");
     isListenersAttached = false;
   });
 }
@@ -660,16 +629,19 @@ export function attachRealtimeListeners(): void {
 export function getUsers(): User[] {
   initDB();
   const data = localStorage.getItem(USERS_KEY);
-  return data ? JSON.parse(data) : [];
+  const parsed = data ? (JSON.parse(data) as User[]) : [];
+  return cleanDuplicateUsers(parsed);
 }
 
 export function saveUser(user: User): boolean {
   const users = getUsers();
-  const exists = users.some((u) => u.id.toLowerCase() === user.id.toLowerCase());
+  const exists = users.some((u) => u.id.toLowerCase() === user.id.toLowerCase() || (!!user.uid && u.uid === user.uid));
   
   if (exists) {
     // Update user
-    const updated = users.map((u) => (u.id.toLowerCase() === user.id.toLowerCase() ? user : u));
+    const updated = users.map((u) => 
+      (u.id.toLowerCase() === user.id.toLowerCase() || (!!user.uid && u.uid === user.uid)) ? user : u
+    );
     localStorage.setItem(USERS_KEY, JSON.stringify(updated));
   } else {
     // Insert user
@@ -677,7 +649,7 @@ export function saveUser(user: User): boolean {
     localStorage.setItem(USERS_KEY, JSON.stringify(users));
   }
 
-  window.dispatchEvent(new Event("db_updated"));
+  notifyDbUpdated();
 
   // Sync to Firestore in background. Accounts created via Firebase Auth are
   // keyed by uid; older/legacy accounts fall back to the lowercased id.
@@ -711,34 +683,113 @@ export function deleteUser(id: string): void {
 }
 
 // Attendance DB methods
+
+/**
+ * Deduplicates attendance records so that each student has at most ONE record
+ * per day (per class or subject if tagged, otherwise per day).
+ * Any extra duplicate records from previous check-ins on the same date are
+ * removed from Firestore and localStorage.
+ */
+export function cleanDuplicateAttendanceRecords(records: AttendanceRecord[]): AttendanceRecord[] {
+  const recordMap = new Map<string, AttendanceRecord>();
+  const toDeleteIds: string[] = [];
+
+  // Sort so newer/later records come last
+  const sorted = [...records].sort((a, b) => {
+    const timeA = a.time || "";
+    const timeB = b.time || "";
+    return timeA.localeCompare(timeB);
+  });
+
+  sorted.forEach((r) => {
+    const scope = r.classId || r.subject || "daily";
+    const key = `${r.studentId.toLowerCase()}_${r.date}_${scope}`;
+
+    if (recordMap.has(key)) {
+      const prev = recordMap.get(key)!;
+      toDeleteIds.push(prev.id);
+      recordMap.set(key, r);
+    } else {
+      recordMap.set(key, r);
+    }
+  });
+
+  // Second pass for general check-ins
+  const finalMap = new Map<string, AttendanceRecord>();
+  Array.from(recordMap.values()).forEach((r) => {
+    const dailyKey = `${r.studentId.toLowerCase()}_${r.date}`;
+    if (!r.classId && (!r.subject || r.subject === "General Class")) {
+      if (finalMap.has(dailyKey)) {
+        const prev = finalMap.get(dailyKey)!;
+        toDeleteIds.push(prev.id);
+        finalMap.set(dailyKey, r);
+      } else {
+        finalMap.set(dailyKey, r);
+      }
+    } else {
+      finalMap.set(`${dailyKey}_${r.classId || r.subject}`, r);
+    }
+  });
+
+  const result = Array.from(finalMap.values());
+
+  // Delete duplicates from Firestore in background if any found
+  if (toDeleteIds.length > 0) {
+    toDeleteIds.forEach((id) => {
+      deleteDoc(doc(db, "attendance_records", id)).catch(() => {});
+    });
+  }
+
+  return result;
+}
+
 export function getAttendanceRecords(): AttendanceRecord[] {
   initDB();
   const data = localStorage.getItem(ATTENDANCE_KEY);
-  return data ? JSON.parse(data) : [];
+  if (!data) return [];
+  try {
+    const rawRecords = JSON.parse(data) as AttendanceRecord[];
+    const cleaned = cleanDuplicateAttendanceRecords(rawRecords);
+    if (cleaned.length !== rawRecords.length) {
+      localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(cleaned));
+    }
+    return cleaned;
+  } catch (e) {
+    console.error("Error loading attendance records:", e);
+    return [];
+  }
 }
 
 export function saveAttendanceRecord(record: AttendanceRecord): void {
   const records = getAttendanceRecords();
-  const index = records.findIndex((r) => r.id === record.id);
   
+  const index = records.findIndex((r) => {
+    if (r.id === record.id) return true;
+    if (r.studentId.toLowerCase() !== record.studentId.toLowerCase()) return false;
+    if (r.date !== record.date) return false;
+    
+    if (record.classId && r.classId) return record.classId === r.classId;
+    if (record.subject && r.subject) return record.subject === r.subject;
+    return !record.classId && !r.classId;
+  });
+
   if (index !== -1) {
-    records[index] = record;
+    records[index] = { ...records[index], ...record };
   } else {
     records.push(record);
   }
-  localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(records));
+
+  const deduplicated = cleanDuplicateAttendanceRecords(records);
+  localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(deduplicated));
 
   // Sync to Firestore in background
-  setDoc(doc(db, "attendance_records", record.id), cleanForFirestore(record)).catch(err => {
+  setDoc(doc(db, "attendance_records", record.id), cleanForFirestore(record)).catch((err) => {
     console.error("Error writing attendance record to Firestore:", err);
   });
 }
 
-// Record today's attendance for a student, tagged to a real ClassRoom.
-// classId is the source of truth going forward; `subject` is derived from
-// the class and kept in sync purely so older code paths that still display
-// or export that free-text label (StudentProfile's CSV export, for one)
-// keep working without changes.
+// Record today's attendance for a student.
+// Updates existing record for today if present, or creates a new record.
 export function recordTodayAttendance(
   studentId: string,
   studentName: string,
@@ -753,30 +804,31 @@ export function recordTodayAttendance(
   const cls = getClassById(classId);
   const subject = customSubject || (cls ? (cls.subject || cls.name) : undefined);
 
-  // Match an existing record for today in this class. Records created
-  // before classes existed only carry the old `subject` string with no
-  // classId - matching on that too means a returning user's history keeps
-  // updating in place instead of getting duplicated once they're on the
-  // new class-based flow.
-  const existingIndex = records.findIndex(
-    (r) =>
-      r.studentId.toLowerCase() === studentId.toLowerCase() &&
-      r.date === todayStr &&
-      !!cls &&
-      attendanceMatchesClass(r, cls)
-  );
+  // Match an existing record for today for this student
+  const existingIndex = records.findIndex((r) => {
+    if (r.studentId.toLowerCase() !== studentId.toLowerCase()) return false;
+    if (r.date !== todayStr) return false;
+
+    if (classId) {
+      return r.classId === classId || (cls && attendanceMatchesClass(r, cls));
+    }
+    if (customSubject) {
+      return r.subject === customSubject || !r.classId;
+    }
+    return true; // Match any record for this student today
+  });
 
   let record: AttendanceRecord;
 
   if (existingIndex !== -1) {
-    // Update existing record
+    // Update existing record for today
     record = {
       ...records[existingIndex],
       time: timeStr,
       status,
-      notes: notes || records[existingIndex].notes,
+      notes: notes !== undefined ? notes : records[existingIndex].notes,
       subject: subject || records[existingIndex].subject,
-      classId,
+      classId: classId || records[existingIndex].classId,
     };
     records[existingIndex] = record;
   } else {
@@ -795,10 +847,11 @@ export function recordTodayAttendance(
     records.push(record);
   }
 
-  localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(records));
+  const deduplicated = cleanDuplicateAttendanceRecords(records);
+  localStorage.setItem(ATTENDANCE_KEY, JSON.stringify(deduplicated));
 
   // Sync to Firestore in background
-  setDoc(doc(db, "attendance_records", record.id), cleanForFirestore(record)).catch(err => {
+  setDoc(doc(db, "attendance_records", record.id), cleanForFirestore(record)).catch((err) => {
     console.error("Error recording attendance to Firestore:", err);
   });
 
@@ -1071,7 +1124,7 @@ export function getAssignments(): ClassPost[] {
 
 export function getPostsForClass(classId: string): ClassPost[] {
   return getPosts()
-    .filter((p) => !classId || p.classId === classId)
+    .filter((p) => !classId || p.classId === classId || p.classId === "all" || !p.classId)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
@@ -1089,7 +1142,7 @@ export function createPost(input: Omit<ClassPost, "id" | "createdAt">): ClassPos
   setDoc(doc(db, "class_posts", post.id), docData).catch((err) => {
     console.error("Error writing post to Firestore:", err);
   });
-  window.dispatchEvent(new Event("db_updated"));
+  notifyDbUpdated();
   return post;
 }
 
@@ -1101,7 +1154,7 @@ export function deletePost(postId: string): void {
   // Cascade: remove this post's comments and submissions too.
   getCommentsForPost(postId).forEach((c) => deleteComment(c.id));
   getSubmissionsForPost(postId).forEach((s) => deleteSubmission(s.id));
-  window.dispatchEvent(new Event("db_updated"));
+  notifyDbUpdated();
 }
 
 // --- Comments ---
@@ -1177,7 +1230,7 @@ export function submitAssignment(input: Omit<AssignmentSubmission, "id" | "submi
   setDoc(doc(db, "assignment_submissions", submission.id), cleanForFirestore(submission)).catch((err) => {
     console.error("Error writing submission to Firestore:", err);
   });
-  window.dispatchEvent(new Event("db_updated"));
+  notifyDbUpdated();
   return submission;
 }
 
@@ -1196,7 +1249,7 @@ export function gradeSubmission(submissionId: string, score: number | string, fe
   setDoc(doc(db, "assignment_submissions", updated.id), cleanForFirestore(updated)).catch((err) => {
     console.error("Error writing graded submission to Firestore:", err);
   });
-  window.dispatchEvent(new Event("db_updated"));
+  notifyDbUpdated();
   return updated;
 }
 

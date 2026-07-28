@@ -1,19 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Plus, ArrowLeft, Check, Users, MessageSquare,
   Paperclip, Calendar, Trash2, Send, X, FileText, Megaphone, UserPlus, UserMinus,
-  Activity, ListChecks, ChevronDown, ChevronRight, AlertTriangle, ClipboardCheck
+  Activity, ClipboardCheck, Copy, School, BookOpen, Clock, Search,
+  AlertTriangle, ShieldAlert, CheckCircle2, ChevronRight, UserCheck
 } from "lucide-react";
-import { User, ClassRoom, ClassPost, PostComment, AssignmentSubmission, AttendanceRecord } from "../types";
+import { motion, AnimatePresence } from "motion/react";
+import { User, ClassRoom, ClassPost, PostComment, AssignmentSubmission, AttendanceRecord, AttendanceStatus } from "../types";
 import {
   getClassesForTeacher, getClassesForStudent, getClassById, createClass,
-  addStudentToClass, removeStudentFromClass,
+  addStudentToClass, removeStudentFromClass, joinClassByCode,
   deleteClass, getPostsForClass, createPost, deletePost, getCommentsForPost,
   addComment, getSubmissionsForPost, getSubmissionForStudent, submitAssignment,
-  getClassmatesWithStats, getUsers, getAttendanceRecords, attendanceMatchesClass, formatDate,
+  getClassmatesWithStats, getUsers, getAttendanceRecords, saveAttendanceRecord, attendanceMatchesClass, formatDate,
 } from "../lib/db";
 
-const MAX_ATTACHMENT_BYTES = 700 * 1024; // stored inline in Firestore docs - keep small
+const MAX_ATTACHMENT_BYTES = 700 * 1024; // stored inline in Firestore docs
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -36,12 +38,59 @@ function timeAgo(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
+/** Subject Color Scheme & Icon helper for high-tech aesthetic */
+function getSubjectTheme(subject?: string) {
+  const s = (subject || "").toLowerCase();
+  if (s.includes("math") || s.includes("calc") || s.includes("alg") || s.includes("geom")) {
+    return {
+      gradient: "from-cyan-600/30 via-blue-600/20 to-slate-900",
+      badgeBg: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40",
+      accentHex: "#00f0ff",
+      icon: "📐",
+    };
+  }
+  if (s.includes("sci") || s.includes("phys") || s.includes("chem") || s.includes("bio")) {
+    return {
+      gradient: "from-emerald-600/30 via-teal-600/20 to-slate-900",
+      badgeBg: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+      accentHex: "#10b981",
+      icon: "🧬",
+    };
+  }
+  if (s.includes("tech") || s.includes("comp") || s.includes("code") || s.includes("prog") || s.includes("cs")) {
+    return {
+      gradient: "from-violet-600/30 via-purple-600/20 to-slate-900",
+      badgeBg: "bg-violet-500/20 text-violet-300 border-violet-500/40",
+      accentHex: "#8b5cf6",
+      icon: "💻",
+    };
+  }
+  if (s.includes("lit") || s.includes("eng") || s.includes("read") || s.includes("lang")) {
+    return {
+      gradient: "from-amber-600/30 via-orange-600/20 to-slate-900",
+      badgeBg: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+      accentHex: "#f59e0b",
+      icon: "📚",
+    };
+  }
+  if (s.includes("hist") || s.includes("soc") || s.includes("geog") || s.includes("civic")) {
+    return {
+      gradient: "from-rose-600/30 via-pink-600/20 to-slate-900",
+      badgeBg: "bg-rose-500/20 text-rose-300 border-rose-500/40",
+      accentHex: "#f43f5e",
+      icon: "🏛️",
+    };
+  }
+  return {
+    gradient: "from-fuchsia-600/30 via-pink-600/20 to-slate-900",
+    badgeBg: "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40",
+    accentHex: "#d946ef",
+    icon: "🏫",
+  };
+}
+
 interface ClassroomProps {
   currentUser: User;
-  // Lets the host dashboard (teacher) jump straight to the attendance-taking
-  // tab for a given class, e.g. from a "Take attendance" button in the
-  // class header - keeps Classroom from being an island cut off from the
-  // rest of the app.
   onOpenAttendance?: (classId: string) => void;
 }
 
@@ -90,7 +139,7 @@ export default function Classroom({ currentUser, onOpenAttendance }: ClassroomPr
 }
 
 // ---------------------------------------------------------------------------
-// List of classes + create (teacher) / join (student)
+// 1. ClassList: Course Sections Grid & Join / Create Controls
 // ---------------------------------------------------------------------------
 
 function ClassList({
@@ -106,13 +155,16 @@ function ClassList({
 }) {
   const isTeacher = currentUser.role === "teacher";
   const [showCreate, setShowCreate] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
   const [name, setName] = useState("");
   const [subject, setSubject] = useState("");
+  const [joinCodeInput, setJoinCodeInput] = useState("");
   const [error, setError] = useState("");
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   const handleCreate = () => {
     if (!name.trim()) {
-      setError("Class name is required.");
+      setError("Class section name is required.");
       return;
     }
     createClass(name, subject, currentUser);
@@ -123,197 +175,280 @@ function ClassList({
     setError("");
   };
 
+  const handleJoin = () => {
+    if (!joinCodeInput.trim()) {
+      setError("Please enter a class join code.");
+      return;
+    }
+    try {
+      joinClassByCode(joinCodeInput, currentUser);
+      onChanged();
+      setJoinCodeInput("");
+      setShowJoinModal(false);
+      setError("");
+    } catch {
+      setError("Invalid or expired class join code. Check with your teacher.");
+    }
+  };
+
+  const copyCode = (code: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2000);
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h2 className="text-xl font-black text-ink">Classes</h2>
-          <p className="text-sm text-ink-soft/70 mt-0.5">
-            {isTeacher ? "Manage your class sections, announcements, and assignments." : "Your joined classes, announcements, and assignments."}
+      {/* Top Banner Header */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl backdrop-blur-xl flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="space-y-1 z-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-xs font-bold mb-1">
+            <School className="h-3.5 w-3.5" />
+            <span>Course Sections & Academic Subjects</span>
+          </div>
+          <h2 className="text-2xl font-black text-white tracking-tight">
+            {isTeacher ? "Your Teaching Sections" : "Enrolled Class Sections"}
+          </h2>
+          <p className="text-xs font-medium text-slate-400 max-w-xl">
+            {isTeacher
+              ? "Manage distinct subject sections, post announcements, issue assignments, and track attendance per course section."
+              : "Access your enrolled subjects, section feeds, homework submissions, and attendance logs."}
           </p>
         </div>
-        <div className="flex gap-2">
-          {isTeacher && (
+
+        <div className="flex items-center gap-3 z-10 shrink-0">
+          {isTeacher ? (
             <button
               onClick={() => setShowCreate(true)}
-              className="inline-flex items-center gap-1.5 bg-violet-500 hover:bg-violet-600 text-white text-sm font-bold px-4 py-2.5 rounded-full shadow-violet transition-colors cursor-pointer"
+              className="px-5 py-3 rounded-2xl bg-fuchsia-500 hover:bg-fuchsia-400 text-white font-extrabold text-xs shadow-lg shadow-fuchsia-500/25 flex items-center gap-2 transition-all cursor-pointer"
             >
-              <Plus className="h-4 w-4" /> Create class
+              <Plus className="h-4 w-4" />
+              <span>Create New Section</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowJoinModal(true)}
+              className="px-5 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-cyan-500/25 flex items-center gap-2 transition-all cursor-pointer"
+            >
+              <School className="h-4 w-4" />
+              <span>Join Class by Code</span>
             </button>
           )}
         </div>
       </div>
 
+      {/* Empty State */}
       {classes.length === 0 && (
-        <div className="bg-white rounded-2xl border border-ink-soft/10 p-10 text-center">
-          <p className="text-sm text-ink-soft/70">
-            {isTeacher
-              ? "You haven't created a class yet."
-              : "You haven't been added to a class yet. Ask your teacher to add you by your student ID."}
-          </p>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {classes.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => onOpen(c.id)}
-            className="text-left bg-white rounded-2xl border border-ink-soft/10 p-5 hover:border-violet-300 transition-colors cursor-pointer group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center mb-3">
-              <FileText className="h-5 w-5" />
-            </div>
-            <h3 className="font-bold text-ink group-hover:text-violet-600 transition-colors">{c.name}</h3>
-            {c.subject && <p className="text-xs text-ink-soft/60 mt-0.5">{c.subject}</p>}
-            <div className="flex items-center justify-between mt-4 text-xs text-ink-soft/60">
-              <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {c.studentIds.length} students</span>
-              {!isTeacher && <span>{c.teacherName}</span>}
-            </div>
-          </button>
-        ))}
-      </div>
-
-      {/* Create class modal */}
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowCreate(false)}>
-          <div className="bg-white rounded-2xl border border-ink-soft/10 shadow-xl p-6 w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-ink">Create a class</h3>
-              <button onClick={() => setShowCreate(false)} className="text-ink-soft/50 hover:text-ink cursor-pointer"><X className="h-5 w-5" /></button>
-            </div>
-            <label className="text-xs font-bold text-ink-soft/70 block mb-1">Class name</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Grade 10 - Section A"
-              className="w-full mb-3 px-3.5 py-2.5 text-sm rounded-xl border border-ink-soft/15 focus:outline-none focus:border-violet-400 bg-white"
-            />
-            <label className="text-xs font-bold text-ink-soft/70 block mb-1">Subject (optional)</label>
-            <input
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder="Mathematics"
-              className="w-full mb-4 px-3.5 py-2.5 text-sm rounded-xl border border-ink-soft/15 focus:outline-none focus:border-violet-400 bg-white"
-            />
-            {error && <p className="text-xs text-coral-600 font-semibold mb-3">{error}</p>}
-            <button
-              onClick={handleCreate}
-              className="w-full bg-violet-500 hover:bg-violet-600 text-white text-sm font-bold py-2.5 rounded-full shadow-violet transition-colors cursor-pointer"
-            >
-              Create
-            </button>
+        <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-12 text-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-slate-800/80 text-violet-400 flex items-center justify-center mx-auto border border-slate-700">
+            <BookOpen className="h-8 w-8" />
           </div>
+          <div className="max-w-md mx-auto space-y-1">
+            <h3 className="text-base font-bold text-white">No active class sections found</h3>
+            <p className="text-xs text-slate-400">
+              {isTeacher
+                ? "Get started by creating your first course section above (e.g., Grade 10 - Mathematics)."
+                : "Ask your teacher for a class join code or to add your student ID to their section."}
+            </p>
+          </div>
+          {isTeacher ? (
+            <button
+              onClick={() => setShowCreate(true)}
+              className="px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-md"
+            >
+              <Plus className="h-4 w-4" /> Create First Section
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowJoinModal(true)}
+              className="px-4 py-2.5 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-md"
+            >
+              <School className="h-4 w-4" /> Enter Join Code
+            </button>
+          )}
         </div>
       )}
-    </div>
-  );
-}
 
-// ---------------------------------------------------------------------------
-// ClassesPanel: the ONE place classes get created/deleted - a flat grid of
-// cards with a create form up top, no drilling into a separate class page.
-// (Announcements, Assignments, and Roster all live as their own top-level
-// tabs scoped to the header's active-class picker, so this panel doesn't
-// need to duplicate that browsing.)
-// ---------------------------------------------------------------------------
+      {/* Class Section Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {classes.map((cls) => {
+          const theme = getSubjectTheme(cls.subject);
+          const studentCount = cls.studentIds.length;
+          const stats = getClassmatesWithStats(cls.id);
+          const totalDays = stats.reduce((acc, curr) => acc + curr.stats.totalDays, 0);
+          const totalPresents = stats.reduce((acc, curr) => acc + curr.stats.presentCount, 0);
+          const avgAttendance = totalDays > 0 ? Math.round((totalPresents / totalDays) * 100) : 100;
 
-export function ClassesPanel({ currentUser }: { currentUser: User }) {
-  const [classes, setClasses] = useState<ClassRoom[]>(getClassesForTeacher(currentUser.id));
-  const [name, setName] = useState("");
-  const [subject, setSubject] = useState("");
-  const [error, setError] = useState("");
-  const [creating, setCreating] = useState(false);
+          return (
+            <motion.div
+              key={cls.id}
+              whileHover={{ y: -4, scale: 1.01 }}
+              onClick={() => onOpen(cls.id)}
+              className={`bg-gradient-to-b ${theme.gradient} border border-slate-800/80 hover:border-violet-500/50 rounded-3xl p-5 shadow-xl transition-all cursor-pointer flex flex-col justify-between group relative overflow-hidden`}
+            >
+              <div className="space-y-4">
+                {/* Header Row */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xl">{theme.icon}</span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${theme.badgeBg}`}>
+                        {cls.subject || "General Subject"}
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-black text-white group-hover:text-cyan-300 transition-colors truncate">
+                      {cls.name}
+                    </h3>
+                  </div>
 
-  useEffect(() => {
-    const refresh = () => setClasses(getClassesForTeacher(currentUser.id));
-    refresh();
-    window.addEventListener("db_updated", refresh);
-    return () => window.removeEventListener("db_updated", refresh);
-  }, [currentUser.id]);
+                  <div className="p-2 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-400 group-hover:text-white group-hover:border-violet-500/40 transition-all shrink-0">
+                    <ChevronRight className="h-4 w-4" />
+                  </div>
+                </div>
 
-  const handleCreate = () => {
-    if (creating) return; // guard against rapid double-clicks / duplicate classes
-    if (!name.trim()) {
-      setError("Class name is required.");
-      return;
-    }
-    setCreating(true);
-    createClass(name, subject, currentUser);
-    setClasses(getClassesForTeacher(currentUser.id));
-    setName("");
-    setSubject("");
-    setError("");
-    setCreating(false);
-  };
+                {/* Sub Metadata */}
+                <div className="text-xs text-slate-400 space-y-1">
+                  {!isTeacher && (
+                    <p className="flex items-center gap-1.5 text-slate-300 font-semibold">
+                      <Users className="h-3.5 w-3.5 text-cyan-400" />
+                      <span>Instructor: {cls.teacherName}</span>
+                    </p>
+                  )}
+                  <div className="flex items-center gap-4 text-[11px] pt-1">
+                    <span className="inline-flex items-center gap-1 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 text-slate-300 font-bold">
+                      <Users className="h-3 w-3 text-violet-400" /> {studentCount} Enrolled
+                    </span>
+                    <span className="inline-flex items-center gap-1 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 text-emerald-400 font-bold">
+                      <Activity className="h-3 w-3 text-emerald-400" /> {avgAttendance}% Health
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-  const handleDelete = (cls: ClassRoom) => {
-    if (!confirm(`Delete "${cls.name}"? This removes the class, its posts, and all submissions. This can't be undone.`)) return;
-    deleteClass(cls.id);
-    setClasses(getClassesForTeacher(currentUser.id));
-  };
+              {/* Bottom Card Footer with Join Code Widget */}
+              <div className="pt-4 mt-4 border-t border-slate-800/80 flex items-center justify-between gap-2 text-xs">
+                <button
+                  onClick={(e) => copyCode(cls.joinCode, e)}
+                  className="px-2.5 py-1 rounded-lg bg-slate-950/90 border border-slate-800 hover:border-cyan-500/50 text-cyan-300 font-mono text-[11px] font-bold flex items-center gap-1.5 transition-all"
+                  title="Click to copy section join code"
+                >
+                  <Copy className="h-3 w-3 text-cyan-400" />
+                  <span>{copiedCode === cls.joinCode ? "Copied!" : `Code: ${cls.joinCode}`}</span>
+                </button>
 
-  return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-2xl border border-ink-soft/10 p-5 space-y-3">
-        <h3 className="text-sm font-bold text-ink flex items-center gap-1.5">
-          <Plus className="h-4 w-4 text-violet-500" /> New class
-        </h3>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-            placeholder="Class name, e.g. Grade 10 - Section A"
-            className="flex-1 min-w-0 px-3.5 py-2.5 text-sm rounded-xl border border-ink-soft/15 focus:outline-none focus:border-violet-400 bg-white"
-          />
-          <input
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-            placeholder="Subject (optional)"
-            className="flex-1 min-w-0 px-3.5 py-2.5 text-sm rounded-xl border border-ink-soft/15 focus:outline-none focus:border-violet-400 bg-white"
-          />
-          <button
-            onClick={handleCreate}
-            disabled={creating}
-            className="inline-flex items-center justify-center gap-1.5 bg-violet-500 hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold px-4 py-2.5 rounded-full shadow-violet transition-colors cursor-pointer shrink-0"
-          >
-            <Plus className="h-4 w-4" /> {creating ? "Creating..." : "Create"}
-          </button>
-        </div>
-        {error && <p className="text-xs text-coral-600 font-semibold">{error}</p>}
+                <span className="text-[11px] font-bold text-violet-300 group-hover:underline flex items-center gap-1">
+                  View Stream & Roster &rarr;
+                </span>
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
 
-      {classes.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-ink-soft/10 p-10 text-center">
-          <p className="text-sm text-ink-soft/70">You haven't created a class yet.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {classes.map((c) => (
-            <div key={c.id} className="bg-white rounded-2xl border border-ink-soft/10 p-5 space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center">
-                <FileText className="h-5 w-5" />
-              </div>
+      {/* Create Section Modal */}
+      {showCreate && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-50" onClick={() => setShowCreate(false)}>
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6 w-full max-w-md space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                <School className="h-5 w-5 text-fuchsia-400" /> Create Course Section
+              </h3>
+              <button onClick={() => setShowCreate(false)} className="text-slate-400 hover:text-white"><X className="h-5 w-5" /></button>
+            </div>
+
+            <div className="space-y-3">
               <div>
-                <h4 className="font-bold text-ink">{c.name}</h4>
-                {c.subject && <p className="text-xs text-ink-soft/60 mt-0.5">{c.subject}</p>}
+                <label className="text-xs font-bold text-slate-300 block mb-1">Section / Class Name *</label>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g., Grade 10 - Section Alpha"
+                  className="w-full px-3.5 py-2.5 text-xs font-bold rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-fuchsia-500"
+                />
               </div>
-              <div className="flex items-center justify-between text-xs text-ink-soft/60 pt-2 border-t border-ink-soft/10">
-                <span className="inline-flex items-center gap-1">
-                  <Users className="h-3.5 w-3.5" /> {c.studentIds.length} students
-                </span>
-                <button
-                  onClick={() => handleDelete(c)}
-                  title="Delete class"
-                  className="text-ink-soft/40 hover:text-coral-500 cursor-pointer"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">Subject / Course Title</label>
+                <input
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder="e.g., Mathematics / Computer Science"
+                  className="w-full px-3.5 py-2.5 text-xs font-bold rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-fuchsia-500"
+                />
               </div>
             </div>
-          ))}
+
+            {error && <p className="text-xs text-rose-400 font-bold">{error}</p>}
+
+            <div className="pt-2 flex gap-2">
+              <button
+                onClick={() => setShowCreate(false)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreate}
+                className="flex-1 py-2.5 rounded-xl bg-fuchsia-500 hover:bg-fuchsia-400 text-white font-extrabold text-xs shadow-md shadow-fuchsia-500/25"
+              >
+                Create Section
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Join Section Modal */}
+      {showJoinModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-50" onClick={() => setShowJoinModal(false)}>
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6 w-full max-w-md space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                <School className="h-5 w-5 text-cyan-400" /> Join Class Section
+              </h3>
+              <button onClick={() => setShowJoinModal(false)} className="text-slate-400 hover:text-white"><X className="h-5 w-5" /></button>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-300 block mb-1">Class Join Code</label>
+              <input
+                value={joinCodeInput}
+                onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
+                placeholder="e.g. MATH101-X9"
+                className="w-full px-3.5 py-2.5 text-xs font-mono font-bold tracking-widest rounded-xl bg-slate-950 border border-slate-800 text-cyan-300 focus:outline-none focus:border-cyan-500"
+              />
+              <p className="text-[11px] text-slate-400 mt-1">Ask your teacher for the 6-character join code.</p>
+            </div>
+
+            {error && <p className="text-xs text-rose-400 font-bold">{error}</p>}
+
+            <div className="pt-2 flex gap-2">
+              <button
+                onClick={() => setShowJoinModal(false)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleJoin}
+                className="flex-1 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs shadow-md shadow-cyan-500/25"
+              >
+                Join Section
+              </button>
+            </div>
+          </motion.div>
         </div>
       )}
     </div>
@@ -321,7 +456,7 @@ export function ClassesPanel({ currentUser }: { currentUser: User }) {
 }
 
 // ---------------------------------------------------------------------------
-// A single class: header, tabs for Stream / Classmates
+// 2. ClassDetail: Section View with Sub-Tabs (Stream, Attendance, Assignments, Roster)
 // ---------------------------------------------------------------------------
 
 function ClassDetail({
@@ -340,12 +475,10 @@ function ClassDetail({
   onOpenAttendance?: (classId: string) => void;
 }) {
   const isTeacher = currentUser.role === "teacher";
-  const [tab, setTab] = useState<"log" | "roster">("log");
-
-  // Today's attendance snapshot for this class - the thing that makes this
-  // page an Attendance Hub class page and not a generic message board.
+  const [tab, setTab] = useState<"stream" | "attendance" | "assignments" | "roster">("stream");
   const [todayRecords, setTodayRecords] = useState<AttendanceRecord[]>([]);
   const [atRiskCount, setAtRiskCount] = useState(0);
+  const [copiedCode, setCopiedCode] = useState(false);
 
   useEffect(() => {
     const refresh = () => {
@@ -359,126 +492,335 @@ function ClassDetail({
     refresh();
     window.addEventListener("db_updated", refresh);
     return () => window.removeEventListener("db_updated", refresh);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cls.id]);
+  }, [cls.id, isTeacher]);
 
   const presentT = todayRecords.filter((r) => r.status === "Present").length;
   const lateT = todayRecords.filter((r) => r.status === "Late").length;
   const absentT = todayRecords.filter((r) => r.status === "Absent").length;
   const myToday = !isTeacher ? todayRecords.find((r) => r.studentId.toLowerCase() === currentUser.id.toLowerCase()) : undefined;
 
+  const theme = getSubjectTheme(cls.subject);
+
+  const copyJoinCode = () => {
+    navigator.clipboard.writeText(cls.joinCode);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
   const handleDeleteClass = () => {
-    if (!confirm(`Delete "${cls.name}"? This removes the class, its log, and all submissions. This can't be undone.`)) return;
+    if (!confirm(`Delete section "${cls.name}"? This removes the section, posts, homework, and logs permanently.`)) return;
     deleteClass(cls.id);
     onDeleted();
   };
 
   return (
     <div className="space-y-6">
-      <button onClick={onBack} className="inline-flex items-center gap-1.5 text-sm font-bold text-ink-soft/70 hover:text-ink cursor-pointer">
-        <ArrowLeft className="h-4 w-4" /> Back to classes
+      {/* Back Button */}
+      <button
+        onClick={onBack}
+        className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer"
+      >
+        <ArrowLeft className="h-4 w-4" /> Back to All Course Sections
       </button>
 
-      <div className="bg-white rounded-2xl border border-ink-soft/10 p-5 space-y-4">
-        <div className="flex items-start justify-between flex-wrap gap-3">
-          <div>
-            <h2 className="text-xl font-black text-ink">{cls.name}</h2>
-            {cls.subject && <p className="text-sm text-ink-soft/60">{cls.subject}</p>}
-            {!isTeacher && <p className="text-xs text-ink-soft/50 mt-1">Taught by {cls.teacherName}</p>}
+      {/* Hero Banner Header Card */}
+      <div className={`bg-gradient-to-r ${theme.gradient} border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden space-y-6`}>
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-2xl">{theme.icon}</span>
+              <span className={`px-3 py-1 rounded-full text-xs font-extrabold border ${theme.badgeBg}`}>
+                {cls.subject || "General Section"}
+              </span>
+              <button
+                onClick={copyJoinCode}
+                className="px-3 py-1 rounded-full bg-slate-950/90 border border-slate-700 hover:border-cyan-500/50 text-cyan-300 font-mono text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Copy className="h-3.5 w-3.5 text-cyan-400" />
+                <span>{copiedCode ? "Copied!" : `Join Code: ${cls.joinCode}`}</span>
+              </button>
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">{cls.name}</h1>
+            <p className="text-xs text-slate-300 font-medium">
+              Teacher: <span className="font-bold text-white">{cls.teacherName}</span> &bull; Enrolled: <span className="font-bold text-white">{cls.studentIds.length} Students</span>
+            </p>
           </div>
-          {isTeacher && (
-            <button onClick={handleDeleteClass} title="Delete class" className="p-2.5 rounded-full hover:bg-coral-50 text-coral-500 cursor-pointer shrink-0">
-              <Trash2 className="h-4 w-4" />
-            </button>
-          )}
+
+          <div className="flex items-center gap-2 shrink-0">
+            {isTeacher && (
+              <>
+                <button
+                  onClick={() => setTab("attendance")}
+                  className="px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-extrabold text-xs shadow-lg shadow-violet-500/20 flex items-center gap-2 cursor-pointer transition-all"
+                >
+                  <ClipboardCheck className="h-4 w-4" /> Mark Attendance
+                </button>
+                <button
+                  onClick={handleDeleteClass}
+                  title="Delete Section"
+                  className="p-2.5 rounded-xl bg-slate-950/80 hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 border border-slate-800 transition-all cursor-pointer"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
-        {/* Today's attendance snapshot - the primary hero content now,
-            instead of the join code. */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {isTeacher ? (
-            <>
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-teal-700 bg-teal-50 px-3 py-1.5 rounded-full">
-                {presentT} present
+        {/* Today's Section Attendance Health Bar */}
+        <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-bold text-slate-300">Today's Attendance:</span>
+            {isTeacher ? (
+              <>
+                <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold">
+                  {presentT} Present
+                </span>
+                <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold">
+                  {lateT} Late
+                </span>
+                <span className="px-2.5 py-1 rounded-lg bg-rose-500/20 border border-rose-500/40 text-rose-300 font-bold">
+                  {absentT} Absent
+                </span>
+                <span className="text-slate-400 text-[11px]">of {cls.studentIds.length} students</span>
+              </>
+            ) : myToday ? (
+              <span className={`px-3 py-1 rounded-lg border font-extrabold ${
+                myToday.status === "Present" ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300" : myToday.status === "Late" ? "bg-amber-500/20 border-amber-500/40 text-amber-300" : "bg-rose-500/20 border-rose-500/40 text-rose-300"
+              }`}>
+                Your Status: {myToday.status}
               </span>
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1.5 rounded-full">
-                {lateT} late
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-coral-700 bg-coral-50 px-3 py-1.5 rounded-full">
-                {absentT} absent
-              </span>
-              <span className="text-xs text-ink-soft/50">today, of {cls.studentIds.length} students</span>
-              {onOpenAttendance && (
-                <button
-                  onClick={() => onOpenAttendance(cls.id)}
-                  className="inline-flex items-center gap-1.5 bg-violet-500 hover:bg-violet-600 text-white text-xs font-bold px-3.5 py-1.5 rounded-full shadow-violet transition-colors cursor-pointer ml-auto"
-                >
-                  <ClipboardCheck className="h-3.5 w-3.5" /> Take attendance
-                </button>
-              )}
-            </>
-          ) : myToday ? (
-            <span
-              className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full ${
-                myToday.status === "Present" ? "text-teal-700 bg-teal-50" : myToday.status === "Late" ? "text-amber-700 bg-amber-50" : "text-coral-700 bg-coral-50"
+            ) : (
+              <span className="text-slate-400">Not recorded yet today</span>
+            )}
+          </div>
+
+          {isTeacher && atRiskCount > 0 && (
+            <div className="flex items-center gap-1.5 text-rose-400 font-bold text-xs bg-rose-950/40 px-3 py-1 rounded-lg border border-rose-800/40">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              <span>{atRiskCount} student(s) below 75% attendance</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Sub Navigation Bar */}
+      <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
+        {[
+          { id: "stream", label: "Class Feed & Activity", icon: Activity },
+          { id: "attendance", label: "Section Attendance Sheet", icon: ClipboardCheck },
+          { id: "assignments", label: "Assignments & Submissions", icon: FileText },
+          { id: "roster", label: "Enrolled Roster", icon: Users, count: cls.studentIds.length },
+        ].map((item) => {
+          const Icon = item.icon;
+          const active = tab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setTab(item.id as any)}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                active
+                  ? "bg-violet-500 text-white shadow-lg shadow-violet-500/25"
+                  : "bg-slate-900/80 border border-slate-800 text-slate-400 hover:text-white"
               }`}
             >
-              You: {myToday.status} today
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-ink-soft/60 bg-cream-dim px-3 py-1.5 rounded-full">
-              Not checked in today
-            </span>
-          )}
-          {!isTeacher && (
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-ink-soft/60 bg-cream-dim px-3 py-1.5 rounded-full">
-              <Users className="h-3.5 w-3.5" /> {cls.studentIds.length} classmates
-            </span>
-          )}
-        </div>
-
+              <Icon className="h-4 w-4" />
+              <span>{item.label}</span>
+              {item.count !== undefined && (
+                <span className="px-1.5 py-0.2 rounded-full bg-slate-950 text-[10px] font-mono text-slate-300">
+                  {item.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      {isTeacher && atRiskCount > 0 && (
-        <div className="flex items-center gap-2 bg-coral-50 border border-coral-100 rounded-xl px-4 py-3 text-xs font-bold text-coral-700">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          {atRiskCount} student{atRiskCount === 1 ? " is" : "s are"} below 75% attendance in this class.
-          <button onClick={() => setTab("roster")} className="underline underline-offset-2 hover:text-coral-800 cursor-pointer ml-auto shrink-0">
-            View roster
-          </button>
-        </div>
-      )}
-
-      <div className="flex border-b border-ink-soft/10 gap-6">
-        <button
-          onClick={() => setTab("log")}
-          className={`pb-3 text-sm font-bold border-b-2 transition-all cursor-pointer inline-flex items-center gap-1.5 ${
-            tab === "log" ? "border-violet-500 text-violet-500" : "border-transparent text-ink-soft/50 hover:text-ink-soft"
-          }`}
-        >
-          <Activity className="h-4 w-4" /> Class Log
-        </button>
-        <button
-          onClick={() => setTab("roster")}
-          className={`pb-3 text-sm font-bold border-b-2 transition-all cursor-pointer inline-flex items-center gap-1.5 ${
-            tab === "roster" ? "border-violet-500 text-violet-500" : "border-transparent text-ink-soft/50 hover:text-ink-soft"
-          }`}
-        >
-          <Users className="h-4 w-4" /> Roster
-        </button>
-      </div>
-
-      {tab === "log" && <ClassLog currentUser={currentUser} cls={cls} />}
+      {/* SUB TAB CONTENTS */}
+      {tab === "stream" && <ClassLog currentUser={currentUser} cls={cls} />}
+      {tab === "attendance" && <SectionAttendanceSheet cls={cls} currentUser={currentUser} />}
+      {tab === "assignments" && <PostsPanel currentUser={currentUser} cls={cls} filterType="assignment" />}
       {tab === "roster" && <Classmates cls={cls} isTeacher={isTeacher} />}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Class Log: a unified, chronological feed of announcements, assignments,
-// AND real attendance events for this class - the thing that makes this
-// page belong to an attendance app instead of being a copy of Classroom's
-// Stream tab.
+// 3. Section Attendance Sheet (Direct In-Class Section Attendance Marker)
+// ---------------------------------------------------------------------------
+
+function SectionAttendanceSheet({ cls, currentUser }: { cls: ClassRoom; currentUser: User }) {
+  const isTeacher = currentUser.role === "teacher";
+  const todayStr = formatDate(new Date());
+  const [selectedDate, setSelectedDate] = useState(todayStr);
+  const [students, setStudents] = useState(getClassmatesWithStats(cls.id));
+  const [statuses, setStatuses] = useState<Record<string, AttendanceStatus>>({});
+  const [savedMsg, setSavedMsg] = useState("");
+
+  useEffect(() => {
+    const records = getAttendanceRecords().filter((r) => r.date === selectedDate && attendanceMatchesClass(r, cls));
+    const initialMap: Record<string, AttendanceStatus> = {};
+    records.forEach((r) => {
+      initialMap[r.studentId.toLowerCase()] = r.status;
+    });
+    setStatuses(initialMap);
+    setStudents(getClassmatesWithStats(cls.id));
+  }, [cls, selectedDate]);
+
+  const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
+    if (!isTeacher) return;
+    setStatuses((prev) => ({ ...prev, [studentId.toLowerCase()]: status }));
+  };
+
+  const markAllPresent = () => {
+    if (!isTeacher) return;
+    const nextMap: Record<string, AttendanceStatus> = {};
+    students.forEach(({ student }) => {
+      nextMap[student.id.toLowerCase()] = "Present";
+    });
+    setStatuses(nextMap);
+  };
+
+  const handleSave = () => {
+    if (!isTeacher) return;
+    students.forEach(({ student }) => {
+      saveAttendanceRecord({
+        id: `${cls.id}_${student.id}_${selectedDate}`,
+        studentId: student.id,
+        studentName: student.name,
+        date: selectedDate,
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        status: statuses[student.id.toLowerCase()] || "Present",
+        subject: cls.subject || cls.name,
+        classId: cls.id,
+      });
+    });
+    setSavedMsg("Attendance successfully recorded for this section!");
+    setTimeout(() => setSavedMsg(""), 3000);
+  };
+
+  return (
+    <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div>
+          <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+            <ClipboardCheck className="h-5 w-5 text-violet-400" /> Section Attendance Log
+          </h3>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Mark daily attendance for enrolled students in <span className="text-white font-bold">{cls.name}</span>.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3 flex-wrap">
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="px-3 py-2 text-xs font-bold rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-violet-500 [color-scheme:dark]"
+          />
+
+          {isTeacher && (
+            <>
+              <button
+                onClick={markAllPresent}
+                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs transition-colors cursor-pointer"
+              >
+                Mark All Present
+              </button>
+              <button
+                onClick={handleSave}
+                className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs shadow-md shadow-emerald-500/20 cursor-pointer"
+              >
+                Save Attendance
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {savedMsg && (
+        <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold rounded-xl flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+          <span>{savedMsg}</span>
+        </div>
+      )}
+
+      {students.length === 0 ? (
+        <div className="p-8 text-center text-slate-400 text-xs">No students enrolled in this section yet.</div>
+      ) : (
+        <div className="space-y-2">
+          {students.map(({ student, stats }) => {
+            const currentStatus = statuses[student.id.toLowerCase()] || "Present";
+            return (
+              <div
+                key={student.id}
+                className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 flex items-center justify-between gap-3"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-violet-500/20 border border-violet-500/40 text-violet-300 font-bold text-xs flex items-center justify-center shrink-0">
+                    {student.name.charAt(0)}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white truncate">{student.name}</p>
+                    <p className="text-[11px] text-slate-400">
+                      ID: {student.id} &bull; Overall: {stats.percentage}%
+                    </p>
+                  </div>
+                </div>
+
+                {isTeacher ? (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {(["Present", "Late", "Absent"] as AttendanceStatus[]).map((st) => {
+                      const active = currentStatus === st;
+                      const colors =
+                        st === "Present"
+                          ? active
+                            ? "bg-emerald-500 text-slate-950 font-extrabold"
+                            : "bg-slate-900 text-slate-400 hover:text-emerald-400 border border-slate-800"
+                          : st === "Late"
+                          ? active
+                            ? "bg-amber-500 text-slate-950 font-extrabold"
+                            : "bg-slate-900 text-slate-400 hover:text-amber-400 border border-slate-800"
+                          : active
+                          ? "bg-rose-500 text-white font-extrabold"
+                          : "bg-slate-900 text-slate-400 hover:text-rose-400 border border-slate-800";
+
+                      return (
+                        <button
+                          key={st}
+                          onClick={() => handleStatusChange(student.id, st)}
+                          className={`px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${colors}`}
+                        >
+                          {st}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <span
+                    className={`px-3 py-1 rounded-xl text-xs font-extrabold ${
+                      currentStatus === "Present"
+                        ? "bg-emerald-500/20 border border-emerald-500/40 text-emerald-300"
+                        : currentStatus === "Late"
+                        ? "bg-amber-500/20 border border-amber-500/40 text-amber-300"
+                        : "bg-rose-500/20 border border-rose-500/40 text-rose-300"
+                    }`}
+                  >
+                    {currentStatus}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 4. ClassLog (Combined Feed & Composer)
 // ---------------------------------------------------------------------------
 
 type LogEntry =
@@ -514,6 +856,7 @@ function ClassLog({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
   const [dueDate, setDueDate] = useState("");
   const [attachment, setAttachment] = useState<{ name: string; dataUrl: string } | null>(null);
   const [fileError, setFileError] = useState("");
+  const [posting, setPosting] = useState(false);
 
   useEffect(() => {
     const refresh = () => {
@@ -529,14 +872,12 @@ function ClassLog({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
     setFileError("");
     if (!file) return;
     if (file.size > MAX_ATTACHMENT_BYTES) {
-      setFileError("File is too large (max ~700KB). Try a smaller image or a linked doc instead.");
+      setFileError("File is too large (max ~700KB). Try a smaller image or file.");
       return;
     }
     const dataUrl = await readFileAsDataUrl(file);
     setAttachment({ name: file.name, dataUrl });
   };
-
-  const [posting, setPosting] = useState(false);
 
   const resetComposer = () => {
     setTitle("");
@@ -548,7 +889,7 @@ function ClassLog({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
   };
 
   const handlePost = () => {
-    if (posting) return; // guard against rapid double-clicks
+    if (posting) return;
     if (!content.trim() && !title.trim()) return;
     setPosting(true);
     createPost({
@@ -562,10 +903,6 @@ function ClassLog({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
       attachmentName: attachment?.name,
       attachmentDataUrl: attachment?.dataUrl,
     });
-    // The localStorage write above is synchronous - refresh straight from it
-    // instead of waiting for the Firestore round-trip (which is what the
-    // "db_updated" event fires on). Waiting on that event made posting feel
-    // unresponsive enough that clicking again created real duplicate posts.
     setPosts(getPostsForClass(cls.id));
     resetComposer();
     setPosting(false);
@@ -579,79 +916,91 @@ function ClassLog({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
   return (
     <div className="space-y-4">
       {isTeacher && !showComposer && (
-        <div className="bg-white rounded-2xl border border-ink-soft/10 p-4 flex gap-2">
+        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-4 flex gap-3">
           <button
             onClick={() => { setPostType("announcement"); setShowComposer(true); }}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 text-sm font-bold text-ink-soft/70 hover:text-violet-600 hover:bg-violet-50 py-2.5 rounded-xl transition-colors cursor-pointer"
+            className="flex-1 inline-flex items-center justify-center gap-2 text-xs font-extrabold text-violet-300 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 py-3 rounded-2xl transition-all cursor-pointer"
           >
-            <Megaphone className="h-4 w-4" /> Announcement
+            <Megaphone className="h-4 w-4" /> Post Announcement
           </button>
           <button
             onClick={() => { setPostType("assignment"); setShowComposer(true); }}
-            className="flex-1 inline-flex items-center justify-center gap-1.5 text-sm font-bold text-ink-soft/70 hover:text-coral-600 hover:bg-coral-50 py-2.5 rounded-xl transition-colors cursor-pointer"
+            className="flex-1 inline-flex items-center justify-center gap-2 text-xs font-extrabold text-fuchsia-300 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 border border-fuchsia-500/30 py-3 rounded-2xl transition-all cursor-pointer"
           >
-            <FileText className="h-4 w-4" /> Assignment
+            <FileText className="h-4 w-4" /> Create Assignment
           </button>
         </div>
       )}
 
       {isTeacher && showComposer && (
-        <div className="bg-white rounded-2xl border border-ink-soft/10 p-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="font-bold text-ink text-sm">
-              {postType === "assignment" ? "New assignment" : "New announcement"}
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-2xl">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h4 className="font-extrabold text-white text-sm flex items-center gap-2">
+              {postType === "assignment" ? <FileText className="h-4 w-4 text-fuchsia-400" /> : <Megaphone className="h-4 w-4 text-violet-400" />}
+              {postType === "assignment" ? "New Class Homework / Assignment" : "New Class Announcement"}
             </h4>
-            <button onClick={resetComposer} className="text-ink-soft/50 hover:text-ink cursor-pointer"><X className="h-4 w-4" /></button>
+            <button onClick={resetComposer} className="text-slate-400 hover:text-white"><X className="h-4 w-4" /></button>
           </div>
+
           {postType === "assignment" && (
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Assignment title"
-              className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-soft/15 focus:outline-none focus:border-coral-400"
+              placeholder="Assignment Title (e.g., Chapter 4 Calculus Problem Set)"
+              className="w-full px-4 py-2.5 text-xs font-bold rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-violet-500"
             />
           )}
+
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder={postType === "assignment" ? "Instructions..." : "Share something with your class..."}
+            placeholder={postType === "assignment" ? "Write submission guidelines & instructions..." : "Share an update with your class..."}
             rows={3}
-            className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-soft/15 focus:outline-none focus:border-violet-400 resize-none"
+            className="w-full px-4 py-2.5 text-xs font-medium rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-violet-500 resize-none"
           />
-          <div className="flex items-center gap-3 flex-wrap">
-            {postType === "assignment" && (
-              <label className="text-xs font-bold text-ink-soft/70 inline-flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5" /> Due
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="px-2 py-1.5 text-xs rounded-lg border border-ink-soft/15 focus:outline-none focus:border-coral-400"
-                />
+
+          <div className="flex items-center justify-between gap-3 flex-wrap pt-1">
+            <div className="flex items-center gap-4 flex-wrap">
+              {postType === "assignment" && (
+                <label className="text-xs font-bold text-slate-300 inline-flex items-center gap-2">
+                  <Calendar className="h-3.5 w-3.5 text-fuchsia-400" /> Due Date:
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-fuchsia-500 [color-scheme:dark]"
+                  />
+                </label>
+              )}
+
+              <label className="text-xs font-bold text-slate-300 inline-flex items-center gap-1.5 cursor-pointer hover:text-violet-400">
+                <Paperclip className="h-3.5 w-3.5 text-cyan-400" />
+                <span>{attachment ? attachment.name : "Attach File / Image"}</span>
+                <input type="file" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
               </label>
-            )}
-            <label className="text-xs font-bold text-ink-soft/70 inline-flex items-center gap-1.5 cursor-pointer hover:text-violet-600">
-              <Paperclip className="h-3.5 w-3.5" /> {attachment ? attachment.name : "Attach file/photo"}
-              <input type="file" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
-            </label>
-            {attachment && (
-              <button onClick={() => setAttachment(null)} className="text-xs text-coral-600 font-semibold cursor-pointer">Remove</button>
-            )}
+
+              {attachment && (
+                <button onClick={() => setAttachment(null)} className="text-xs text-rose-400 font-bold">Remove</button>
+              )}
+            </div>
+
+            <button
+              onClick={handlePost}
+              disabled={posting}
+              className="px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-extrabold text-xs shadow-md shadow-violet-500/25 cursor-pointer"
+            >
+              {posting ? "Posting..." : "Publish to Class"}
+            </button>
           </div>
-          {fileError && <p className="text-xs text-coral-600 font-semibold">{fileError}</p>}
-          <button
-            onClick={handlePost}
-            disabled={posting}
-            className="inline-flex items-center gap-1.5 bg-violet-500 hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold px-5 py-2.5 rounded-full shadow-violet transition-colors cursor-pointer"
-          >
-            <Send className="h-3.5 w-3.5" /> {posting ? "Posting..." : "Post"}
-          </button>
+
+          {fileError && <p className="text-xs text-rose-400 font-bold">{fileError}</p>}
         </div>
       )}
 
       {entries.length === 0 && (
-        <div className="bg-white rounded-2xl border border-ink-soft/10 p-10 text-center">
-          <p className="text-sm text-ink-soft/70">Nothing here yet. Announcements, assignments, and attendance will show up as they happen.</p>
+        <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-10 text-center space-y-2">
+          <Megaphone className="h-8 w-8 text-slate-600 mx-auto" />
+          <p className="text-xs text-slate-400">No activity logged in this section yet.</p>
         </div>
       )}
 
@@ -673,11 +1022,7 @@ function ClassLog({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
 }
 
 // ---------------------------------------------------------------------------
-// PostsPanel: a flat, single-purpose feed of just announcements OR just
-// assignments for one class - no attendance mixed in, no type picker (the
-// caller decides the type). This is what powers the top-level
-// "Announcements" / "Assignments" tabs so teachers and students don't have
-// to drill into a separate Classes section to see them.
+// 5. PostsPanel (Announcements / Assignments Feed Component)
 // ---------------------------------------------------------------------------
 
 export function PostsPanel({
@@ -692,256 +1037,74 @@ export function PostsPanel({
   emptyText?: string;
 }) {
   const isTeacher = currentUser.role === "teacher";
-  const isAssignment = filterType === "assignment";
   const [posts, setPosts] = useState<ClassPost[]>(cls ? getPostsForClass(cls.id) : []);
-  const [showComposer, setShowComposer] = useState(false);
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [attachment, setAttachment] = useState<{ name: string; dataUrl: string } | null>(null);
-  const [fileError, setFileError] = useState("");
-  const [posting, setPosting] = useState(false);
 
   useEffect(() => {
-    if (!cls) {
-      setPosts([]);
-      return;
-    }
-    const refresh = () => setPosts(getPostsForClass(cls.id));
-    refresh();
-    window.addEventListener("db_updated", refresh);
-    return () => window.removeEventListener("db_updated", refresh);
-  }, [cls?.id]);
+    if (cls) setPosts(getPostsForClass(cls.id));
+  }, [cls]);
 
-  if (!cls) {
-    return (
-      <div className="bg-white rounded-2xl border border-ink-soft/10 p-10 text-center">
-        <p className="text-sm text-ink-soft/70">
-          Pick a class from the switcher above to see its {isAssignment ? "assignments" : "announcements"}.
-        </p>
-      </div>
-    );
-  }
-
-  const handleFile = async (file: File | undefined) => {
-    setFileError("");
-    if (!file) return;
-    if (file.size > MAX_ATTACHMENT_BYTES) {
-      setFileError("File is too large (max ~700KB). Try a smaller image or a linked doc instead.");
-      return;
-    }
-    const dataUrl = await readFileAsDataUrl(file);
-    setAttachment({ name: file.name, dataUrl });
-  };
-
-  const resetComposer = () => {
-    setTitle("");
-    setContent("");
-    setDueDate("");
-    setAttachment(null);
-    setFileError("");
-    setShowComposer(false);
-  };
-
-  const handlePost = () => {
-    if (posting) return; // guard against rapid double-clicks
-    if (!content.trim() && !title.trim()) return;
-    setPosting(true);
-    createPost({
-      classId: cls.id,
-      type: filterType,
-      authorId: currentUser.id,
-      authorName: currentUser.name,
-      title: isAssignment ? title.trim() : undefined,
-      content: content.trim(),
-      dueDate: isAssignment && dueDate ? dueDate : undefined,
-      attachmentName: attachment?.name,
-      attachmentDataUrl: attachment?.dataUrl,
-    });
-    // Same synchronous-refresh fix as the unified log: read straight back
-    // from localStorage instead of waiting on the "db_updated" event so a
-    // second click can't fire while the first post is still "in flight".
-    setPosts(getPostsForClass(cls.id));
-    resetComposer();
-    setPosting(false);
-  };
-
-  const filteredPosts = posts
-    .filter((p) => p.type === filterType)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const filtered = posts.filter((p) => p.type === filterType);
 
   return (
     <div className="space-y-4">
-      {isTeacher && !showComposer && (
-        <button
-          onClick={() => setShowComposer(true)}
-          className="w-full bg-white rounded-2xl border border-ink-soft/10 p-4 inline-flex items-center justify-center gap-1.5 text-sm font-bold text-ink-soft/70 hover:text-violet-600 hover:bg-violet-50/60 transition-colors cursor-pointer"
-        >
-          {isAssignment ? <FileText className="h-4 w-4" /> : <Megaphone className="h-4 w-4" />}
-          New {isAssignment ? "assignment" : "announcement"}
-        </button>
-      )}
-
-      {isTeacher && showComposer && (
-        <div className="bg-white rounded-2xl border border-ink-soft/10 p-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="font-bold text-ink text-sm">
-              {isAssignment ? "New assignment" : "New announcement"}
-            </h4>
-            <button onClick={resetComposer} className="text-ink-soft/50 hover:text-ink cursor-pointer"><X className="h-4 w-4" /></button>
-          </div>
-          {isAssignment && (
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Assignment title"
-              className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-soft/15 focus:outline-none focus:border-coral-400"
-            />
-          )}
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder={isAssignment ? "Instructions..." : "Share something with your class..."}
-            rows={3}
-            className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-ink-soft/15 focus:outline-none focus:border-violet-400 resize-none"
+      {filtered.length === 0 ? (
+        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-10 text-center space-y-2">
+          <FileText className="h-8 w-8 text-slate-600 mx-auto" />
+          <p className="text-xs text-slate-400">
+            {emptyText || `No ${filterType}s posted yet for this course section.`}
+          </p>
+        </div>
+      ) : (
+        filtered.map((post) => (
+          <PostCard
+            key={post.id}
+            post={post}
+            currentUser={currentUser}
+            isTeacher={isTeacher}
+            onDeleted={() => cls && setPosts(getPostsForClass(cls.id))}
           />
-          <div className="flex items-center gap-3 flex-wrap">
-            {isAssignment && (
-              <label className="text-xs font-bold text-ink-soft/70 inline-flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5" /> Due
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="px-2 py-1.5 text-xs rounded-lg border border-ink-soft/15 focus:outline-none focus:border-coral-400"
-                />
-              </label>
-            )}
-            <label className="text-xs font-bold text-ink-soft/70 inline-flex items-center gap-1.5 cursor-pointer hover:text-violet-600">
-              <Paperclip className="h-3.5 w-3.5" /> {attachment ? attachment.name : "Attach file/photo"}
-              <input type="file" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
-            </label>
-            {attachment && (
-              <button onClick={() => setAttachment(null)} className="text-xs text-coral-600 font-semibold cursor-pointer">Remove</button>
-            )}
-          </div>
-          {fileError && <p className="text-xs text-coral-600 font-semibold">{fileError}</p>}
-          <button
-            onClick={handlePost}
-            disabled={posting}
-            className="inline-flex items-center gap-1.5 bg-violet-500 hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold px-5 py-2.5 rounded-full shadow-violet transition-colors cursor-pointer"
-          >
-            <Send className="h-3.5 w-3.5" /> {posting ? "Posting..." : "Post"}
-          </button>
-        </div>
+        ))
       )}
-
-      {filteredPosts.length === 0 && (
-        <div className="bg-white rounded-2xl border border-ink-soft/10 p-10 text-center">
-          <p className="text-sm text-ink-soft/70">
-            {emptyText || (isAssignment ? "No assignments yet." : "No announcements yet.")}
-          </p>
-        </div>
-      )}
-
-      {filteredPosts.map((post) => (
-        <PostCard
-          key={post.id}
-          post={post}
-          currentUser={currentUser}
-          isTeacher={isTeacher}
-          onDeleted={() => setPosts(getPostsForClass(cls.id))}
-        />
-      ))}
     </div>
   );
 }
 
-function AttendanceLogCard({
-  entry,
-  isTeacher,
+// ---------------------------------------------------------------------------
+// 6. PostCard (Card item for announcements and assignments)
+// ---------------------------------------------------------------------------
+
+function PostCard({
+  post,
   currentUser,
+  isTeacher,
+  onDeleted,
 }: {
-  entry: Extract<LogEntry, { kind: "attendance" }>;
-  isTeacher: boolean;
+  post: ClassPost;
   currentUser: User;
+  isTeacher: boolean;
+  onDeleted: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const rate = entry.total > 0 ? Math.round(((entry.present + entry.late) / entry.total) * 100) : 0;
-  const mine = !isTeacher ? entry.records.find((r) => r.studentId.toLowerCase() === currentUser.id.toLowerCase()) : undefined;
-  const absentees = entry.records.filter((r) => r.status === "Absent");
-
-  return (
-    <div className="bg-teal-50/40 rounded-2xl border border-teal-100 p-5">
-      <div className="flex items-start gap-3">
-        <div className="w-9 h-9 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center shrink-0">
-          <ListChecks className="h-4 w-4" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <p className="text-sm font-bold text-ink">Attendance taken</p>
-            <span className="text-xs text-ink-soft/50">
-              {new Date(`${entry.date}T12:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
-            </span>
-          </div>
-          <p className="text-sm text-ink-soft/80 mt-1">
-            {entry.present} present &bull; {entry.late} late &bull; {entry.absent} absent{" "}
-            <span className="text-ink-soft/50">({rate}%)</span>
-          </p>
-          {mine && (
-            <p
-              className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full mt-2 ${
-                mine.status === "Present" ? "text-teal-700 bg-teal-100" : mine.status === "Late" ? "text-amber-700 bg-amber-100" : "text-coral-700 bg-coral-100"
-              }`}
-            >
-              You: {mine.status}
-            </p>
-          )}
-          {isTeacher && absentees.length > 0 && (
-            <button
-              onClick={() => setExpanded((v) => !v)}
-              className="text-xs font-bold text-coral-600 hover:text-coral-700 mt-2 inline-flex items-center gap-1 cursor-pointer"
-            >
-              {absentees.length} absent {expanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-            </button>
-          )}
-          {expanded && (
-            <div className="mt-2 space-y-1">
-              {absentees.map((r) => (
-                <p key={r.id} className="text-xs text-ink-soft/70">{r.studentName}</p>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PostCard({ post, currentUser, isTeacher, onDeleted }: { post: ClassPost; currentUser: User; isTeacher: boolean; onDeleted: () => void }) {
-  const [showComments, setShowComments] = useState(false);
+  const isAssignment = post.type === "assignment";
   const [comments, setComments] = useState<PostComment[]>(getCommentsForPost(post.id));
+  const [submissions, setSubmissions] = useState<AssignmentSubmission[]>(isAssignment ? getSubmissionsForPost(post.id) : []);
   const [commentText, setCommentText] = useState("");
-  const [showSubmissions, setShowSubmissions] = useState(false);
-  const [submissions, setSubmissions] = useState<AssignmentSubmission[]>(getSubmissionsForPost(post.id));
-  const mySubmission = !isTeacher ? getSubmissionForStudent(post.id, currentUser.id) : undefined;
   const [submitText, setSubmitText] = useState("");
-  const [submitAttachment, setSubmitAttachment] = useState<{ name: string; dataUrl: string } | null>(null);
+  const [showComments, setShowComments] = useState(false);
+  const [showSubmissions, setShowSubmissions] = useState(false);
   const [showSubmitForm, setShowSubmitForm] = useState(false);
+  const [submitAttachment, setSubmitAttachment] = useState<{ name: string; dataUrl: string } | null>(null);
   const [fileError, setFileError] = useState("");
 
-  useEffect(() => {
-    const refresh = () => {
-      setComments(getCommentsForPost(post.id));
-      setSubmissions(getSubmissionsForPost(post.id));
-    };
-    window.addEventListener("db_updated", refresh);
-    return () => window.removeEventListener("db_updated", refresh);
-  }, [post.id]);
+  const mySubmission = !isTeacher && isAssignment ? getSubmissionForStudent(post.id, currentUser.id) : undefined;
 
   const handleComment = () => {
     if (!commentText.trim()) return;
-    addComment({ postId: post.id, classId: post.classId, authorId: currentUser.id, authorName: currentUser.name, content: commentText.trim() });
+    addComment({
+      postId: post.id,
+      authorId: currentUser.id,
+      authorName: currentUser.name,
+      content: commentText.trim(),
+    });
     setComments(getCommentsForPost(post.id));
     setCommentText("");
   };
@@ -950,170 +1113,197 @@ function PostCard({ post, currentUser, isTeacher, onDeleted }: { post: ClassPost
     setFileError("");
     if (!file) return;
     if (file.size > MAX_ATTACHMENT_BYTES) {
-      setFileError("File is too large (max ~700KB).");
+      setFileError("File too large (max ~700KB).");
       return;
     }
     const dataUrl = await readFileAsDataUrl(file);
     setSubmitAttachment({ name: file.name, dataUrl });
   };
 
-  const handleSubmit = () => {
-    if (!submitText.trim() && !submitAttachment) return;
+  const handleSubmitWork = () => {
     submitAssignment({
       postId: post.id,
-      classId: post.classId,
       studentId: currentUser.id,
       studentName: currentUser.name,
-      content: submitText.trim() || undefined,
+      content: submitText.trim(),
       attachmentName: submitAttachment?.name,
       attachmentDataUrl: submitAttachment?.dataUrl,
     });
     setSubmissions(getSubmissionsForPost(post.id));
+    setShowSubmitForm(false);
     setSubmitText("");
     setSubmitAttachment(null);
-    setShowSubmitForm(false);
   };
 
-  const isAssignment = post.type === "assignment";
-
   return (
-    <div className="bg-white rounded-2xl border border-ink-soft/10 p-5">
-      <div className="flex items-start gap-3">
-        <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${isAssignment ? "bg-coral-50 text-coral-600" : "bg-violet-50 text-violet-600"}`}>
-          {isAssignment ? <FileText className="h-4 w-4" /> : <Megaphone className="h-4 w-4" />}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <p className="text-sm font-bold text-ink">{post.authorName}</p>
-            <span className="text-xs text-ink-soft/50">{timeAgo(post.createdAt)}</span>
+    <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${
+                isAssignment
+                  ? "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40"
+                  : "bg-violet-500/20 text-violet-300 border-violet-500/40"
+              }`}
+            >
+              {isAssignment ? "Assignment / Homework" : "Announcement"}
+            </span>
+            <span className="text-[11px] text-slate-400 font-medium">{timeAgo(post.createdAt)}</span>
           </div>
-          {isAssignment && post.title && <p className="font-bold text-ink mt-1">{post.title}</p>}
-          {post.content && <p className="text-sm text-ink-soft/80 mt-1 whitespace-pre-wrap">{post.content}</p>}
-          {isAssignment && post.dueDate && (
-            <p className="inline-flex items-center gap-1 text-xs font-bold text-coral-600 bg-coral-50 px-2.5 py-1 rounded-full mt-2">
-              <Calendar className="h-3 w-3" /> Due {post.dueDate}
+
+          {post.title && <h4 className="text-base font-extrabold text-white">{post.title}</h4>}
+          <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">{post.content}</p>
+
+          {post.dueDate && (
+            <p className="text-xs font-bold text-amber-400 flex items-center gap-1 mt-1">
+              <Clock className="h-3.5 w-3.5" /> Due: {formatDate(new Date(post.dueDate))}
             </p>
           )}
-          {post.attachmentDataUrl && (
-            <a
-              href={post.attachmentDataUrl}
-              download={post.attachmentName}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-violet-600 bg-violet-50 px-2.5 py-1.5 rounded-full mt-2 hover:bg-violet-100"
-            >
-              <Paperclip className="h-3 w-3" /> {post.attachmentName || "Attachment"}
-            </a>
-          )}
 
-          {/* Assignment: submit (student) / view submissions (teacher) */}
-          {isAssignment && !isTeacher && (
-            <div className="mt-3">
-              {mySubmission ? (
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 text-xs font-bold text-teal-600 bg-teal-50 px-2.5 py-1 rounded-full">
-                    <Check className="h-3 w-3" /> Submitted {timeAgo(mySubmission.submittedAt)}
-                  </span>
-                  <button onClick={() => setShowSubmitForm(true)} className="text-xs font-bold text-ink-soft/60 hover:text-ink cursor-pointer">Resubmit</button>
-                </div>
+          {post.attachmentDataUrl && (
+            <div className="pt-2">
+              <a
+                href={post.attachmentDataUrl}
+                download={post.attachmentName || "attachment"}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-cyan-300 text-xs font-bold hover:border-cyan-500/50 transition-all"
+              >
+                <Paperclip className="h-3.5 w-3.5 text-cyan-400" />
+                <span>Download Attachment ({post.attachmentName})</span>
+              </a>
+            </div>
+          )}
+        </div>
+
+        {isTeacher && (
+          <button
+            onClick={() => { deletePost(post.id); onDeleted(); }}
+            className="p-2 rounded-xl bg-slate-950 hover:bg-rose-950/80 text-slate-500 hover:text-rose-400 border border-slate-800 cursor-pointer"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Student Submission Controls */}
+      {isAssignment && !isTeacher && (
+        <div className="pt-3 border-t border-slate-800">
+          {mySubmission ? (
+            <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-between gap-2 text-xs">
+              <span className="text-emerald-300 font-bold flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Turned in on {formatDate(new Date(mySubmission.submittedAt))}
+              </span>
+            </div>
+          ) : (
+            <div>
+              {!showSubmitForm ? (
+                <button
+                  onClick={() => setShowSubmitForm(true)}
+                  className="px-4 py-2 rounded-xl bg-fuchsia-500 hover:bg-fuchsia-400 text-white font-extrabold text-xs shadow-md cursor-pointer"
+                >
+                  Turn In Homework
+                </button>
               ) : (
-                !showSubmitForm && (
-                  <button
-                    onClick={() => setShowSubmitForm(true)}
-                    className="inline-flex items-center gap-1.5 bg-coral-500 hover:bg-coral-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-coral transition-colors cursor-pointer"
-                  >
-                    Submit assignment
-                  </button>
-                )
-              )}
-              {showSubmitForm && (
-                <div className="mt-2 space-y-2 bg-cream-dim rounded-xl p-3">
+                <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-3">
                   <textarea
                     value={submitText}
                     onChange={(e) => setSubmitText(e.target.value)}
-                    placeholder="Add a note (optional)..."
+                    placeholder="Add student submission notes..."
                     rows={2}
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-ink-soft/15 focus:outline-none focus:border-coral-400 resize-none bg-white"
+                    className="w-full px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-white focus:outline-none"
                   />
-                  <div className="flex items-center gap-3">
-                    <label className="text-xs font-bold text-ink-soft/70 inline-flex items-center gap-1.5 cursor-pointer hover:text-coral-600">
-                      <Paperclip className="h-3.5 w-3.5" /> {submitAttachment ? submitAttachment.name : "Attach file"}
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5 cursor-pointer hover:text-cyan-400">
+                      <Paperclip className="h-3.5 w-3.5 text-cyan-400" />
+                      <span>{submitAttachment ? submitAttachment.name : "Attach File"}</span>
                       <input type="file" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
                     </label>
-                    <button onClick={handleSubmit} className="text-xs font-bold text-white bg-coral-500 hover:bg-coral-600 px-3 py-1.5 rounded-full cursor-pointer">Submit</button>
-                    <button onClick={() => setShowSubmitForm(false)} className="text-xs font-bold text-ink-soft/60 cursor-pointer">Cancel</button>
-                  </div>
-                  {fileError && <p className="text-xs text-coral-600 font-semibold">{fileError}</p>}
-                </div>
-              )}
-            </div>
-          )}
 
-          {isAssignment && isTeacher && (
-            <div className="mt-3">
-              <button
-                onClick={() => setShowSubmissions((v) => !v)}
-                className="text-xs font-bold text-violet-600 hover:text-violet-700 cursor-pointer"
-              >
-                {submissions.length} submission{submissions.length === 1 ? "" : "s"} {showSubmissions ? "▲" : "▼"}
-              </button>
-              {showSubmissions && (
-                <div className="mt-2 space-y-2">
-                  {submissions.length === 0 && <p className="text-xs text-ink-soft/60">No submissions yet.</p>}
-                  {submissions.map((s) => (
-                    <div key={s.id} className="flex items-center justify-between bg-cream-dim rounded-lg px-3 py-2">
-                      <div>
-                        <p className="text-xs font-bold text-ink">{s.studentName}</p>
-                        {s.content && <p className="text-xs text-ink-soft/70">{s.content}</p>}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-ink-soft/50">{timeAgo(s.submittedAt)}</span>
-                        {s.attachmentDataUrl && (
-                          <a href={s.attachmentDataUrl} download={s.attachmentName} className="text-violet-600 hover:text-violet-700">
-                            <Paperclip className="h-3.5 w-3.5" />
-                          </a>
-                        )}
-                      </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowSubmitForm(false)} className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs">Cancel</button>
+                      <button onClick={handleSubmitWork} className="px-4 py-1.5 rounded-xl bg-fuchsia-500 text-white font-bold text-xs">Submit</button>
                     </div>
-                  ))}
+                  </div>
+                  {fileError && <p className="text-xs text-rose-400 font-bold">{fileError}</p>}
                 </div>
               )}
             </div>
           )}
-
-          {/* Comments */}
-          <div className="mt-3 pt-3 border-t border-ink-soft/10">
-            <button
-              onClick={() => setShowComments((v) => !v)}
-              className="text-xs font-bold text-ink-soft/60 hover:text-ink inline-flex items-center gap-1 cursor-pointer"
-            >
-              <MessageSquare className="h-3.5 w-3.5" /> {comments.length} comment{comments.length === 1 ? "" : "s"}
-            </button>
-            {showComments && (
-              <div className="mt-2 space-y-2">
-                {comments.map((c) => (
-                  <div key={c.id} className="text-xs bg-cream-dim rounded-lg px-3 py-2">
-                    <span className="font-bold text-ink">{c.authorName}</span>{" "}
-                    <span className="text-ink-soft/50">{timeAgo(c.createdAt)}</span>
-                    <p className="text-ink-soft/80 mt-0.5">{c.content}</p>
-                  </div>
-                ))}
-                <div className="flex gap-2">
-                  <input
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleComment()}
-                    placeholder="Add a comment..."
-                    className="flex-1 px-3 py-2 text-xs rounded-lg border border-ink-soft/15 focus:outline-none focus:border-violet-400"
-                  />
-                  <button onClick={handleComment} className="text-violet-600 hover:text-violet-700 cursor-pointer"><Send className="h-4 w-4" /></button>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
-        {isTeacher && (
-          <button onClick={() => { deletePost(post.id); onDeleted(); }} title="Delete post" className="text-ink-soft/30 hover:text-coral-500 cursor-pointer shrink-0">
-            <Trash2 className="h-4 w-4" />
+      )}
+
+      {/* Teacher View Submissions */}
+      {isAssignment && isTeacher && (
+        <div className="pt-2">
+          <button
+            onClick={() => setShowSubmissions((v) => !v)}
+            className="text-xs font-bold text-fuchsia-400 hover:underline cursor-pointer"
+          >
+            {submissions.length} Turn-in Submission(s) {showSubmissions ? "▲" : "▼"}
           </button>
+
+          {showSubmissions && (
+            <div className="mt-3 space-y-2">
+              {submissions.length === 0 ? (
+                <p className="text-xs text-slate-500">No student work submitted yet.</p>
+              ) : (
+                submissions.map((s) => (
+                  <div key={s.id} className="p-3 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 text-xs">
+                    <div>
+                      <p className="font-bold text-white">{s.studentName}</p>
+                      {s.content && <p className="text-slate-400">{s.content}</p>}
+                    </div>
+                    {s.attachmentDataUrl && (
+                      <a href={s.attachmentDataUrl} download={s.attachmentName} className="text-cyan-400 hover:underline flex items-center gap-1">
+                        <Paperclip className="h-3.5 w-3.5" /> Download
+                      </a>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Comments Section */}
+      <div className="pt-3 border-t border-slate-800">
+        <button
+          onClick={() => setShowComments((v) => !v)}
+          className="text-xs font-bold text-slate-400 hover:text-white flex items-center gap-1.5 cursor-pointer"
+        >
+          <MessageSquare className="h-3.5 w-3.5 text-violet-400" />
+          <span>{comments.length} Class Comment(s)</span>
+        </button>
+
+        {showComments && (
+          <div className="mt-3 space-y-3">
+            {comments.map((c) => (
+              <div key={c.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-violet-300">{c.authorName}</span>
+                  <span className="text-[10px] text-slate-500">{timeAgo(c.createdAt)}</span>
+                </div>
+                <p className="text-slate-300">{c.content}</p>
+              </div>
+            ))}
+
+            <div className="flex gap-2">
+              <input
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleComment()}
+                placeholder="Add a class comment..."
+                className="flex-1 px-3.5 py-2 text-xs font-medium rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-violet-500"
+              />
+              <button
+                onClick={handleComment}
+                className="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs cursor-pointer"
+              >
+                Send
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -1121,8 +1311,36 @@ function PostCard({ post, currentUser, isTeacher, onDeleted }: { post: ClassPost
 }
 
 // ---------------------------------------------------------------------------
-// Classmates: roster with attendance stats for this class, teacher can
-// add/remove students.
+// 7. Attendance Log Card item
+// ---------------------------------------------------------------------------
+
+function AttendanceLogCard({ entry }: { entry: LogEntry & { kind: "attendance" }; isTeacher: boolean; currentUser: User }) {
+  return (
+    <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+          Daily Attendance Recorded
+        </span>
+        <span className="text-xs text-slate-400 font-bold">{entry.date}</span>
+      </div>
+
+      <div className="flex items-center gap-3 text-xs flex-wrap">
+        <span className="px-3 py-1 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-extrabold">
+          {entry.present} Present
+        </span>
+        <span className="px-3 py-1 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-extrabold">
+          {entry.late} Late
+        </span>
+        <span className="px-3 py-1 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 font-extrabold">
+          {entry.absent} Absent
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 8. Classmates / Roster Management
 // ---------------------------------------------------------------------------
 
 function Classmates({ cls, isTeacher }: { cls: ClassRoom; isTeacher: boolean }) {
@@ -1142,7 +1360,7 @@ function Classmates({ cls, isTeacher }: { cls: ClassRoom; isTeacher: boolean }) 
     if (!trimmed) return;
     const match = getUsers().find((u) => u.role === "student" && u.id.toLowerCase() === trimmed.toLowerCase());
     if (!match) {
-      setAddError("No student found with that ID.");
+      setAddError("No student registered with that ID.");
       return;
     }
     addStudentToClass(cls.id, match.id);
@@ -1152,54 +1370,80 @@ function Classmates({ cls, isTeacher }: { cls: ClassRoom; isTeacher: boolean }) 
   };
 
   return (
-    <div className="space-y-4">
-      {isTeacher && (
-        <div className="bg-white rounded-2xl border border-ink-soft/10 p-4 flex items-center gap-2 flex-wrap">
-          <UserPlus className="h-4 w-4 text-violet-500 shrink-0" />
-          <input
-            value={addId}
-            onChange={(e) => setAddId(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            placeholder="Add student by ID"
-            className="flex-1 min-w-[160px] px-3.5 py-2 text-sm rounded-xl border border-ink-soft/15 focus:outline-none focus:border-violet-400"
-          />
-          <button onClick={handleAdd} className="text-sm font-bold text-white bg-violet-500 hover:bg-violet-600 px-4 py-2 rounded-full cursor-pointer">
-            Add
-          </button>
-          {addError && <p className="text-xs text-coral-600 font-semibold w-full">{addError}</p>}
+    <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+        <div>
+          <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+            <Users className="h-5 w-5 text-violet-400" /> Enrolled Section Roster
+          </h3>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Students currently enrolled in <span className="text-white font-bold">{cls.name}</span>.
+          </p>
         </div>
-      )}
 
-      {rows.length === 0 && (
-        <div className="bg-white rounded-2xl border border-ink-soft/10 p-10 text-center">
-          <p className="text-sm text-ink-soft/70">No students in this class yet.</p>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {rows.map(({ student, stats }) => (
-          <div key={student.id} className="bg-white rounded-2xl border border-ink-soft/10 p-4 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded-full bg-violet-50 text-violet-600 flex items-center justify-center text-xs font-bold shrink-0">
-                {student.name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()}
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-ink truncate">{student.name}</p>
-                <p className="text-xs text-ink-soft/60">{stats.percentage}% attendance &bull; {stats.presentCount}P / {stats.lateCount}L / {stats.absentCount}A</p>
-              </div>
-            </div>
-            {isTeacher && (
-              <button
-                onClick={() => { removeStudentFromClass(cls.id, student.id); setRows(getClassmatesWithStats(cls.id)); }}
-                title="Remove from class"
-                className="text-ink-soft/30 hover:text-coral-500 cursor-pointer shrink-0"
-              >
-                <UserMinus className="h-4 w-4" />
-              </button>
-            )}
+        {isTeacher && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              value={addId}
+              onChange={(e) => setAddId(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+              placeholder="Enter Student ID (e.g. student101)"
+              className="px-3.5 py-2 text-xs font-bold rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-violet-500"
+            />
+            <button
+              onClick={handleAdd}
+              className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-extrabold text-xs shadow-md cursor-pointer"
+            >
+              Enroll Student
+            </button>
           </div>
-        ))}
+        )}
       </div>
+
+      {addError && <p className="text-xs text-rose-400 font-bold">{addError}</p>}
+
+      {rows.length === 0 ? (
+        <div className="p-8 text-center text-slate-400 text-xs">No students enrolled in this section yet.</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {rows.map(({ student, stats }) => (
+            <div
+              key={student.id}
+              className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 flex items-center justify-between gap-3"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-violet-500/20 border border-violet-500/40 text-violet-300 font-black text-sm flex items-center justify-center shrink-0">
+                  {student.name.charAt(0)}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-white truncate">{student.name}</p>
+                  <p className="text-[11px] text-slate-400">
+                    Attendance: <span className="text-emerald-400 font-bold">{stats.percentage}%</span> &bull; ({stats.presentCount}P / {stats.lateCount}L / {stats.absentCount}A)
+                  </p>
+                </div>
+              </div>
+
+              {isTeacher && (
+                <button
+                  onClick={() => { removeStudentFromClass(cls.id, student.id); setRows(getClassmatesWithStats(cls.id)); }}
+                  className="p-2 rounded-xl bg-slate-900 hover:bg-rose-950 text-slate-500 hover:text-rose-400 border border-slate-800 cursor-pointer"
+                  title="Remove student from section"
+                >
+                  <UserMinus className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// 9. ClassesPanel Export for flat standalone views
+// ---------------------------------------------------------------------------
+
+export function ClassesPanel({ currentUser }: { currentUser: User }) {
+  return <Classroom currentUser={currentUser} />;
 }

@@ -15,7 +15,6 @@ import {
   Lock,
   Mail,
   MapPin,
-  Sparkles,
   Zap,
   Layers,
   Sliders,
@@ -25,7 +24,13 @@ import {
   Camera,
   Upload,
   Image as ImageIcon,
-  X
+  X,
+  Phone,
+  Home,
+  Globe,
+  Share2,
+  GraduationCap,
+  BookOpen
 } from "lucide-react";
 import { User } from "../types";
 import type { AppTheme } from "../App";
@@ -50,8 +55,19 @@ export default function SettingsTab({
   // Profile edit state
   const [name, setName] = useState(currentUser.name);
   const [email, setEmail] = useState(currentUser.email || "");
-  const [location, setLocation] = useState(currentUser.location || "");
+  const [phone, setPhone] = useState(currentUser.phone || "");
+  const [address, setAddress] = useState(currentUser.address || "");
+  const [department, setDepartment] = useState(currentUser.department || "");
+  const [subject, setSubject] = useState(currentUser.subject || "");
   const [avatarUrl, setAvatarUrl] = useState(currentUser.avatarUrl || "");
+
+  // Social accounts
+  const [facebook, setFacebook] = useState(currentUser.socialAccounts?.facebook || "");
+  const [twitter, setTwitter] = useState(currentUser.socialAccounts?.twitter || "");
+  const [linkedin, setLinkedin] = useState(currentUser.socialAccounts?.linkedin || "");
+  const [github, setGithub] = useState(currentUser.socialAccounts?.github || "");
+  const [instagram, setInstagram] = useState(currentUser.socialAccounts?.instagram || "");
+
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
 
@@ -73,17 +89,8 @@ export default function SettingsTab({
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // File Upload Ref & Preset Avatars
+  // File Upload Ref
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const AVATAR_PRESETS = [
-    { id: "preset-1", label: "Student 1", url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200" },
-    { id: "preset-2", label: "Student 2", url: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200" },
-    { id: "preset-3", label: "Student 3", url: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200" },
-    { id: "preset-4", label: "Student 4", url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200" },
-    { id: "preset-5", label: "Teacher 1", url: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200" },
-    { id: "preset-6", label: "Teacher 2", url: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200" },
-  ];
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -142,12 +149,25 @@ export default function SettingsTab({
     }
 
     try {
+      const socialAccounts = {
+        facebook: facebook.trim() || undefined,
+        twitter: twitter.trim() || undefined,
+        linkedin: linkedin.trim() || undefined,
+        github: github.trim() || undefined,
+        instagram: instagram.trim() || undefined,
+      };
+      const hasSocials = Object.values(socialAccounts).some(Boolean);
+
       const updatedUser: User = {
         ...currentUser,
         name: name.trim(),
         email: email.trim() || undefined,
-        location: location.trim() || undefined,
+        phone: phone.trim() || undefined,
+        address: address.trim() || undefined,
+        department: department.trim() || undefined,
+        subject: currentUser.role === "teacher" ? (subject.trim() || undefined) : currentUser.subject,
         avatarUrl: avatarUrl.trim() || undefined,
+        socialAccounts: hasSocials ? socialAccounts : undefined,
       };
       saveUser(updatedUser);
       setProfileSuccess("Profile updated successfully!");
@@ -222,6 +242,15 @@ export default function SettingsTab({
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-12">
+      {/* Hidden File Input for Avatar Upload */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileSelect}
+        accept="image/*"
+        className="hidden"
+      />
+
       {/* Settings Header Banner */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -245,29 +274,7 @@ export default function SettingsTab({
             <h1 className="text-xl font-black text-ink tracking-tight mt-1">{currentUser.name}</h1>
           </div>
         </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <button
-            onClick={handleSyncData}
-            disabled={isSyncing}
-            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 text-xs font-bold text-violet-700 bg-violet-50 border border-violet-200 rounded-xl hover:bg-violet-100 transition-all cursor-pointer shadow-sm"
-          >
-            <RefreshCw className={`h-4 w-4 ${isSyncing ? "animate-spin text-violet-600" : ""}`} />
-            {isSyncing ? "Syncing..." : "Sync Database"}
-          </button>
-        </div>
       </motion.div>
-
-      {syncMsg && (
-        <motion.div
-          initial={{ opacity: 0, y: -5 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs font-bold flex items-center gap-2"
-        >
-          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-          {syncMsg}
-        </motion.div>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* 1. PROFILE INFORMATION */}
@@ -326,106 +333,139 @@ export default function SettingsTab({
               </div>
 
               <div>
-                <label className="font-bold text-slate-300 block mb-1">Location / Classroom Section</label>
+                <label className="font-bold text-slate-300 block mb-1">Phone Number</label>
                 <div className="relative">
                   <input
-                    type="text"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="e.g. Room 302 / Section A"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+1 (555) 123-4567"
                     className="w-full pl-9 pr-3 py-2.5 text-xs font-bold bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-400"
                   />
-                  <MapPin className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
+                  <Phone className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
                 </div>
               </div>
 
-              {/* Profile Picture Uploader & Presets */}
-              <div className="space-y-3 pt-2 border-t border-ink-soft/10">
-                <label className="font-bold text-ink-soft block text-xs">
-                  Profile Picture
+              <div>
+                <label className="font-bold text-slate-300 block mb-1">Residential Address</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Street, City, State/Province, ZIP"
+                    className="w-full pl-9 pr-3 py-2.5 text-xs font-bold bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-400"
+                  />
+                  <Home className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-300 block mb-1">Department / Course</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                    placeholder="e.g. DCPE, DCS, Computer Engineering"
+                    className="w-full pl-9 pr-3 py-2.5 text-xs font-bold bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-400"
+                  />
+                  <GraduationCap className="h-4 w-4 text-cyan-400 absolute left-3 top-3" />
+                </div>
+              </div>
+
+              {currentUser.role === "teacher" && (
+                <div>
+                  <label className="font-bold text-slate-300 block mb-1">Subject(s) / Specialization(s)</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      placeholder="e.g. DCPE, DCS, Computer Engineering, Mathematics"
+                      className="w-full pl-9 pr-3 py-2.5 text-xs font-bold bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-400"
+                    />
+                    <BookOpen className="h-4 w-4 text-violet-400 absolute left-3 top-3" />
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">If you teach multiple subjects, separate them with commas.</p>
+                </div>
+              )}
+
+              {/* Social Accounts Section */}
+              <div className="pt-2 border-t border-slate-700/60 space-y-3">
+                <label className="font-bold text-violet-300 flex items-center gap-1.5 text-xs">
+                  <Share2 className="h-4 w-4" />
+                  <span>Social Accounts</span>
                 </label>
 
-                {/* Hidden File Input */}
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileSelect}
-                  accept="image/*"
-                  className="hidden"
-                />
-
-                <div className="flex flex-wrap items-center gap-3">
-                  {/* Current Avatar Preview */}
-                  <UserAvatar
-                    name={name}
-                    avatarUrl={avatarUrl}
-                    role={currentUser.role}
-                    size="lg"
-                  />
-
-                  {/* Upload Button */}
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="px-3.5 py-2 text-xs font-bold text-violet-700 bg-violet-50 hover:bg-violet-100 border border-violet-200 rounded-xl flex items-center gap-2 cursor-pointer transition-all shadow-sm active:scale-95"
-                  >
-                    <Upload className="h-4 w-4" />
-                    <span>Upload Photo File</span>
-                  </button>
-
-                  {/* Clear Photo Button */}
-                  {avatarUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setAvatarUrl("")}
-                      className="px-3 py-2 text-xs font-bold text-coral-600 bg-coral-50 hover:bg-coral-100 border border-coral-200 rounded-xl flex items-center gap-1.5 cursor-pointer transition-all"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                      <span>Remove</span>
-                    </button>
-                  )}
-                </div>
-
-                {/* Avatar Presets Selection */}
-                <div className="space-y-1.5 pt-1">
-                  <p className="text-[11px] font-bold text-ink-soft/80">Or choose a preset profile picture:</p>
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                    {AVATAR_PRESETS.map((preset) => (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => setAvatarUrl(preset.url)}
-                        className={`relative rounded-full shrink-0 border-2 transition-all cursor-pointer p-0.5 ${
-                          avatarUrl === preset.url
-                            ? "border-violet-600 scale-105 shadow-md"
-                            : "border-transparent hover:border-violet-300 opacity-80 hover:opacity-100"
-                        }`}
-                        title={preset.label}
-                      >
-                        <img
-                          src={preset.url}
-                          alt={preset.label}
-                          referrerPolicy="no-referrer"
-                          className="h-10 w-10 rounded-full object-cover"
-                        />
-                      </button>
-                    ))}
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">Facebook</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={facebook}
+                      onChange={(e) => setFacebook(e.target.value)}
+                      placeholder="facebook.com/username or @handle"
+                      className="w-full pl-9 pr-3 py-2 text-xs font-medium bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-500"
+                    />
+                    <Globe className="h-3.5 w-3.5 text-blue-400 absolute left-3 top-2.5" />
                   </div>
                 </div>
 
-                {/* Direct Image URL fallback */}
-                <div className="pt-1">
-                  <span className="text-[10px] font-bold text-ink-soft/60 block mb-1">Direct Image URL</span>
-                  <input
-                    type="url"
-                    value={avatarUrl}
-                    onChange={(e) => setAvatarUrl(e.target.value)}
-                    placeholder="https://lh3.googleusercontent.com/... or image link"
-                    className="w-full px-3 py-2 text-xs font-bold bg-white/80 border border-ink-soft/15 rounded-xl text-ink focus:outline-none focus:border-violet-500"
-                  />
-                  <p className="text-[10px] text-ink-soft/60 mt-1">
-                    Logged in with Google? Your photo syncs automatically from your Google account.
-                  </p>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">Twitter / X</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={twitter}
+                      onChange={(e) => setTwitter(e.target.value)}
+                      placeholder="@username or x.com/username"
+                      className="w-full pl-9 pr-3 py-2 text-xs font-medium bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-500"
+                    />
+                    <Globe className="h-3.5 w-3.5 text-sky-400 absolute left-3 top-2.5" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">LinkedIn</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={linkedin}
+                      onChange={(e) => setLinkedin(e.target.value)}
+                      placeholder="linkedin.com/in/username"
+                      className="w-full pl-9 pr-3 py-2 text-xs font-medium bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-500"
+                    />
+                    <Globe className="h-3.5 w-3.5 text-indigo-400 absolute left-3 top-2.5" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">GitHub</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={github}
+                      onChange={(e) => setGithub(e.target.value)}
+                      placeholder="github.com/username"
+                      className="w-full pl-9 pr-3 py-2 text-xs font-medium bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-500"
+                    />
+                    <Globe className="h-3.5 w-3.5 text-slate-300 absolute left-3 top-2.5" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">Instagram</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={instagram}
+                      onChange={(e) => setInstagram(e.target.value)}
+                      placeholder="@username or instagram.com/username"
+                      className="w-full pl-9 pr-3 py-2 text-xs font-medium bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-500"
+                    />
+                    <Globe className="h-3.5 w-3.5 text-pink-400 absolute left-3 top-2.5" />
+                  </div>
                 </div>
               </div>
             </form>

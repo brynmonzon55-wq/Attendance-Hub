@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { ArrowLeft, Key, User as UserIcon, LogIn, AlertCircle, Sparkles, Mail, MapPin } from "lucide-react";
+import { ArrowLeft, Key, User as UserIcon, LogIn, AlertCircle, Mail, GraduationCap } from "lucide-react";
 import { UserRole, User } from "../types";
-import { getUsers, addSecurityLog, registerUser, loginUser, loginWithGoogle, loginWithGoogleDemo } from "../lib/db";
+import { getUsers, addSecurityLog, registerUser, loginUser, loginWithGoogle } from "../lib/db";
 
 interface LoginFormProps {
   role: UserRole;
@@ -16,7 +16,7 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [location, setLocation] = useState("");
+  const [department, setDepartment] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [, setTick] = useState(0);
 
@@ -42,7 +42,7 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
     const cleanPassword = password;
     const cleanName = name.trim();
     const cleanEmail = email.trim();
-    const cleanLocation = location.trim();
+    const cleanDepartment = department.trim();
 
     if (!cleanUsername || !cleanPassword) {
       setError("Please fill out all required fields.");
@@ -54,8 +54,8 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
       return;
     }
 
-    if (isRegister && isStudent && (!cleanEmail || !cleanLocation)) {
-      setError("Please provide your email and location so your teacher can reach you.");
+    if (isRegister && isStudent && !cleanEmail) {
+      setError("Please provide your email so your teacher can reach you.");
       return;
     }
 
@@ -74,7 +74,7 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
       if (isRegister) {
         const newUser = await registerUser(cleanUsername, cleanName, cleanPassword, role, {
           email: isStudent ? cleanEmail : undefined,
-          location: isStudent ? cleanLocation : undefined,
+          department: isStudent ? cleanDepartment : undefined,
         });
         onLoginSuccess(newUser);
       } else {
@@ -147,7 +147,7 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
           } relative overflow-hidden`}
         >
           <div className="absolute right-0 top-0 translate-x-10 -translate-y-10 opacity-35 pointer-events-none">
-            <Sparkles className={`h-36 w-36 sm:h-40 sm:w-40 text-white ${isStudent ? "drop-shadow-[0_0_18px_rgba(0,240,255,0.9)]" : "drop-shadow-[0_0_18px_rgba(217,70,239,0.9)]"}`} />
+            <GraduationCap className={`h-36 w-36 sm:h-40 sm:w-40 text-white ${isStudent ? "drop-shadow-[0_0_18px_rgba(0,240,255,0.9)]" : "drop-shadow-[0_0_18px_rgba(217,70,239,0.9)]"}`} />
           </div>
 
           <button
@@ -172,49 +172,6 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
 
         {/* Form area */}
         <form onSubmit={handleSubmit} className="p-3.5 sm:p-7 space-y-2.5 sm:space-y-4" id="login-form">
-          {!isRegister && (
-            <div className={`p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border flex items-center justify-between gap-2 text-xs backdrop-blur-md ${
-              isStudent
-                ? "bg-cyan-500/10 border-cyan-400/40 text-cyan-200 shadow-[0_0_20px_rgba(0,240,255,0.15)]"
-                : "bg-fuchsia-500/10 border-fuchsia-400/40 text-fuchsia-200 shadow-[0_0_20px_rgba(217,70,239,0.15)]"
-            }`}>
-              <div className="min-w-0">
-                <span className="font-bold flex items-center gap-1 text-white text-[11px] sm:text-xs">
-                  ⚡ Easy Demo Access
-                </span>
-                <span className="text-slate-300 text-[10px] sm:text-[11px] truncate block">
-                  ID: <code className={`font-mono font-bold bg-slate-950/90 px-1 py-0.2 rounded border ${isStudent ? "text-cyan-300 border-cyan-500/40 shadow-[0_0_8px_rgba(0,240,255,0.3)]" : "text-fuchsia-300 border-fuchsia-500/40 shadow-[0_0_8px_rgba(217,70,239,0.3)]"}`}>{isStudent ? "student101" : "teacher1"}</code> | Pass: <code className={`font-mono font-bold bg-slate-950/90 px-1 py-0.2 rounded border ${isStudent ? "text-cyan-300 border-cyan-500/40 shadow-[0_0_8px_rgba(0,240,255,0.3)]" : "text-fuchsia-300 border-fuchsia-500/40 shadow-[0_0_8px_rgba(217,70,239,0.3)]"}`}>{isStudent ? "student103" : "teacher123"}</code>
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={async () => {
-                  const demoUser = isStudent ? "student101" : "teacher1";
-                  const demoPass = isStudent ? "student103" : "teacher123";
-                  setUsername(demoUser);
-                  setPassword(demoPass);
-                  setIsSubmitting(true);
-                  setError(null);
-                  try {
-                    const u = await loginUser(demoUser, demoPass, role);
-                    onLoginSuccess(u);
-                  } catch (err: any) {
-                    setError("Demo login failed. Please try again.");
-                  } finally {
-                    setIsSubmitting(false);
-                  }
-                }}
-                className={`px-2.5 py-1.5 font-black rounded-lg sm:rounded-xl text-[10px] sm:text-[11px] shrink-0 cursor-pointer transition-all shadow-md flex items-center gap-1 ${
-                  isStudent
-                    ? "bg-cyan-400 text-slate-950 hover:bg-cyan-300 shadow-[0_0_12px_rgba(0,240,255,0.4)]"
-                    : "bg-fuchsia-400 text-slate-950 hover:bg-fuchsia-300 shadow-[0_0_12px_rgba(217,70,239,0.4)]"
-                }`}
-              >
-                1-Click Log In
-              </button>
-            </div>
-          )}
-
           {/* Google Sign In Button */}
           <div className="space-y-2">
             <button
@@ -230,9 +187,9 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
                   if (err.message === "wrong-portal") {
                     setError(`This Google account is registered as a ${role === "student" ? "Teacher" : "Student"}. Please switch portals.`);
                   } else if (err.code === "auth/popup-blocked" || err.code === "auth/cancelled-popup-request" || err.message?.includes("popup") || err.message?.includes("closed")) {
-                    setError("Google popup was blocked by browser iframe settings. Open in new tab or click 'Google Demo Login' below.");
+                    setError("Google sign-in popup was closed or blocked by browser settings. Please allow popups or open in a new tab.");
                   } else {
-                    setError("Google popups can be blocked inside embedded previews. Click 'Google Demo Login' below to test with a real Google profile.");
+                    setError("Failed to sign in with Google. Please check your credentials or try again.");
                   }
                 } finally {
                   setIsSubmitting(false);
@@ -261,34 +218,9 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
               <span>Sign in with Google Account</span>
             </button>
 
-            {/* Direct Google Demo Account Fallback */}
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={async () => {
-                setIsSubmitting(true);
-                setError(null);
-                try {
-                  const demoUser = await loginWithGoogleDemo(role);
-                  onLoginSuccess(demoUser);
-                } catch (err: any) {
-                  setError("Failed to log in with Google demo account.");
-                } finally {
-                  setIsSubmitting(false);
-                }
-              }}
-              className={`w-full text-center text-[11px] font-bold hover:underline cursor-pointer py-1 block transition-all ${
-                isStudent
-                  ? "text-cyan-400 hover:text-cyan-300 drop-shadow-[0_0_8px_rgba(0,240,255,0.5)]"
-                  : "text-fuchsia-400 hover:text-fuchsia-300 drop-shadow-[0_0_8px_rgba(255,0,127,0.5)]"
-              }`}
-            >
-              ⚡ Instant Google Demo Account (Bypasses iframe popup block)
-            </button>
-
             <div className="flex items-center gap-3 my-2">
               <div className="h-[1px] bg-slate-700 flex-1" />
-              <span className="text-[10px] font-black tracking-wider text-slate-400 uppercase">OR WITH ID</span>
+              <span className="text-[10px] font-black tracking-wider text-slate-400 uppercase">OR WITH ACCOUNT ID</span>
               <div className="h-[1px] bg-slate-700 flex-1" />
             </div>
           </div>
@@ -344,23 +276,24 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
                   />
                   <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
                 </div>
-                <p className="text-[11px] text-slate-400">So your teacher can reach you. You can change this later in Settings.</p>
+                <p className="text-[11px] text-slate-400">So your teacher can reach you.</p>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-200 flex items-center justify-between" htmlFor="reg-location">
-                  <span>Location <span className="text-rose-400">*</span></span>
+                <label className="text-xs font-bold text-slate-200 flex items-center justify-between" htmlFor="reg-department">
+                  <span>Department / Course</span>
+                  <span className="text-[10px] text-slate-400 font-normal">e.g. DCPE, DCS, Computer Engineering, Computer Science</span>
                 </label>
                 <div className="relative">
                   <input
-                    id="reg-location"
+                    id="reg-department"
                     type="text"
-                    placeholder="e.g. Manila, Philippines"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="e.g. DCPE - Computer Engineering"
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-950/80 border border-slate-700 rounded-2xl focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,240,255,0.35)] transition-all text-white placeholder:text-slate-500"
                   />
-                  <MapPin className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                  <GraduationCap className="absolute left-3.5 top-3 h-4 w-4 text-cyan-400" />
                 </div>
               </div>
             </>
@@ -374,7 +307,7 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
               <input
                 id="login-username"
                 type="text"
-                placeholder={isStudent ? "student101" : "teacher1"}
+                placeholder={isStudent ? "e.g. STU-2026-001 or username" : "e.g. TCH-2026-001 or username"}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className={`w-full pl-9 pr-3 py-2 sm:py-2.5 text-xs sm:text-sm bg-slate-950/80 border rounded-xl sm:rounded-2xl focus:outline-none transition-all text-white placeholder:text-slate-500 ${

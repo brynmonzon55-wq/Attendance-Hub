@@ -10,7 +10,6 @@ import {
   Settings as SettingsIcon,
   MessageSquare,
   ClipboardList,
-  Sparkles,
   BookOpen,
   Megaphone,
   FileText,
@@ -27,13 +26,22 @@ import {
   Zap,
   TrendingUp,
   Moon,
-  Sun
+  Sun,
+  Image as ImageIcon,
+  GraduationCap,
+  MapPin,
+  Mail,
+  School
 } from "lucide-react";
 import { User, AttendanceRecord, AttendanceStatus, StudentStats, ClassPost, PostComment, AssignmentSubmission } from "../types";
 import type { AppTheme } from "../App";
 import AnimatedThemeBackground from "./AnimatedThemeBackground";
 import SettingsTab from "./SettingsTab";
 import UserAvatar from "./UserAvatar";
+import StudentProfile from "./StudentProfile";
+import TeacherProfile from "./TeacherProfile";
+import DailyCheckinsTab from "./DailyCheckinsTab";
+import Classroom from "./Classroom";
 import {
   getUsers,
   getAttendanceRecords,
@@ -70,7 +78,11 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
     percentage: 100,
   });
 
-  const [activeTab, setActiveTab] = useState<"attendance" | "announcements" | "assignments" | "settings">("attendance");
+  const [activeTab, setActiveTab] = useState<"classes" | "attendance" | "checkins" | "announcements" | "assignments" | "faculty" | "settings">("classes");
+  const [allStudents, setAllStudents] = useState<User[]>([]);
+  const [allAttendanceRecords, setAllAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  const [viewingStudent, setViewingStudent] = useState<User | null>(null);
+  const [viewingTeacher, setViewingTeacher] = useState<User | null>(null);
 
   // Teacher Filter & Selector state
   const [teachers, setTeachers] = useState<User[]>([]);
@@ -120,6 +132,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
 
   const loadData = () => {
     const allUsers = getUsers();
+    setAllStudents(allUsers.filter((u) => u.role === "student"));
     const freshUser = allUsers.find((u) => u.id.toLowerCase() === user.id.toLowerCase());
     if (freshUser) {
       setDbUser(freshUser);
@@ -127,6 +140,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
 
     // Attendance
     const allRecords = getAttendanceRecords();
+    setAllAttendanceRecords(allRecords);
     const studentRecords = allRecords
       .filter((r) => r.studentId.toLowerCase() === user.id.toLowerCase())
       .sort((a, b) => b.date.localeCompare(a.date));
@@ -336,10 +350,14 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
       (selectedTeacher.uid && p.authorId?.toLowerCase() === selectedTeacher.uid.toLowerCase()) ||
       p.authorName?.toLowerCase() === selectedTeacher.name.toLowerCase();
 
+    const teacherSubjects = selectedTeacher.subject
+      ? selectedTeacher.subject.split(',').map((s) => s.trim().toLowerCase())
+      : [];
+
     const subjectMatch =
-      selectedTeacher.subject &&
+      teacherSubjects.length > 0 &&
       p.subject &&
-      p.subject.toLowerCase() === selectedTeacher.subject.toLowerCase();
+      teacherSubjects.includes(p.subject.toLowerCase());
 
     return authorMatch || subjectMatch;
   };
@@ -373,7 +391,10 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
   // Filtered Attendance & Stats for selected teacher
   const displayHistory = history.filter((r) => {
     if (selectedTeacherId === "all" || !selectedTeacher) return true;
-    if (r.subject && selectedTeacher.subject && r.subject.toLowerCase() === selectedTeacher.subject.toLowerCase()) return true;
+    const teacherSubjects = selectedTeacher.subject
+      ? selectedTeacher.subject.split(',').map((s) => s.trim().toLowerCase())
+      : [];
+    if (r.subject && teacherSubjects.includes(r.subject.toLowerCase())) return true;
     if (r.subject && r.subject.toLowerCase() === selectedTeacher.name.toLowerCase()) return true;
     return false;
   });
@@ -397,8 +418,6 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
 
   return (
     <div className="relative min-h-screen pb-16 pt-4 sm:pt-6 px-2.5 sm:px-6 max-w-7xl mx-auto w-full min-w-0 overflow-x-hidden">
-      <AnimatedThemeBackground theme={theme} />
-
       <div className="relative z-10 space-y-4 sm:space-y-6 w-full min-w-0">
         {/* Top Navbar Header */}
         <motion.div
@@ -461,6 +480,23 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
         {/* Navigation Tabs - Responsive Grid on Mobile, Flex Row on Desktop */}
         <div className="bg-cream/80 backdrop-blur-xl p-1.5 rounded-2xl border border-ink-soft/10 shadow-lg grid grid-cols-2 sm:flex sm:items-center sm:justify-start gap-1.5 max-w-full">
           <button
+            onClick={() => setActiveTab("classes")}
+            className={`relative flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 py-2.5 sm:px-4 text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto ${
+              activeTab === "classes" ? "text-teal-600" : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            {activeTab === "classes" && (
+              <motion.div
+                layoutId="studentActiveTabPill"
+                className="absolute inset-0 bg-teal-500/15 border border-teal-500/30 rounded-xl"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+            )}
+            <School className="h-4 w-4 relative z-10 shrink-0" />
+            <span className="relative z-10 truncate">My Classes</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab("attendance")}
             className={`relative flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 py-2.5 sm:px-4 text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto ${
               activeTab === "attendance" ? "text-teal-600" : "text-ink-soft hover:text-ink"
@@ -475,6 +511,23 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
             )}
             <ClipboardList className="h-4 w-4 relative z-10 shrink-0" />
             <span className="relative z-10 truncate">Attendance</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("checkins")}
+            className={`relative flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 py-2.5 sm:px-4 text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto ${
+              activeTab === "checkins" ? "text-teal-600" : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            {activeTab === "checkins" && (
+              <motion.div
+                layoutId="studentActiveTabPill"
+                className="absolute inset-0 bg-teal-500/15 border border-teal-500/30 rounded-xl"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+            )}
+            <UserCheck className="h-4 w-4 relative z-10 shrink-0" />
+            <span className="relative z-10 truncate">Attendance Sheet</span>
           </button>
 
           <button
@@ -522,6 +575,23 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
           </button>
 
           <button
+            onClick={() => setActiveTab("faculty")}
+            className={`relative flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 py-2.5 sm:px-4 text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto ${
+              activeTab === "faculty" ? "text-teal-600" : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            {activeTab === "faculty" && (
+              <motion.div
+                layoutId="studentActiveTabPill"
+                className="absolute inset-0 bg-teal-500/15 border border-teal-500/30 rounded-xl"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+            )}
+            <GraduationCap className="h-4 w-4 relative z-10 shrink-0" />
+            <span className="relative z-10 truncate">Faculty Directory</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab("settings")}
             className={`relative flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 py-2.5 sm:px-4 text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto ${
               activeTab === "settings" ? "text-teal-600" : "text-ink-soft hover:text-ink"
@@ -561,12 +631,8 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                     </span>
                   )}
                 </div>
-                <p className="text-xs sm:text-sm font-extrabold text-ink truncate mt-0.5">
-                  {selectedTeacherId === "all" ? (
-                    <span className="text-teal-600 dark:text-teal-400">
-                      Viewing combined feed from All Teachers & Classes
-                    </span>
-                  ) : (
+                {selectedTeacherId !== "all" && selectedTeacher && (
+                  <p className="text-xs sm:text-sm font-extrabold text-ink truncate mt-0.5">
                     <span className="flex items-center gap-1.5 flex-wrap">
                       <span>Viewing Feed of: </span>
                       <span className="text-violet-600 dark:text-violet-400 font-black">
@@ -578,12 +644,12 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                         </span>
                       )}
                     </span>
-                  )}
-                </p>
+                  </p>
+                )}
               </div>
             </div>
 
-            <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full md:w-auto shrink-0">
               <label htmlFor="teacher-select" className="text-xs font-bold text-ink-soft hidden sm:inline shrink-0">
                 Teacher:
               </label>
@@ -593,14 +659,36 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                 onChange={(e) => setSelectedTeacherId(e.target.value)}
                 className="w-full md:w-auto px-3.5 py-2 text-xs font-bold bg-white dark:bg-slate-800 border border-ink-soft/20 rounded-xl text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
               >
-                <option value="all">🌟 All Teachers & Classes</option>
-                {teachers.map((t) => (
-                  <option key={t.id || t.uid} value={t.id || t.uid}>
-                    👨‍🏫 {t.name} {t.subject ? `(${t.subject})` : ""}
+                <option value="all">All Teachers & Classes</option>
+                {teachers.map((t, idx) => (
+                  <option key={`${t.id || t.uid || 'teacher'}-${idx}`} value={t.id || t.uid}>
+                    {t.name} {t.subject ? `(${t.subject})` : ""}
                   </option>
                 ))}
               </select>
+
+              {selectedTeacher && (
+                <button
+                  onClick={() => setViewingTeacher(selectedTeacher)}
+                  className="px-3 py-2 text-xs font-bold text-violet-600 dark:text-violet-300 bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/80 border border-violet-200 dark:border-violet-800/80 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shrink-0 shadow-sm"
+                  id="view-selected-teacher-profile-btn"
+                >
+                  <GraduationCap className="h-3.5 w-3.5 text-violet-500" />
+                  <span>Teacher Profile</span>
+                </button>
+              )}
             </div>
+          </motion.div>
+        )}
+
+        {/* TAB 0: MY CLASSES & SECTIONS */}
+        {activeTab === "classes" && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="min-w-0"
+          >
+            <Classroom currentUser={user} />
           </motion.div>
         )}
 
@@ -633,7 +721,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                       exit={{ scale: 0.8, opacity: 0 }}
                       className="p-3 sm:p-4 bg-gradient-to-r from-teal-500 to-emerald-500 text-white rounded-2xl shadow-lg flex items-center gap-2.5 sm:gap-3"
                     >
-                      <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 animate-bounce shrink-0" />
+                      <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
                       <div className="min-w-0">
                         <h4 className="font-extrabold text-xs sm:text-sm">Checked In!</h4>
                         <p className="text-[11px] sm:text-xs opacity-90 truncate">{successMsg}</p>
@@ -729,37 +817,37 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
 
                 <div className="grid grid-cols-2 gap-2 sm:gap-3 min-w-0">
                   <div className="p-2.5 sm:p-3.5 bg-teal-500/10 rounded-2xl border border-teal-500/20 text-center min-w-0">
-                    <span className="text-[10px] font-bold text-teal-700 block uppercase tracking-normal sm:tracking-wider truncate">
+                    <span className="text-[10px] font-bold text-teal-300 block uppercase tracking-normal sm:tracking-wider truncate">
                       Present
                     </span>
-                    <span className="text-lg sm:text-xl font-black text-teal-600 mt-0.5 block">
+                    <span className="text-lg sm:text-xl font-black text-teal-400 mt-0.5 block">
                       {displayStats.presentCount}
                     </span>
                   </div>
 
                   <div className="p-2.5 sm:p-3.5 bg-amber-500/10 rounded-2xl border border-amber-500/20 text-center min-w-0">
-                    <span className="text-[10px] font-bold text-amber-700 block uppercase tracking-normal sm:tracking-wider truncate">
+                    <span className="text-[10px] font-bold text-amber-300 block uppercase tracking-normal sm:tracking-wider truncate">
                       Late
                     </span>
-                    <span className="text-lg sm:text-xl font-black text-amber-600 mt-0.5 block">
+                    <span className="text-lg sm:text-xl font-black text-amber-400 mt-0.5 block">
                       {displayStats.lateCount}
                     </span>
                   </div>
 
                   <div className="p-2.5 sm:p-3.5 bg-coral-500/10 rounded-2xl border border-coral-500/20 text-center min-w-0">
-                    <span className="text-[10px] font-bold text-coral-700 block uppercase tracking-normal sm:tracking-wider truncate">
+                    <span className="text-[10px] font-bold text-coral-300 block uppercase tracking-normal sm:tracking-wider truncate">
                       Absent
                     </span>
-                    <span className="text-lg sm:text-xl font-black text-coral-600 mt-0.5 block">
+                    <span className="text-lg sm:text-xl font-black text-coral-400 mt-0.5 block">
                       {displayStats.absentCount}
                     </span>
                   </div>
 
                   <div className="p-2.5 sm:p-3.5 bg-violet-500/10 rounded-2xl border border-violet-500/20 text-center min-w-0">
-                    <span className="text-[10px] font-bold text-violet-700 block uppercase tracking-normal sm:tracking-wider truncate">
+                    <span className="text-[10px] font-bold text-violet-300 block uppercase tracking-normal sm:tracking-wider truncate">
                       Punctuality Rate
                     </span>
-                    <span className="text-lg sm:text-xl font-black text-violet-600 mt-0.5 block">
+                    <span className="text-lg sm:text-xl font-black text-violet-400 mt-0.5 block">
                       {displayStats.percentage}%
                     </span>
                   </div>
@@ -830,7 +918,22 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
           </motion.div>
         )}
 
-        {/* TAB 2: ANNOUNCEMENTS */}
+        {/* TAB 2: DAILY CHECK-INS */}
+        {activeTab === "checkins" && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <DailyCheckinsTab
+              currentUser={dbUser}
+              allStudents={allStudents}
+              attendanceRecords={allAttendanceRecords}
+              onSelectStudent={(st) => setViewingStudent(st)}
+            />
+          </motion.div>
+        )}
+
+        {/* TAB 3: ANNOUNCEMENTS */}
         {activeTab === "announcements" && (
           <motion.div
             initial={{ opacity: 0, y: 15 }}
@@ -845,7 +948,8 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                 value={announcementSearch}
                 onChange={(e) => setAnnouncementSearch(e.target.value)}
                 placeholder="Search announcements by title or content..."
-                className="w-full text-xs font-semibold bg-transparent focus:outline-none text-ink placeholder-ink-soft/50"
+                className="w-full text-xs font-semibold bg-transparent !border-none !outline-none focus:!bg-transparent focus:!outline-none focus:!border-none focus:!ring-0 text-ink placeholder-ink-soft/50"
+                style={{ border: "none", outline: "none", boxShadow: "none" }}
               />
             </div>
 
@@ -867,12 +971,16 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-ink-soft/10 pb-4">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-teal-50 text-teal-700 rounded-full border border-teal-200">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-teal-950/80 text-teal-300 rounded-full border border-teal-500/40">
                             Announcement
                           </span>
+                          <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-indigo-950/80 text-indigo-300 rounded-full border border-indigo-500/40 flex items-center gap-1">
+                            <GraduationCap className="h-3 w-3" />
+                            Teacher: {post.authorName || teachers.find((t) => t.id === post.authorId)?.name || "Faculty"}
+                          </span>
                           {post.subject && (
-                            <span className="px-2.5 py-0.5 text-[10px] font-bold bg-violet-50 text-violet-700 rounded-full border border-violet-200">
+                            <span className="px-2.5 py-0.5 text-[10px] font-bold bg-violet-950/80 text-violet-300 rounded-full border border-violet-500/40">
                               {post.subject}
                             </span>
                           )}
@@ -898,19 +1006,43 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
 
                     {/* Attachment preview if any */}
                     {post.attachmentDataUrl && (
-                      <div className="p-3 bg-white/60 border border-ink-soft/15 rounded-2xl flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-xs font-bold text-ink">
-                          <Paperclip className="h-4 w-4 text-teal-500" />
-                          <span>{post.attachmentName || "Attachment"}</span>
+                      post.attachmentDataUrl.startsWith("data:image/") || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(post.attachmentName || "") ? (
+                        <div className="mt-3 overflow-hidden rounded-2xl border border-ink-soft/15 bg-slate-950/20 max-w-lg">
+                          <img
+                            src={post.attachmentDataUrl}
+                            alt={post.attachmentName || "Attached photo"}
+                            className="max-h-72 w-full object-cover rounded-t-2xl hover:opacity-95 transition-opacity cursor-pointer"
+                            onClick={() => window.open(post.attachmentDataUrl, "_blank")}
+                          />
+                          <div className="p-2.5 bg-white/80 dark:bg-slate-900/80 flex items-center justify-between text-xs font-bold text-ink dark:text-slate-200">
+                            <span className="flex items-center gap-1.5 truncate">
+                              <ImageIcon className="h-4 w-4 text-teal-500 shrink-0" />
+                              <span className="truncate">{post.attachmentName || "Attached Photo"}</span>
+                            </span>
+                            <a
+                              href={post.attachmentDataUrl}
+                              download={post.attachmentName || "photo.png"}
+                              className="px-3 py-1 text-[11px] font-extrabold text-teal-600 bg-teal-50 border border-teal-200 rounded-xl hover:bg-teal-100 transition-all cursor-pointer"
+                            >
+                              Download Photo
+                            </a>
+                          </div>
                         </div>
-                        <a
-                          href={post.attachmentDataUrl}
-                          download={post.attachmentName || "attachment"}
-                          className="px-3 py-1 text-xs font-extrabold text-teal-600 bg-teal-50 border border-teal-200 rounded-xl hover:bg-teal-100 transition-all cursor-pointer"
-                        >
-                          Download
-                        </a>
-                      </div>
+                      ) : (
+                        <div className="p-3 bg-white/60 border border-ink-soft/15 rounded-2xl flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs font-bold text-ink truncate">
+                            <Paperclip className="h-4 w-4 text-teal-500 shrink-0" />
+                            <span className="truncate">{post.attachmentName || "Attachment"}</span>
+                          </div>
+                          <a
+                            href={post.attachmentDataUrl}
+                            download={post.attachmentName || "attachment"}
+                            className="px-3 py-1 text-xs font-extrabold text-teal-600 bg-teal-50 border border-teal-200 rounded-xl hover:bg-teal-100 transition-all cursor-pointer shrink-0"
+                          >
+                            Download
+                          </a>
+                        </div>
+                      )
                     )}
 
                     {/* Comment Thread Trigger */}
@@ -921,7 +1053,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
 
                       <button
                         onClick={() => handleToggleComments(post.id)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded-xl hover:bg-violet-100 transition-all cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-violet-300 bg-violet-500/20 border border-violet-500/40 rounded-xl hover:bg-violet-500/30 transition-all cursor-pointer"
                       >
                         <MessageSquare className="h-3.5 w-3.5" />
                         Comments
@@ -995,7 +1127,8 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                   value={assignmentSearch}
                   onChange={(e) => setAssignmentSearch(e.target.value)}
                   placeholder="Search assignments by title..."
-                  className="w-full text-xs font-semibold bg-transparent border-0 focus:bg-transparent focus:outline-none focus:ring-0 text-white placeholder-slate-400"
+                  className="w-full text-xs font-semibold bg-transparent !border-none !outline-none focus:!bg-transparent focus:!outline-none focus:!border-none focus:!ring-0 text-white placeholder-slate-400"
+                  style={{ border: "none", outline: "none", boxShadow: "none" }}
                 />
               </div>
 
@@ -1038,18 +1171,31 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                       className="bg-cream border border-ink-soft/10 rounded-3xl p-6 shadow-xl flex flex-col justify-between space-y-4"
                     >
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <span
-                            className={`px-2.5 py-0.5 text-[10px] font-extrabold rounded-full border ${
-                              isGraded
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                : isSubmitted
-                                ? "bg-teal-50 text-teal-700 border-teal-200"
-                                : "bg-amber-50 text-amber-700 border border-amber-200"
-                            }`}
-                          >
-                            {isGraded ? "Graded" : isSubmitted ? "Submitted" : "Pending"}
-                          </span>
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span
+                              className={`px-2.5 py-0.5 text-[10px] font-extrabold rounded-full border ${
+                                isGraded
+                                  ? "bg-emerald-950/80 text-emerald-300 border-emerald-500/40"
+                                  : isSubmitted
+                                  ? "bg-teal-950/80 text-teal-300 border-teal-500/40"
+                                  : "bg-amber-950/80 text-amber-300 border border-amber-500/40"
+                              }`}
+                            >
+                              {isGraded ? "Graded" : isSubmitted ? "Submitted" : "Pending"}
+                            </span>
+
+                            <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-indigo-950/80 text-indigo-300 rounded-full border border-indigo-500/40 flex items-center gap-1">
+                              <GraduationCap className="h-3 w-3" />
+                              Teacher: {assignment.authorName || teachers.find((t) => t.id === assignment.authorId)?.name || "Faculty"}
+                            </span>
+
+                            {assignment.subject && (
+                              <span className="px-2.5 py-0.5 text-[10px] font-bold bg-violet-950/80 text-violet-300 rounded-full border border-violet-500/40">
+                                {assignment.subject}
+                              </span>
+                            )}
+                          </div>
 
                           {assignment.dueDate && (
                             <span className="text-[11px] font-mono font-bold text-ink-soft">
@@ -1100,6 +1246,105 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                     </motion.div>
                   );
                 })}
+              </div>
+            )}
+          </motion.div>
+        )}
+
+        {/* TAB 5: FACULTY DIRECTORY */}
+        {activeTab === "faculty" && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <div className="bg-cream border border-ink-soft/10 rounded-3xl p-6 shadow-xl space-y-2">
+              <div className="flex items-center gap-2">
+                <GraduationCap className="h-6 w-6 text-violet-500" />
+                <h2 className="text-xl font-black text-ink font-display">Faculty Directory</h2>
+              </div>
+              <p className="text-xs text-ink-soft">
+                Connect with your teachers, check subjects, and view verified profile credentials.
+              </p>
+            </div>
+
+            {teachers.length === 0 ? (
+              <div className="text-center py-12 bg-white border border-ink-soft/10 rounded-3xl p-6">
+                <GraduationCap className="h-10 w-10 text-ink-soft/40 mx-auto mb-2" />
+                <p className="text-sm font-bold text-ink">No faculty accounts found.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {teachers.map((t, idx) => (
+                  <motion.div
+                    key={`${t.id || t.uid || 'teacher'}-${idx}`}
+                    whileHover={{ y: -2 }}
+                    className="bg-white border border-ink-soft/10 rounded-3xl p-5 shadow-sm space-y-4 flex flex-col justify-between"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <UserAvatar name={t.name} avatarUrl={t.avatarUrl} role="teacher" size="lg" />
+                          <div>
+                            <h3 className="font-bold text-sm text-ink">{t.name}</h3>
+                            <p className="text-[11px] text-ink-soft font-mono">@{t.id}</p>
+                          </div>
+                        </div>
+
+                        {t.isApproved ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-teal-50 text-teal-700 border border-teal-200">
+                            <CheckCircle2 className="h-3 w-3 text-teal-500" /> Verified
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200">
+                            <Clock className="h-3 w-3 text-amber-500" /> Pending
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5 text-xs">
+                        {t.subject && (
+                          <div className="flex items-start gap-2 text-ink-soft">
+                            <BookOpen className="h-3.5 w-3.5 text-violet-500 shrink-0 mt-0.5" />
+                            <div className="flex flex-wrap gap-1">
+                              {t.subject.split(',').map((sub, sIdx) => (
+                                <span key={sIdx} className="bg-violet-100 dark:bg-violet-900/40 text-violet-800 dark:text-violet-300 px-2 py-0.5 rounded-md text-[11px] font-bold border border-violet-200 dark:border-violet-700/50">
+                                  {sub.trim()}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {t.location && (
+                          <div className="flex items-center gap-2 text-ink-soft">
+                            <MapPin className="h-3.5 w-3.5 text-cyan-500 shrink-0" />
+                            <span>{t.location}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-ink-soft/10 flex items-center justify-between gap-2">
+                      {t.email ? (
+                        <a
+                          href={`mailto:${t.email}`}
+                          className="text-xs font-bold text-teal-600 hover:underline flex items-center gap-1"
+                        >
+                          <Mail className="h-3.5 w-3.5" /> Email
+                        </a>
+                      ) : (
+                        <span className="text-[10px] text-ink-soft/50 italic">No email</span>
+                      )}
+
+                      <button
+                        onClick={() => setViewingTeacher(t)}
+                        className="px-3 py-1.5 text-xs font-extrabold text-violet-300 bg-violet-500/20 hover:bg-violet-500/30 border border-violet-500/40 rounded-xl transition-all cursor-pointer flex items-center gap-1"
+                      >
+                        <GraduationCap className="h-3.5 w-3.5" /> View Profile
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
             )}
           </motion.div>
@@ -1159,8 +1404,8 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                 </div>
 
                 {submissionSuccess && (
-                  <div className="p-3 bg-teal-50 border border-teal-200 text-teal-700 text-xs font-bold rounded-xl flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-teal-500" />
+                  <div className="p-3 bg-teal-950/80 border border-teal-500/40 text-teal-300 text-xs font-bold rounded-xl flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-teal-400" />
                     <span>{submissionSuccess}</span>
                   </div>
                 )}
@@ -1185,7 +1430,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                       Attach File / Photo (optional):
                     </label>
                     <div className="flex items-center gap-3">
-                      <label className="px-4 py-2.5 text-xs font-extrabold text-teal-700 bg-teal-50 border border-teal-200 hover:bg-teal-100 rounded-xl cursor-pointer transition-all flex items-center gap-1.5">
+                      <label className="px-4 py-2.5 text-xs font-extrabold text-teal-300 bg-teal-950/80 border border-teal-500/40 hover:bg-teal-900/80 rounded-xl cursor-pointer transition-all flex items-center gap-1.5">
                         <Paperclip className="h-4 w-4" />
                         Choose File
                         <input
@@ -1223,6 +1468,25 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* VIEW STUDENT PROFILE SECTION */}
+        {viewingStudent && (
+          <div className="pt-8 mt-10 border-t border-slate-700/60">
+            <StudentProfile student={viewingStudent} onClose={() => setViewingStudent(null)} />
+          </div>
+        )}
+
+        {/* VIEW TEACHER PROFILE SECTION */}
+        {viewingTeacher && (
+          <div className="pt-8 mt-10 border-t border-slate-700/60">
+            <TeacherProfile
+              teacher={viewingTeacher}
+              currentUser={dbUser}
+              onClose={() => setViewingTeacher(null)}
+              onSelectStudent={(s) => setViewingStudent(s)}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
