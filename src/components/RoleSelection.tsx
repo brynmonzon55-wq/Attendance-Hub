@@ -17,79 +17,72 @@ export default function RoleSelection({ onSelectRole }: RoleSelectionProps) {
         className="w-full max-w-2xl mx-auto flex flex-col items-center"
         id="role-selection-card"
       >
-        {/* Header */}
-        <div className="text-center mb-8 sm:mb-10">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 mb-4 shadow-lg shadow-blue-600/20">
-            <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
-          </div>
-          <h1 className="text-[38px] sm:text-5xl md:text-6xl font-black tracking-tight text-gray-900 font-display mb-2 leading-none">
+        <div className="text-center mb-[24px] sm:mb-9">
+          <h1 className="text-[38px] sm:text-5xl md:text-6xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-purple-400 font-display mb-1.5 leading-none drop-shadow-[0_0_30px_rgba(0,240,255,0.5)]">
             Attendance Hub
           </h1>
-          <p className="text-gray-500 font-medium text-xs sm:text-sm md:text-base max-w-md mx-auto">
+          <p className="text-slate-300/80 font-medium text-xs sm:text-sm md:text-base max-w-md mx-auto">
             Select your portal to log in
           </p>
         </div>
 
-        {/* Role Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-[18px] sm:gap-6 w-full">
           {/* Student Role */}
           <motion.button
-            whileHover={{ y: -4, scale: 1.01 }}
+            whileHover={{ y: -6, scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            transition={{ duration: 0.15 }}
+            transition={{ duration: 0.12 }}
             onClick={() => onSelectRole("student")}
-            className="flex flex-row sm:flex-col items-center justify-between sm:justify-center text-left sm:text-center p-5 sm:p-8 min-h-[100px] sm:min-h-[auto] bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group"
+            className="flex flex-row sm:flex-col items-center justify-between sm:justify-center text-left sm:text-center p-[18px] sm:p-8 min-h-[96px] sm:min-h-[auto] bg-slate-900/75 border border-cyan-400/50 rounded-2xl sm:rounded-3xl shadow-[0_0_25px_rgba(0,240,255,0.25)] hover:shadow-[0_0_40px_rgba(0,240,255,0.45)] hover:border-cyan-300 transition-all cursor-pointer group backdrop-blur-2xl"
             id="select-student-btn"
           >
-            <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0">
-              <div className="p-3 sm:p-4 bg-blue-50 rounded-xl sm:rounded-2xl text-blue-600 sm:mb-4 group-hover:bg-blue-100 transition-colors shrink-0">
-                <GraduationCap className="h-7 w-7 sm:h-10 sm:w-10" />
+            <div className="flex flex-row sm:flex-col items-center gap-3.5 sm:gap-0">
+              <div className="p-3 sm:p-4 bg-cyan-500/20 rounded-xl sm:rounded-2xl text-cyan-400 sm:mb-3.5 group-hover:bg-cyan-500/30 group-hover:scale-110 transition-all shadow-[0_0_20px_rgba(0,240,255,0.35)] shrink-0">
+                <GraduationCap className="h-6.5 w-6.5 sm:h-10 sm:w-10 text-cyan-400 drop-shadow-[0_0_12px_rgba(0,240,255,0.7)]" />
               </div>
               <div>
-                <h3 className="text-lg sm:text-2xl font-black text-gray-900 font-display sm:mb-2 group-hover:text-blue-600 transition-colors">
+                <h3 className="text-lg sm:text-2xl font-black text-white font-display sm:mb-1.5 group-hover:text-cyan-300 transition-colors drop-shadow-[0_0_12px_rgba(0,240,255,0.6)]">
                   Student
                 </h3>
-                <p className="text-[11px] sm:text-sm text-gray-500 hidden sm:block mb-6 max-w-[230px] leading-relaxed font-medium">
+                <p className="text-[11px] sm:text-sm text-slate-300/80 hidden sm:block mb-6 max-w-[230px] leading-relaxed font-medium">
                   Check in for active classes, track attendance records, and turn in assignments.
                 </p>
-                <p className="text-[11px] text-gray-500 sm:hidden font-medium">
+                <p className="text-[11px] text-slate-300/80 sm:hidden font-medium">
                   Check in & track records
                 </p>
               </div>
             </div>
-            <span className="inline-flex items-center justify-center text-[11px] sm:text-xs font-bold text-white bg-blue-600 group-hover:bg-blue-700 px-4 py-2.5 sm:px-5 sm:py-2.5 rounded-full transition-colors sm:w-full sm:max-w-[200px] shrink-0">
+            <span className="inline-flex items-center justify-center text-[11px] sm:text-xs font-black text-slate-950 bg-gradient-to-r from-cyan-400 to-teal-300 group-hover:from-cyan-300 group-hover:to-teal-200 px-3.5 py-2.5 sm:px-5 sm:py-2.5 rounded-full shadow-[0_0_18px_rgba(0,240,255,0.5)] sm:w-full sm:max-w-[200px] transition-all shrink-0">
               Portal <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 ml-0.5 sm:ml-1 stroke-[3]" />
             </span>
           </motion.button>
 
           {/* Teacher Role */}
           <motion.button
-            whileHover={{ y: -4, scale: 1.01 }}
-            transition={{ duration: 0.15 }}
+            whileHover={{ y: -6, scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
+            transition={{ duration: 0.12 }}
             onClick={() => onSelectRole("teacher")}
-            className="flex flex-row sm:flex-col items-center justify-between sm:justify-center text-left sm:text-center p-5 sm:p-8 min-h-[100px] sm:min-h-[auto] bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md hover:border-teal-300 transition-all cursor-pointer group"
+            className="flex flex-row sm:flex-col items-center justify-between sm:justify-center text-left sm:text-center p-[18px] sm:p-8 min-h-[96px] sm:min-h-[auto] bg-slate-900/75 border border-fuchsia-400/50 rounded-2xl sm:rounded-3xl shadow-[0_0_25px_rgba(217,70,239,0.25)] hover:shadow-[0_0_40px_rgba(217,70,239,0.45)] hover:border-fuchsia-300 transition-all cursor-pointer group backdrop-blur-2xl"
             id="select-teacher-btn"
           >
-            <div className="flex flex-row sm:flex-col items-center gap-4 sm:gap-0">
-              <div className="p-3 sm:p-4 bg-teal-50 rounded-xl sm:rounded-2xl text-teal-600 sm:mb-4 group-hover:bg-teal-100 transition-colors shrink-0">
-                <Briefcase className="h-7 w-7 sm:h-10 sm:w-10" />
+            <div className="flex flex-row sm:flex-col items-center gap-3.5 sm:gap-0">
+              <div className="p-3 sm:p-4 bg-fuchsia-500/20 rounded-xl sm:rounded-2xl text-fuchsia-400 sm:mb-3.5 group-hover:bg-fuchsia-500/30 group-hover:scale-110 transition-all shadow-[0_0_20px_rgba(217,70,239,0.35)] shrink-0">
+                <Briefcase className="h-6.5 w-6.5 sm:h-10 sm:w-10 text-fuchsia-400 drop-shadow-[0_0_12px_rgba(217,70,239,0.7)]" />
               </div>
               <div>
-                <h3 className="text-lg sm:text-2xl font-black text-gray-900 font-display sm:mb-2 group-hover:text-teal-600 transition-colors">
+                <h3 className="text-lg sm:text-2xl font-black text-white font-display sm:mb-1.5 group-hover:text-fuchsia-300 transition-colors drop-shadow-[0_0_12px_rgba(217,70,239,0.6)]">
                   Teacher
                 </h3>
-                <p className="text-[11px] sm:text-sm text-gray-500 hidden sm:block mb-6 max-w-[230px] leading-relaxed font-medium">
+                <p className="text-[11px] sm:text-sm text-slate-300/80 hidden sm:block mb-6 max-w-[230px] leading-relaxed font-medium">
                   Create classrooms, manage live attendance, approve enrollments, and post tasks.
                 </p>
-                <p className="text-[11px] text-gray-500 sm:hidden font-medium">
+                <p className="text-[11px] text-slate-300/80 sm:hidden font-medium">
                   Classrooms & attendance
                 </p>
               </div>
             </div>
-            <span className="inline-flex items-center justify-center text-[11px] sm:text-xs font-bold text-white bg-teal-600 group-hover:bg-teal-700 px-4 py-2.5 sm:px-5 sm:py-2.5 rounded-full transition-colors sm:w-full sm:max-w-[200px] shrink-0">
+            <span className="inline-flex items-center justify-center text-[11px] sm:text-xs font-black text-slate-950 bg-gradient-to-r from-fuchsia-400 via-pink-400 to-fuchsia-300 group-hover:from-fuchsia-300 group-hover:to-pink-200 px-3.5 py-2.5 sm:px-5 sm:py-2.5 rounded-full shadow-[0_0_18px_rgba(217,70,239,0.5)] sm:w-full sm:max-w-[200px] transition-all shrink-0">
               Portal <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 ml-0.5 sm:ml-1 stroke-[3]" />
             </span>
           </motion.button>
@@ -98,3 +91,4 @@ export default function RoleSelection({ onSelectRole }: RoleSelectionProps) {
     </div>
   );
 }
+

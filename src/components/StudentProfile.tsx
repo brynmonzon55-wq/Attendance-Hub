@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion } from "motion/react";
 import {
   ArrowLeft,
@@ -145,7 +145,7 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
     <div className="space-y-6" id="student-profile">
       <button
         onClick={handleClose}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 transition-colors cursor-pointer"
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-500 hover:text-violet-700 transition-colors cursor-pointer"
         id="profile-back-btn"
       >
         <ArrowLeft className="h-3.5 w-3.5" /> Back to Roster
@@ -155,12 +155,12 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row md:items-center gap-5"
+        className="bg-white border border-violet-100/60 rounded-3xl p-6 shadow-violet flex flex-col md:flex-row md:items-center gap-5"
       >
         <UserAvatar name={student.name} avatarUrl={student.avatarUrl} role={student.role} size="2xl" />
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-2xl font-bold text-gray-900 font-display truncate">{student.name}</h2>
+            <h2 className="text-2xl font-bold text-ink font-display truncate">{student.name}</h2>
             <span
               className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                 student.isApproved
@@ -171,20 +171,20 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
               {student.isApproved ? "Verified" : "Pending"}
             </span>
           </div>
-          <p className="text-xs text-gray-500/60 font-mono mt-0.5">Student ID: #{student.id}</p>
+          <p className="text-xs text-ink-soft/60 font-mono mt-0.5">Student ID: #{student.id}</p>
           {student.department && (
-            <div className="mt-1.5 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 text-xs font-bold">
-              <GraduationCap className="h-3.5 w-3.5 text-blue-600" />
+            <div className="mt-1.5 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-violet-950/40 text-violet-300 border border-violet-800/50 text-xs font-bold">
+              <GraduationCap className="h-3.5 w-3.5 text-cyan-400" />
               <span>{student.department}</span>
             </div>
           )}
           <div className="flex flex-wrap gap-x-6 gap-y-1 mt-3">
             <div>
-              <p className="text-[10px] font-bold text-gray-500/50 uppercase tracking-wide">Attendance Rate</p>
+              <p className="text-[10px] font-bold text-ink-soft/50 uppercase tracking-wide">Attendance Rate</p>
               <p className="text-lg font-bold text-teal-400 font-display">{stats.percentage}%</p>
             </div>
             <div>
-              <p className="text-[10px] font-bold text-gray-500/50 uppercase tracking-wide">Current Streak</p>
+              <p className="text-[10px] font-bold text-ink-soft/50 uppercase tracking-wide">Current Streak</p>
               <p className="text-lg font-bold text-coral-400 font-display">
                 {streak} {streak === 1 ? "Day" : "Days"}
               </p>
@@ -204,14 +204,14 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
           {student.phone && (
             <a
               href={`tel:${student.phone}`}
-              className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100/80 border border-blue-200 rounded-full transition-all cursor-pointer"
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-bold text-violet-300 bg-violet-950/80 hover:bg-violet-900/80 border border-violet-500/40 rounded-full transition-all cursor-pointer"
             >
               <Phone className="h-3.5 w-3.5" /> Call
             </a>
           )}
           <button
             onClick={handleExport}
-            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-blue-500 hover:bg-blue-600 rounded-full shadow-sm hover:-translate-y-0.5 transition-all cursor-pointer"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-violet-500 hover:bg-violet-600 rounded-full shadow-violet hover:-translate-y-0.5 transition-all cursor-pointer"
             id="profile-export-btn"
           >
             <Download className="h-3.5 w-3.5" /> Export Report
@@ -223,29 +223,29 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
         {/* Calendar */}
         <div className="lg:col-span-2 bg-white border border-ink-soft/10 rounded-3xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="text-lg font-bold text-gray-900 font-display">Attendance Calendar</h3>
+            <h3 className="text-lg font-bold text-ink font-display">Attendance Calendar</h3>
             <div className="flex items-center gap-1 bg-cream-dim/60 rounded-full px-1 py-1">
               <button
                 onClick={() => setMonthOffset((m) => m - 1)}
                 className="p-1.5 rounded-full hover:bg-white transition-colors cursor-pointer"
                 id="calendar-prev-btn"
               >
-                <ChevronLeft className="h-4 w-4 text-gray-500" />
+                <ChevronLeft className="h-4 w-4 text-ink-soft" />
               </button>
-              <span className="text-xs font-bold text-gray-900 px-2 min-w-[110px] text-center">{monthLabel}</span>
+              <span className="text-xs font-bold text-ink px-2 min-w-[110px] text-center">{monthLabel}</span>
               <button
                 onClick={() => setMonthOffset((m) => m + 1)}
                 className="p-1.5 rounded-full hover:bg-white transition-colors cursor-pointer"
                 id="calendar-next-btn"
               >
-                <ChevronRight className="h-4 w-4 text-gray-500" />
+                <ChevronRight className="h-4 w-4 text-ink-soft" />
               </button>
             </div>
           </div>
 
           <div className="grid grid-cols-7 gap-2 text-center mb-2">
             {WEEKDAY_LABELS.map((d) => (
-              <span key={d} className="text-[10px] font-bold text-gray-500/50">
+              <span key={d} className="text-[10px] font-bold text-ink-soft/50">
                 {d}
               </span>
             ))}
@@ -261,8 +261,8 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
                 <div
                   key={i}
                   className={`aspect-square rounded-xl flex items-center justify-center text-xs font-semibold ${
-                    isFuture ? "text-gray-500/30" : record ? statusCellClass[record.status] : "bg-cream-dim/60 text-gray-500/40"
-                  } ${isToday ? "ring-2 ring-blue-500" : ""}`}
+                    isFuture ? "text-ink-soft/30" : record ? statusCellClass[record.status] : "bg-cream-dim/60 text-ink-soft/40"
+                  } ${isToday ? "ring-2 ring-violet-400" : ""}`}
                   title={record ? `${record.status}${record.subject ? " · " + record.subject : ""}` : undefined}
                 >
                   {day}
@@ -272,13 +272,13 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
           </div>
 
           <div className="flex items-center gap-4 mt-5 pt-4 border-t border-ink-soft/10">
-            <span className="inline-flex items-center gap-1.5 text-[11px] text-gray-500/70">
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-ink-soft/70">
               <span className="h-2 w-2 rounded-full bg-teal-500" /> Present
             </span>
-            <span className="inline-flex items-center gap-1.5 text-[11px] text-gray-500/70">
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-ink-soft/70">
               <span className="h-2 w-2 rounded-full bg-coral-500" /> Late
             </span>
-            <span className="inline-flex items-center gap-1.5 text-[11px] text-gray-500/70">
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-ink-soft/70">
               <span className="h-2 w-2 rounded-full bg-rose-500" /> Absent
             </span>
           </div>
@@ -288,18 +288,18 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
         <div className="space-y-6">
           {/* Profile Details (Address, Email, Phone, Location) */}
           <div className="bg-white border border-ink-soft/10 rounded-3xl p-6 shadow-sm space-y-4">
-            <h3 className="text-base font-bold text-gray-900 font-display flex items-center gap-2">
-              <Home className="h-4 w-4 text-blue-600" />
+            <h3 className="text-base font-bold text-ink font-display flex items-center gap-2">
+              <Home className="h-4 w-4 text-violet-500" />
               <span>Contact & Address Info</span>
             </h3>
 
             <div className="space-y-3 text-xs">
               {student.email && (
-                <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-gray-200/50">
+                <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-700/50">
                   <Mail className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
                   <div className="min-w-0">
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500/60">Email Address</p>
-                    <a href={`mailto:${student.email}`} className="font-bold text-gray-900 dark:text-gray-700 hover:text-teal-600 truncate block">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-ink-soft/60">Email Address</p>
+                    <a href={`mailto:${student.email}`} className="font-bold text-ink dark:text-slate-200 hover:text-teal-600 truncate block">
                       {student.email}
                     </a>
                   </div>
@@ -307,11 +307,11 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
               )}
 
               {student.phone && (
-                <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-gray-200/50">
-                  <Phone className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                  <Phone className="h-4 w-4 text-violet-600 shrink-0 mt-0.5" />
                   <div className="min-w-0">
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500/60">Phone Number</p>
-                    <a href={`tel:${student.phone}`} className="font-bold text-gray-900 dark:text-gray-700 hover:text-blue-600 truncate block">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-ink-soft/60">Phone Number</p>
+                    <a href={`tel:${student.phone}`} className="font-bold text-ink dark:text-slate-200 hover:text-violet-600 truncate block">
                       {student.phone}
                     </a>
                   </div>
@@ -319,34 +319,34 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
               )}
 
               {student.address && (
-                <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-gray-200/50">
+                <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-700/50">
                   <Home className="h-4 w-4 text-coral-600 shrink-0 mt-0.5" />
                   <div className="min-w-0">
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500/60">Residential Address</p>
-                    <p className="font-bold text-gray-900 dark:text-gray-700 leading-snug">{student.address}</p>
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-ink-soft/60">Residential Address</p>
+                    <p className="font-bold text-ink dark:text-slate-200 leading-snug">{student.address}</p>
                   </div>
                 </div>
               )}
 
               {student.department && (
-                <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-gray-200/50">
+                <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-700/50">
                   <GraduationCap className="h-4 w-4 text-cyan-500 shrink-0 mt-0.5" />
                   <div className="min-w-0">
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500/60">Department / Course</p>
-                    <p className="font-bold text-gray-900 dark:text-gray-700 leading-snug">{student.department}</p>
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-ink-soft/60">Department / Course</p>
+                    <p className="font-bold text-ink dark:text-slate-200 leading-snug">{student.department}</p>
                   </div>
                 </div>
               )}
 
               {!student.email && !student.phone && !student.address && !student.department && (
-                <p className="text-xs text-gray-500/50 italic">No contact or academic details configured yet.</p>
+                <p className="text-xs text-ink-soft/50 italic">No contact or academic details configured yet.</p>
               )}
             </div>
           </div>
 
           {/* Connected Social Media Accounts */}
           <div className="bg-white border border-ink-soft/10 rounded-3xl p-6 shadow-sm space-y-4">
-            <h3 className="text-base font-bold text-gray-900 font-display flex items-center gap-2">
+            <h3 className="text-base font-bold text-ink font-display flex items-center gap-2">
               <Share2 className="h-4 w-4 text-teal-500" />
               <span>Social Accounts</span>
             </h3>
@@ -358,7 +358,7 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
                     <span className="font-extrabold text-blue-700 dark:text-blue-300 flex items-center gap-2">
                       <Globe className="h-3.5 w-3.5" /> Facebook
                     </span>
-                    <span className="font-semibold text-gray-500 truncate max-w-[160px]">{social.facebook}</span>
+                    <span className="font-semibold text-ink-soft truncate max-w-[160px]">{social.facebook}</span>
                   </div>
                 )}
                 {social.twitter && (
@@ -366,7 +366,7 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
                     <span className="font-extrabold text-sky-700 dark:text-sky-300 flex items-center gap-2">
                       <Globe className="h-3.5 w-3.5" /> Twitter / X
                     </span>
-                    <span className="font-semibold text-gray-500 truncate max-w-[160px]">{social.twitter}</span>
+                    <span className="font-semibold text-ink-soft truncate max-w-[160px]">{social.twitter}</span>
                   </div>
                 )}
                 {social.linkedin && (
@@ -374,15 +374,15 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
                     <span className="font-extrabold text-indigo-700 dark:text-indigo-300 flex items-center gap-2">
                       <Globe className="h-3.5 w-3.5" /> LinkedIn
                     </span>
-                    <span className="font-semibold text-gray-500 truncate max-w-[160px]">{social.linkedin}</span>
+                    <span className="font-semibold text-ink-soft truncate max-w-[160px]">{social.linkedin}</span>
                   </div>
                 )}
                 {social.github && (
-                  <div className="p-2.5 bg-slate-100 dark:bg-gray-50 border border-slate-200 dark:border-gray-200 rounded-xl flex items-center justify-between">
-                    <span className="font-extrabold text-gray-800 dark:text-gray-700 flex items-center gap-2">
+                  <div className="p-2.5 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-between">
+                    <span className="font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
                       <Globe className="h-3.5 w-3.5" /> GitHub
                     </span>
-                    <span className="font-semibold text-gray-500 truncate max-w-[160px]">{social.github}</span>
+                    <span className="font-semibold text-ink-soft truncate max-w-[160px]">{social.github}</span>
                   </div>
                 )}
                 {social.instagram && (
@@ -390,19 +390,19 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
                     <span className="font-extrabold text-pink-700 dark:text-pink-300 flex items-center gap-2">
                       <Globe className="h-3.5 w-3.5" /> Instagram
                     </span>
-                    <span className="font-semibold text-gray-500 truncate max-w-[160px]">{social.instagram}</span>
+                    <span className="font-semibold text-ink-soft truncate max-w-[160px]">{social.instagram}</span>
                   </div>
                 )}
               </div>
             ) : (
-              <p className="text-xs text-gray-500/50 italic">No social media profiles connected yet.</p>
+              <p className="text-xs text-ink-soft/50 italic">No social media profiles connected yet.</p>
             )}
           </div>
 
           <div className="bg-white border border-ink-soft/10 rounded-3xl p-6 shadow-sm">
-            <h3 className="text-base font-bold text-gray-900 font-display mb-4">Subject Absences</h3>
+            <h3 className="text-base font-bold text-ink font-display mb-4">Subject Absences</h3>
             {subjectBreakdown.length === 0 ? (
-              <p className="text-xs text-gray-500/50">No attendance records yet for this student.</p>
+              <p className="text-xs text-ink-soft/50">No attendance records yet for this student.</p>
             ) : (
               <div className="space-y-3">
                 {subjectBreakdown.map(([subject, { absences, late }]) => {
@@ -410,10 +410,10 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
                   return (
                     <div key={subject}>
                       <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="font-semibold text-gray-900">{subject}</span>
+                        <span className="font-semibold text-ink">{subject}</span>
                         <span
                           className={`font-bold ${
-                            absences > 0 ? "text-rose-600" : late > 0 ? "text-coral-600" : "text-gray-500/50"
+                            absences > 0 ? "text-rose-600" : late > 0 ? "text-coral-600" : "text-ink-soft/50"
                           }`}
                         >
                           {absences > 0 ? `${absences} Absence${absences > 1 ? "s" : ""}` : late > 0 ? `${late} Late` : "0 Absences"}

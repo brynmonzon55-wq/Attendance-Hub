@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import {
   ArrowLeft,
@@ -117,14 +117,14 @@ export default function TeacherProfile({
       <div className="flex items-center justify-between">
         <button
           onClick={handleClose}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-600 transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-400 hover:text-violet-300 transition-colors cursor-pointer"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Back to Faculty List
         </button>
 
         <button
           onClick={handleClose}
-          className="p-1.5 rounded-full bg-slate-800 text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"
+          className="p-1.5 rounded-full bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
         >
           <X className="h-4 w-4" />
         </button>
@@ -134,7 +134,7 @@ export default function TeacherProfile({
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-slate-900 border border-gray-200 rounded-3xl p-6 shadow-2xl flex flex-col md:flex-row md:items-center gap-5 text-white"
+        className="bg-slate-900 border border-slate-700/80 rounded-3xl p-6 shadow-2xl flex flex-col md:flex-row md:items-center gap-5 text-white"
       >
         <UserAvatar name={teacher.name} avatarUrl={teacher.avatarUrl} role="teacher" size="2xl" />
 
@@ -147,22 +147,22 @@ export default function TeacherProfile({
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-950/90 text-amber-300 border border-amber-500/40 animate-pulse">
-                <Clock className="h-3 w-3 text-amber-500" /> Pending Verification
+                <Clock className="h-3 w-3 text-amber-400" /> Pending Verification
               </span>
             )}
             {isMe && (
-              <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-cyan-950 text-blue-600 border border-cyan-500/40 rounded-full">
+              <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-cyan-950 text-cyan-300 border border-cyan-500/40 rounded-full">
                 Your Profile
               </span>
             )}
           </div>
 
-          <p className="text-xs text-gray-400 font-mono">Faculty ID: #{teacher.id}</p>
+          <p className="text-xs text-slate-400 font-mono">Faculty ID: #{teacher.id}</p>
 
           <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs">
             {teacher.subject && teacher.subject.split(',').map((sub, sIdx) => (
-              <span key={sIdx} className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-800 border border-gray-200 rounded-xl text-blue-600 font-bold">
-                <BookOpen className="h-3.5 w-3.5 text-blue-600" /> {sub.trim()}
+              <span key={sIdx} className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-800 border border-slate-700/80 rounded-xl text-violet-300 font-bold">
+                <BookOpen className="h-3.5 w-3.5 text-violet-400" /> {sub.trim()}
               </span>
             ))}
           </div>
@@ -182,7 +182,7 @@ export default function TeacherProfile({
           {teacher.phone && (
             <a
               href={`tel:${teacher.phone}`}
-              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-extrabold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-all cursor-pointer"
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-extrabold text-violet-300 bg-violet-950/80 hover:bg-violet-900 border border-violet-500/40 rounded-xl transition-all cursor-pointer"
             >
               <Phone className="h-3.5 w-3.5" /> Call Office
             </a>
@@ -196,7 +196,7 @@ export default function TeacherProfile({
                   onClick={() => onVerifyToggle(teacher)}
                   className={`px-3 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
                     teacher.isApproved
-                      ? "bg-slate-800 hover:bg-slate-700 text-gray-500 border border-gray-200"
+                      ? "bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
                       : "bg-teal-600 hover:bg-teal-500 text-white shadow-lg shadow-teal-600/30"
                   }`}
                   title={teacher.isApproved ? "Revoke Verification Status" : "Verify Teacher Account"}
@@ -209,7 +209,7 @@ export default function TeacherProfile({
               {onEdit && (
                 <button
                   onClick={() => onEdit(teacher)}
-                  className="p-2 text-gray-400 hover:text-gray-900 bg-slate-800 hover:bg-slate-700 rounded-xl border border-gray-200 transition-all cursor-pointer"
+                  className="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 transition-all cursor-pointer"
                   title="Edit Faculty Details"
                 >
                   <Edit className="h-4 w-4" />
@@ -219,7 +219,7 @@ export default function TeacherProfile({
               {onDelete && !isMe && (
                 <button
                   onClick={() => onDelete(teacher)}
-                  className="p-2 text-red-500 hover:text-rose-300 bg-rose-950/40 hover:bg-rose-900/60 rounded-xl border border-rose-800/40 transition-all cursor-pointer"
+                  className="p-2 text-rose-400 hover:text-rose-300 bg-rose-950/40 hover:bg-rose-900/60 rounded-xl border border-rose-800/40 transition-all cursor-pointer"
                   title="Delete Faculty Account"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -235,23 +235,23 @@ export default function TeacherProfile({
         {/* Left Column: Office Details & Social Accounts */}
         <div className="space-y-6">
           {/* Office & Contact Info */}
-          <div className="bg-slate-900 border border-gray-200 rounded-3xl p-6 shadow-xl space-y-4 text-white">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-3xl p-6 shadow-xl space-y-4 text-white">
             <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-blue-600" />
+              <Building2 className="h-4 w-4 text-violet-400" />
               <span>Office & Contact Info</span>
             </h3>
 
             <div className="space-y-3 text-xs">
               {teacher.subject && (
-                <div className="p-3 bg-white rounded-2xl border border-slate-800 flex items-start gap-3">
-                  <BookOpen className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                <div className="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 flex items-start gap-3">
+                  <BookOpen className="h-4 w-4 text-violet-400 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
                       Subject(s) / Specialization(s)
                     </p>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {teacher.subject.split(',').map((sub, sIdx) => (
-                        <span key={sIdx} className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md text-xs font-bold border border-blue-200">
+                        <span key={sIdx} className="bg-violet-950/80 text-violet-300 px-2 py-0.5 rounded-md text-xs font-bold border border-violet-800/40">
                           {sub.trim()}
                         </span>
                       ))}
@@ -261,10 +261,10 @@ export default function TeacherProfile({
               )}
 
               {teacher.email && (
-                <div className="p-3 bg-white rounded-2xl border border-slate-800 flex items-start gap-3">
+                <div className="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 flex items-start gap-3">
                   <Mail className="h-4 w-4 text-teal-400 shrink-0 mt-0.5" />
                   <div className="min-w-0">
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400">Email Address</p>
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Email Address</p>
                     <a href={`mailto:${teacher.email}`} className="font-bold text-teal-300 hover:underline truncate block mt-0.5">
                       {teacher.email}
                     </a>
@@ -273,11 +273,11 @@ export default function TeacherProfile({
               )}
 
               {teacher.phone && (
-                <div className="p-3 bg-white rounded-2xl border border-slate-800 flex items-start gap-3">
-                  <Phone className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                <div className="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 flex items-start gap-3">
+                  <Phone className="h-4 w-4 text-fuchsia-400 shrink-0 mt-0.5" />
                   <div className="min-w-0">
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-gray-400">Phone Number</p>
-                    <a href={`tel:${teacher.phone}`} className="font-bold text-blue-600 hover:underline truncate block mt-0.5">
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Phone Number</p>
+                    <a href={`tel:${teacher.phone}`} className="font-bold text-fuchsia-300 hover:underline truncate block mt-0.5">
                       {teacher.phone}
                     </a>
                   </div>
@@ -285,13 +285,13 @@ export default function TeacherProfile({
               )}
 
               {!teacher.subject && !teacher.email && !teacher.phone && (
-                <p className="text-xs text-gray-500 italic">No contact details listed for this teacher.</p>
+                <p className="text-xs text-slate-500 italic">No contact details listed for this teacher.</p>
               )}
             </div>
           </div>
 
           {/* Social Profiles */}
-          <div className="bg-slate-900 border border-gray-200 rounded-3xl p-6 shadow-xl space-y-4 text-white">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-3xl p-6 shadow-xl space-y-4 text-white">
             <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
               <Share2 className="h-4 w-4 text-teal-400" />
               <span>Social Profiles</span>
@@ -304,7 +304,7 @@ export default function TeacherProfile({
                     <span className="font-extrabold text-blue-300 flex items-center gap-2">
                       <Globe className="h-3.5 w-3.5" /> Facebook
                     </span>
-                    <span className="font-semibold text-gray-500 truncate max-w-[150px]">{social.facebook}</span>
+                    <span className="font-semibold text-slate-300 truncate max-w-[150px]">{social.facebook}</span>
                   </div>
                 )}
                 {social.twitter && (
@@ -312,7 +312,7 @@ export default function TeacherProfile({
                     <span className="font-extrabold text-sky-300 flex items-center gap-2">
                       <Globe className="h-3.5 w-3.5" /> Twitter / X
                     </span>
-                    <span className="font-semibold text-gray-500 truncate max-w-[150px]">{social.twitter}</span>
+                    <span className="font-semibold text-slate-300 truncate max-w-[150px]">{social.twitter}</span>
                   </div>
                 )}
                 {social.linkedin && (
@@ -320,15 +320,15 @@ export default function TeacherProfile({
                     <span className="font-extrabold text-indigo-300 flex items-center gap-2">
                       <Globe className="h-3.5 w-3.5" /> LinkedIn
                     </span>
-                    <span className="font-semibold text-gray-500 truncate max-w-[150px]">{social.linkedin}</span>
+                    <span className="font-semibold text-slate-300 truncate max-w-[150px]">{social.linkedin}</span>
                   </div>
                 )}
                 {social.github && (
                   <div className="p-2.5 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-between">
-                    <span className="font-extrabold text-gray-700 flex items-center gap-2">
+                    <span className="font-extrabold text-slate-200 flex items-center gap-2">
                       <Globe className="h-3.5 w-3.5" /> GitHub
                     </span>
-                    <span className="font-semibold text-gray-400 truncate max-w-[150px]">{social.github}</span>
+                    <span className="font-semibold text-slate-400 truncate max-w-[150px]">{social.github}</span>
                   </div>
                 )}
                 {social.instagram && (
@@ -336,12 +336,12 @@ export default function TeacherProfile({
                     <span className="font-extrabold text-pink-300 flex items-center gap-2">
                       <Globe className="h-3.5 w-3.5" /> Instagram
                     </span>
-                    <span className="font-semibold text-gray-500 truncate max-w-[150px]">{social.instagram}</span>
+                    <span className="font-semibold text-slate-300 truncate max-w-[150px]">{social.instagram}</span>
                   </div>
                 )}
               </div>
             ) : (
-              <p className="text-xs text-gray-500 italic">No social media links provided.</p>
+              <p className="text-xs text-slate-500 italic">No social media links provided.</p>
             )}
           </div>
         </div>
@@ -350,9 +350,9 @@ export default function TeacherProfile({
         <div className="lg:col-span-2 space-y-6">
           {/* Active Classes */}
           {teacherClasses.length > 0 && (
-            <div className="bg-slate-900 border border-gray-200 rounded-3xl p-6 shadow-xl space-y-4 text-white">
+            <div className="bg-slate-900 border border-slate-700/80 rounded-3xl p-6 shadow-xl space-y-4 text-white">
               <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-blue-600" />
+                <BookOpen className="h-4 w-4 text-violet-400" />
                 <span>Active Class Sections ({teacherClasses.length})</span>
               </h3>
 
@@ -360,22 +360,22 @@ export default function TeacherProfile({
                 {teacherClasses.map((cls) => (
                   <div
                     key={cls.id}
-                    className="p-4 bg-white border border-slate-800 rounded-2xl space-y-2 hover:border-blue-300 transition-all"
+                    className="p-4 bg-slate-950/80 border border-slate-800 rounded-2xl space-y-2 hover:border-violet-500/50 transition-all"
                   >
                     <div className="flex items-center justify-between">
                       <h4 className="font-extrabold text-sm text-white">{cls.name}</h4>
-                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-blue-900 text-blue-600 border border-blue-200 rounded-md">
+                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-violet-950 text-violet-300 border border-violet-800/60 rounded-md">
                         Code: {cls.joinCode}
                       </span>
                     </div>
                     {cls.subject && (
-                      <p className="text-xs text-blue-600 font-semibold">{cls.subject}</p>
+                      <p className="text-xs text-violet-300 font-semibold">{cls.subject}</p>
                     )}
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-[11px] text-gray-400">
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-[11px] text-slate-400">
                       <span className="flex items-center gap-1 font-bold text-teal-300">
                         <Users className="h-3.5 w-3.5" /> {cls.studentIds.length} Enrolled Students
                       </span>
-                      <span className="font-mono text-[10px] text-gray-500">{cls.createdAt}</span>
+                      <span className="font-mono text-[10px] text-slate-500">{cls.createdAt}</span>
                     </div>
                   </div>
                 ))}
@@ -384,7 +384,7 @@ export default function TeacherProfile({
           )}
 
           {/* Enrolled Students Roster */}
-          <div className="bg-slate-900 border border-gray-200 rounded-3xl p-6 shadow-xl space-y-4 text-white">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-3xl p-6 shadow-xl space-y-4 text-white">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
                 <Users className="h-4 w-4 text-teal-400" />
@@ -393,7 +393,7 @@ export default function TeacherProfile({
 
               {teacherStudents.length > 0 && (
                 <div className="relative">
-                  <Search className="h-3.5 w-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={studentSearch}
@@ -407,15 +407,15 @@ export default function TeacherProfile({
 
             {filteredStudents.length === 0 ? (
               <div className="text-center py-10 bg-slate-950/40 rounded-2xl border border-slate-800/80">
-                <Users className="h-8 w-8 text-gray-600 mx-auto mb-2" />
-                <p className="text-xs font-bold text-gray-400">No enrolled students found</p>
+                <Users className="h-8 w-8 text-slate-600 mx-auto mb-2" />
+                <p className="text-xs font-bold text-slate-400">No enrolled students found</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {filteredStudents.map((st) => (
                   <div
                     key={st.id || st.uid}
-                    className="p-3.5 bg-white border border-slate-800 rounded-2xl flex items-center justify-between gap-3 hover:border-gray-200 transition-all"
+                    className="p-3.5 bg-slate-950/80 border border-slate-800 rounded-2xl flex items-center justify-between gap-3 hover:border-slate-700 transition-all"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <UserAvatar name={st.name} avatarUrl={st.avatarUrl} role="student" size="md" />
@@ -425,10 +425,10 @@ export default function TeacherProfile({
                           {st.isApproved ? (
                             <CheckCircle2 className="h-3 w-3 text-teal-400 shrink-0" />
                           ) : (
-                            <Clock className="h-3 w-3 text-amber-500 shrink-0" />
+                            <Clock className="h-3 w-3 text-amber-400 shrink-0" />
                           )}
                         </div>
-                        <p className="text-[11px] font-mono text-gray-400 truncate">@{st.id}</p>
+                        <p className="text-[11px] font-mono text-slate-400 truncate">@{st.id}</p>
                       </div>
                     </div>
 
@@ -446,7 +446,7 @@ export default function TeacherProfile({
                       {onSelectStudent && (
                         <button
                           onClick={() => onSelectStudent(st)}
-                          className="px-2.5 py-1.5 text-[11px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors cursor-pointer"
+                          className="px-2.5 py-1.5 text-[11px] font-bold text-violet-300 bg-violet-950/80 hover:bg-violet-900 border border-violet-800/60 rounded-xl transition-colors cursor-pointer"
                         >
                           View
                         </button>

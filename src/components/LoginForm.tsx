@@ -124,49 +124,54 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
   };
 
   const isStudent = role === "student";
-  const accentColor = isStudent ? "blue" : "teal";
 
   return (
-    <div className="flex flex-1 items-center justify-center p-2 sm:p-4 my-auto w-full">
+    <div className="flex flex-1 items-center justify-center p-2 sm:p-4 bg-mesh my-auto w-full">
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3 }}
-        className="w-full max-w-md bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden my-auto"
+        className={`w-full max-w-md bg-slate-900/95 backdrop-blur-2xl border rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden my-auto ${
+          isStudent
+            ? "border-cyan-400/50 shadow-[0_0_35px_rgba(0,240,255,0.25)]"
+            : "border-fuchsia-400/50 shadow-[0_0_35px_rgba(217,70,239,0.25)]"
+        }`}
         id="login-container"
       >
-        {/* Header */}
-        <div className={`px-5 py-4 sm:px-8 sm:py-6 text-white relative overflow-hidden ${
-          isStudent
-            ? "bg-gradient-to-r from-blue-600 to-blue-700"
-            : "bg-gradient-to-r from-teal-600 to-teal-700"
-        }`}>
-          <div className="absolute right-0 top-0 opacity-10 pointer-events-none">
-            <GraduationCap className="h-36 w-36 sm:h-40 sm:w-40 text-white" />
+        {/* Card Header with Theme color based on role */}
+        <div
+          className={`px-4 py-3.5 sm:px-8 sm:py-5 text-white ${
+            isStudent
+              ? "bg-gradient-to-r from-cyan-600 via-teal-600 to-emerald-600 shadow-[0_4px_25px_rgba(0,240,255,0.4)] border-b border-cyan-400/50"
+              : "bg-gradient-to-r from-fuchsia-500 via-pink-500 to-purple-600 shadow-[0_4px_25px_rgba(217,70,239,0.4)] border-b border-fuchsia-400/50"
+          } relative overflow-hidden`}
+        >
+          <div className="absolute right-0 top-0 translate-x-10 -translate-y-10 opacity-35 pointer-events-none">
+            <GraduationCap className={`h-36 w-36 sm:h-40 sm:w-40 text-white ${isStudent ? "drop-shadow-[0_0_18px_rgba(0,240,255,0.9)]" : "drop-shadow-[0_0_18px_rgba(217,70,239,0.9)]"}`} />
           </div>
 
           <button
             onClick={onBack}
-            className={`inline-flex items-center text-[11px] sm:text-xs font-bold text-white transition-all mb-3 sm:mb-4 px-3 py-1.5 rounded-lg cursor-pointer ${
+            className={`inline-flex items-center text-[11px] sm:text-xs font-extrabold text-white transition-all mb-2 sm:mb-3 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl cursor-pointer backdrop-blur-md shadow-md ${
               isStudent
-                ? "bg-white/15 hover:bg-white/25 border border-white/20"
-                : "bg-white/15 hover:bg-white/25 border border-white/20"
+                ? "bg-slate-950/60 hover:bg-slate-950/90 border border-cyan-400/50 hover:border-cyan-300 text-cyan-200 shadow-[0_0_12px_rgba(0,240,255,0.3)]"
+                : "bg-slate-950/60 hover:bg-slate-950/90 border border-fuchsia-400/50 hover:border-fuchsia-300 text-fuchsia-200 shadow-[0_0_12px_rgba(217,70,239,0.3)]"
             }`}
             id="back-role-btn"
           >
             <ArrowLeft className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 stroke-[2.5]" /> Choose Role
           </button>
 
-          <h2 className="text-lg sm:text-2xl font-black tracking-tight font-display text-white">
+          <h2 className="text-lg sm:text-2xl font-black tracking-tight font-display text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.8)]">
             {isRegister ? "Create Account" : "Welcome Back"}
           </h2>
-          <p className="text-[11px] sm:text-xs font-semibold mt-0.5 sm:mt-1 text-white/80">
+          <p className={`text-[11px] sm:text-xs font-bold mt-0.5 sm:mt-1 font-sans ${isStudent ? "text-cyan-100 drop-shadow-[0_0_8px_rgba(0,240,255,0.7)]" : "text-fuchsia-100 drop-shadow-[0_0_8px_rgba(217,70,239,0.7)]"}`}>
             {isStudent ? "Student Portal Sign In" : "Teacher Portal Sign In"}
           </p>
         </div>
 
-        {/* Form Area */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-7 space-y-3 sm:space-y-4" id="login-form">
+        {/* Form area */}
+        <form onSubmit={handleSubmit} className="p-3.5 sm:p-7 space-y-2.5 sm:space-y-4" id="login-form">
           {/* Google Sign In Button */}
           <div className="space-y-2">
             <button
@@ -190,40 +195,51 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
                   setIsSubmitting(false);
                 }
               }}
-              className="w-full py-3 px-4 bg-white hover:bg-gray-50 text-gray-700 font-semibold text-xs rounded-xl border border-gray-200 shadow-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.99]"
+              className="w-full py-3 px-4 bg-slate-800/90 hover:bg-slate-700/90 text-white font-bold text-xs rounded-2xl border border-slate-700 shadow-sm flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.99]"
             >
               <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                />
               </svg>
               <span>Sign in with Google Account</span>
             </button>
 
             <div className="flex items-center gap-3 my-2">
-              <div className="h-[1px] bg-gray-200 flex-1" />
-              <span className="text-[10px] font-bold tracking-wider text-gray-400 uppercase">Or with Account ID</span>
-              <div className="h-[1px] bg-gray-200 flex-1" />
+              <div className="h-[1px] bg-slate-700 flex-1" />
+              <span className="text-[10px] font-black tracking-wider text-slate-400 uppercase">OR WITH ACCOUNT ID</span>
+              <div className="h-[1px] bg-slate-700 flex-1" />
             </div>
           </div>
-
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-xl flex items-start gap-2.5"
+              className="p-3.5 bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs font-bold rounded-2xl flex items-start gap-2.5 shadow-[0_0_15px_rgba(244,63,94,0.2)]"
               id="login-error-banner"
             >
-              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-500" />
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-400" />
               <span>{error}</span>
             </motion.div>
           )}
 
           {isRegister && (
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-gray-700 flex items-center justify-between" htmlFor="reg-name">
-                <span>Full Name <span className="text-red-500">*</span></span>
+              <label className="text-xs font-bold text-slate-200 flex items-center justify-between" htmlFor="reg-name">
+                <span>Full Name <span className="text-rose-400">*</span></span>
               </label>
               <div className="relative">
                 <input
@@ -232,9 +248,13 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
                   placeholder="e.g. Jane Doe"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-gray-900 placeholder:text-gray-400"
+                  className={`w-full pl-10 pr-4 py-2.5 text-sm bg-slate-950/80 border border-slate-700 rounded-2xl focus:outline-none transition-all text-white placeholder:text-slate-500 ${
+                    isStudent
+                      ? "focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,240,255,0.35)]"
+                      : "focus:border-fuchsia-400 focus:shadow-[0_0_15px_rgba(217,70,239,0.35)]"
+                  }`}
                 />
-                <UserIcon className="absolute left-3.5 top-3 h-4 w-4 text-gray-400" />
+                <UserIcon className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
               </div>
             </div>
           )}
@@ -242,8 +262,8 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
           {isRegister && isStudent && (
             <>
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-700 flex items-center justify-between" htmlFor="reg-email">
-                  <span>Email <span className="text-red-500">*</span></span>
+                <label className="text-xs font-bold text-slate-200 flex items-center justify-between" htmlFor="reg-email">
+                  <span>Email <span className="text-rose-400">*</span></span>
                 </label>
                 <div className="relative">
                   <input
@@ -252,17 +272,17 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-gray-900 placeholder:text-gray-400"
+                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-950/80 border border-slate-700 rounded-2xl focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,240,255,0.35)] transition-all text-white placeholder:text-slate-500"
                   />
-                  <Mail className="absolute left-3.5 top-3 h-4 w-4 text-gray-400" />
+                  <Mail className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
                 </div>
-                <p className="text-[11px] text-gray-500">So your teacher can reach you.</p>
+                <p className="text-[11px] text-slate-400">So your teacher can reach you.</p>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-gray-700 flex items-center justify-between" htmlFor="reg-department">
+                <label className="text-xs font-bold text-slate-200 flex items-center justify-between" htmlFor="reg-department">
                   <span>Department / Course</span>
-                  <span className="text-[10px] text-gray-400 font-normal">e.g. DCPE, DCS</span>
+                  <span className="text-[10px] text-slate-400 font-normal">e.g. DCPE, DCS, Computer Engineering, Computer Science</span>
                 </label>
                 <div className="relative">
                   <input
@@ -271,17 +291,17 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
                     placeholder="e.g. DCPE - Computer Engineering"
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-gray-900 placeholder:text-gray-400"
+                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-950/80 border border-slate-700 rounded-2xl focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,240,255,0.35)] transition-all text-white placeholder:text-slate-500"
                   />
-                  <GraduationCap className="absolute left-3.5 top-3 h-4 w-4 text-blue-500" />
+                  <GraduationCap className="absolute left-3.5 top-3 h-4 w-4 text-cyan-400" />
                 </div>
               </div>
             </>
           )}
 
           <div className="space-y-1 sm:space-y-1.5">
-            <label className="text-xs font-bold text-gray-700 flex items-center justify-between" htmlFor="login-username">
-              <span>{isStudent ? "Student ID / Username" : "Teacher ID / Username"} <span className="text-red-500">*</span></span>
+            <label className="text-xs font-bold text-slate-200 flex items-center justify-between" htmlFor="login-username">
+              <span>{isStudent ? "Student ID / Username" : "Teacher ID / Username"} <span className="text-rose-400">*</span></span>
             </label>
             <div className="relative">
               <input
@@ -290,22 +310,26 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
                 placeholder={isStudent ? "e.g. STU-2026-001 or username" : "e.g. TCH-2026-001 or username"}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 sm:py-2.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-gray-900 placeholder:text-gray-400"
+                className={`w-full pl-9 pr-3 py-2 sm:py-2.5 text-xs sm:text-sm bg-slate-950/80 border rounded-xl sm:rounded-2xl focus:outline-none transition-all text-white placeholder:text-slate-500 ${
+                  isStudent
+                    ? "border-slate-700/80 focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,240,255,0.35)]"
+                    : "border-slate-700/80 focus:border-fuchsia-400 focus:shadow-[0_0_15px_rgba(255,0,127,0.35)]"
+                }`}
               />
-              <UserIcon className="absolute left-3 top-2.5 sm:top-3 h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-400" />
+              <UserIcon className="absolute left-3 top-2.5 sm:top-3 h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-400" />
             </div>
           </div>
 
           <div className="space-y-1 sm:space-y-1.5">
             <div className="flex justify-between items-center">
-              <label className="text-xs font-bold text-gray-700" htmlFor="login-password">
-                Password <span className="text-red-500">*</span>
+              <label className="text-xs font-bold text-slate-200" htmlFor="login-password">
+                Password <span className="text-rose-400">*</span>
               </label>
               {!isRegister && (
                 <button
                   type="button"
                   onClick={() => setShowForgotPasswordNote((v) => !v)}
-                  className="text-[10px] sm:text-[11px] font-bold text-gray-400 hover:text-blue-600 cursor-pointer transition-colors"
+                  className="text-[10px] sm:text-[11px] font-bold text-slate-400 hover:text-white cursor-pointer transition-colors"
                 >
                   Forgot password?
                 </button>
@@ -318,12 +342,16 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 sm:py-2.5 text-xs sm:text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-gray-900 placeholder:text-gray-400"
+                className={`w-full pl-9 pr-3 py-2 sm:py-2.5 text-xs sm:text-sm bg-slate-950/80 border rounded-xl sm:rounded-2xl focus:outline-none transition-all text-white placeholder:text-slate-500 ${
+                  isStudent
+                    ? "border-slate-700/80 focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,240,255,0.35)]"
+                    : "border-slate-700/80 focus:border-fuchsia-400 focus:shadow-[0_0_15px_rgba(217,70,239,0.35)]"
+                }`}
               />
-              <Key className="absolute left-3 top-2.5 sm:top-3 h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-400" />
+              <Key className="absolute left-3 top-2.5 sm:top-3 h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-400" />
             </div>
             {!isRegister && showForgotPasswordNote && (
-              <p className="text-[10px] sm:text-[11px] text-gray-600 bg-gray-50 border border-gray-200 rounded-xl p-2.5 leading-relaxed">
+              <p className="text-[10px] sm:text-[11px] text-slate-300 bg-slate-950/90 border border-slate-700 rounded-xl p-2.5 leading-relaxed">
                 There's no self-service email reset for this app. If you're logged in elsewhere, change it from
                 Settings once you're in.
               </p>
@@ -333,10 +361,10 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
           <button
             type="submit"
             disabled={isSubmitting}
-            className={`w-full py-2.5 sm:py-3.5 text-xs sm:text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0 text-white ${
+            className={`w-full py-2.5 sm:py-3.5 text-xs sm:text-sm font-black rounded-xl sm:rounded-2xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed hover:-translate-y-0.5 active:translate-y-0 ${
               isStudent
-                ? "bg-blue-600 hover:bg-blue-700 shadow-sm hover:shadow-md"
-                : "bg-teal-600 hover:bg-teal-700 shadow-sm hover:shadow-md"
+                ? "bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 text-slate-950 shadow-[0_0_20px_rgba(0,240,255,0.4)]"
+                : "bg-gradient-to-r from-fuchsia-400 via-pink-400 to-fuchsia-300 hover:from-fuchsia-300 hover:to-pink-200 text-slate-950 shadow-[0_0_20px_rgba(217,70,239,0.45)]"
             }`}
             id="login-submit-btn"
           >
@@ -344,7 +372,7 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
             {isSubmitting ? "Please wait..." : isRegister ? "Register & Enter" : "Sign In"}
           </button>
 
-          <div className="pt-3 border-t border-gray-100 text-center">
+          <div className="pt-3 border-t border-slate-800 text-center">
             <button
               type="button"
               onClick={() => {
@@ -354,7 +382,9 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
                 setPassword("");
                 setName("");
               }}
-              className="text-xs font-bold cursor-pointer transition-colors text-blue-600 hover:text-blue-700"
+              className={`text-xs font-black cursor-pointer transition-colors ${
+                isStudent ? "text-cyan-400 hover:text-cyan-300" : "text-fuchsia-400 hover:text-fuchsia-300"
+              }`}
               id="toggle-register-btn"
             >
               {isRegister
@@ -367,3 +397,4 @@ export default function LoginForm({ role, onBack, onLoginSuccess }: LoginFormPro
     </div>
   );
 }
+

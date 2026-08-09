@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   User as UserIcon,
@@ -266,7 +266,7 @@ export default function SettingsTab({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 text-[11px] font-extrabold uppercase bg-blue-50 text-blue-700 rounded-full border border-blue-200">
+              <span className="px-2.5 py-0.5 text-[11px] font-extrabold uppercase bg-violet-50 text-violet-700 rounded-full border border-violet-200">
                 {currentUser.role}
               </span>
               <span className="text-xs font-mono font-bold text-ink-soft/70">ID: {currentUser.id}</span>
@@ -285,7 +285,7 @@ export default function SettingsTab({
         >
           <div className="space-y-4">
             <div className="flex items-center gap-2 border-b border-ink-soft/10 pb-3">
-              <UserIcon className="h-5 w-5 text-blue-600" />
+              <UserIcon className="h-5 w-5 text-violet-500" />
               <h2 className="text-base font-black text-ink">Personal Information</h2>
             </div>
 
@@ -297,172 +297,172 @@ export default function SettingsTab({
             )}
 
             {profileError && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded-xl text-xs font-bold flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+              <div className="p-3 bg-coral-50 border border-coral-200 text-coral-800 rounded-xl text-xs font-bold flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-coral-600 shrink-0" />
                 {profileError}
               </div>
             )}
 
             <form id="profile-form" onSubmit={handleSaveProfile} className="space-y-3 text-xs">
               <div>
-                <label className="font-bold text-gray-500 block mb-1">Full Name</label>
+                <label className="font-bold text-slate-300 block mb-1">Full Name</label>
                 <div className="relative">
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
-                    className="w-full pl-9 pr-3 py-2.5 text-xs font-bold bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500 placeholder-gray-400"
+                    className="w-full pl-9 pr-3 py-2.5 text-xs font-bold bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-400"
                   />
-                  <UserIcon className="h-4 w-4 text-gray-400 absolute left-3 top-3" />
+                  <UserIcon className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-gray-500 block mb-1">Email Address</label>
+                <label className="font-bold text-slate-300 block mb-1">Email Address</label>
                 <div className="relative">
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="student@example.com"
-                    className="w-full pl-9 pr-3 py-2.5 text-xs font-bold bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500 placeholder-gray-400"
+                    className="w-full pl-9 pr-3 py-2.5 text-xs font-bold bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-400"
                   />
-                  <Mail className="h-4 w-4 text-gray-400 absolute left-3 top-3" />
+                  <Mail className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-gray-500 block mb-1">Phone Number</label>
+                <label className="font-bold text-slate-300 block mb-1">Phone Number</label>
                 <div className="relative">
                   <input
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="+1 (555) 123-4567"
-                    className="w-full pl-9 pr-3 py-2.5 text-xs font-bold bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500 placeholder-gray-400"
+                    className="w-full pl-9 pr-3 py-2.5 text-xs font-bold bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-400"
                   />
-                  <Phone className="h-4 w-4 text-gray-400 absolute left-3 top-3" />
+                  <Phone className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-gray-500 block mb-1">Residential Address</label>
+                <label className="font-bold text-slate-300 block mb-1">Residential Address</label>
                 <div className="relative">
                   <input
                     type="text"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     placeholder="Street, City, State/Province, ZIP"
-                    className="w-full pl-9 pr-3 py-2.5 text-xs font-bold bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500 placeholder-gray-400"
+                    className="w-full pl-9 pr-3 py-2.5 text-xs font-bold bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-400"
                   />
-                  <Home className="h-4 w-4 text-gray-400 absolute left-3 top-3" />
+                  <Home className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-gray-500 block mb-1">Department / Course</label>
+                <label className="font-bold text-slate-300 block mb-1">Department / Course</label>
                 <div className="relative">
                   <input
                     type="text"
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
                     placeholder="e.g. DCPE, DCS, Computer Engineering"
-                    className="w-full pl-9 pr-3 py-2.5 text-xs font-bold bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500 placeholder-gray-400"
+                    className="w-full pl-9 pr-3 py-2.5 text-xs font-bold bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-400"
                   />
-                  <GraduationCap className="h-4 w-4 text-blue-600 absolute left-3 top-3" />
+                  <GraduationCap className="h-4 w-4 text-cyan-400 absolute left-3 top-3" />
                 </div>
               </div>
 
               {currentUser.role === "teacher" && (
                 <div>
-                  <label className="font-bold text-gray-500 block mb-1">Subject(s) / Specialization(s)</label>
+                  <label className="font-bold text-slate-300 block mb-1">Subject(s) / Specialization(s)</label>
                   <div className="relative">
                     <input
                       type="text"
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                       placeholder="e.g. DCPE, DCS, Computer Engineering, Mathematics"
-                      className="w-full pl-9 pr-3 py-2.5 text-xs font-bold bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500 placeholder-gray-400"
+                      className="w-full pl-9 pr-3 py-2.5 text-xs font-bold bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-400"
                     />
-                    <BookOpen className="h-4 w-4 text-blue-600 absolute left-3 top-3" />
+                    <BookOpen className="h-4 w-4 text-violet-400 absolute left-3 top-3" />
                   </div>
-                  <p className="text-[10px] text-gray-400 mt-1">If you teach multiple subjects, separate them with commas.</p>
+                  <p className="text-[10px] text-slate-400 mt-1">If you teach multiple subjects, separate them with commas.</p>
                 </div>
               )}
 
               {/* Social Accounts Section */}
-              <div className="pt-2 border-t border-gray-200 space-y-3">
-                <label className="font-bold text-blue-600 flex items-center gap-1.5 text-xs">
+              <div className="pt-2 border-t border-slate-700/60 space-y-3">
+                <label className="font-bold text-violet-300 flex items-center gap-1.5 text-xs">
                   <Share2 className="h-4 w-4" />
                   <span>Social Accounts</span>
                 </label>
 
                 <div>
-                  <label className="text-[11px] font-semibold text-gray-400 block mb-1">Facebook</label>
+                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">Facebook</label>
                   <div className="relative">
                     <input
                       type="text"
                       value={facebook}
                       onChange={(e) => setFacebook(e.target.value)}
                       placeholder="facebook.com/username or @handle"
-                      className="w-full pl-9 pr-3 py-2 text-xs font-medium bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500 placeholder-gray-400"
+                      className="w-full pl-9 pr-3 py-2 text-xs font-medium bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-500"
                     />
                     <Globe className="h-3.5 w-3.5 text-blue-400 absolute left-3 top-2.5" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold text-gray-400 block mb-1">Twitter / X</label>
+                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">Twitter / X</label>
                   <div className="relative">
                     <input
                       type="text"
                       value={twitter}
                       onChange={(e) => setTwitter(e.target.value)}
                       placeholder="@username or x.com/username"
-                      className="w-full pl-9 pr-3 py-2 text-xs font-medium bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500 placeholder-gray-400"
+                      className="w-full pl-9 pr-3 py-2 text-xs font-medium bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-500"
                     />
                     <Globe className="h-3.5 w-3.5 text-sky-400 absolute left-3 top-2.5" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold text-gray-400 block mb-1">LinkedIn</label>
+                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">LinkedIn</label>
                   <div className="relative">
                     <input
                       type="text"
                       value={linkedin}
                       onChange={(e) => setLinkedin(e.target.value)}
                       placeholder="linkedin.com/in/username"
-                      className="w-full pl-9 pr-3 py-2 text-xs font-medium bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500 placeholder-gray-400"
+                      className="w-full pl-9 pr-3 py-2 text-xs font-medium bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-500"
                     />
                     <Globe className="h-3.5 w-3.5 text-indigo-400 absolute left-3 top-2.5" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold text-gray-400 block mb-1">GitHub</label>
+                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">GitHub</label>
                   <div className="relative">
                     <input
                       type="text"
                       value={github}
                       onChange={(e) => setGithub(e.target.value)}
                       placeholder="github.com/username"
-                      className="w-full pl-9 pr-3 py-2 text-xs font-medium bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500 placeholder-gray-400"
+                      className="w-full pl-9 pr-3 py-2 text-xs font-medium bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-500"
                     />
-                    <Globe className="h-3.5 w-3.5 text-gray-500 absolute left-3 top-2.5" />
+                    <Globe className="h-3.5 w-3.5 text-slate-300 absolute left-3 top-2.5" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-semibold text-gray-400 block mb-1">Instagram</label>
+                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">Instagram</label>
                   <div className="relative">
                     <input
                       type="text"
                       value={instagram}
                       onChange={(e) => setInstagram(e.target.value)}
                       placeholder="@username or instagram.com/username"
-                      className="w-full pl-9 pr-3 py-2 text-xs font-medium bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500 placeholder-gray-400"
+                      className="w-full pl-9 pr-3 py-2 text-xs font-medium bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-500"
                     />
                     <Globe className="h-3.5 w-3.5 text-pink-400 absolute left-3 top-2.5" />
                   </div>
@@ -474,7 +474,7 @@ export default function SettingsTab({
           <button
             type="submit"
             form="profile-form"
-            className="w-full py-2.5 text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-500 rounded-xl cursor-pointer shadow-sm flex items-center justify-center gap-2 mt-4"
+            className="w-full py-2.5 text-xs font-extrabold text-white bg-violet-500 hover:bg-violet-600 rounded-xl cursor-pointer shadow-md shadow-violet-500/20 flex items-center justify-center gap-2 mt-4"
           >
             <Save className="h-4 w-4" /> Save Profile Info
           </button>
@@ -489,7 +489,7 @@ export default function SettingsTab({
         >
           <div className="space-y-4">
             <div className="flex items-center gap-2 border-b border-ink-soft/10 pb-3">
-              <Key className="h-5 w-5 text-blue-600" />
+              <Key className="h-5 w-5 text-violet-500" />
               <h2 className="text-base font-black text-ink">Account Password</h2>
             </div>
 
@@ -501,15 +501,15 @@ export default function SettingsTab({
             )}
 
             {passwordError && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded-xl text-xs font-bold flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+              <div className="p-3 bg-coral-50 border border-coral-200 text-coral-800 rounded-xl text-xs font-bold flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-coral-600 shrink-0" />
                 {passwordError}
               </div>
             )}
 
             <form id="pass-form" onSubmit={handleChangePassword} className="space-y-3 text-xs">
               <div>
-                <label className="font-bold text-gray-500 block mb-1">Current Password</label>
+                <label className="font-bold text-slate-300 block mb-1">Current Password</label>
                 <div className="relative">
                   <input
                     type="password"
@@ -517,14 +517,14 @@ export default function SettingsTab({
                     onChange={(e) => setOldPassword(e.target.value)}
                     required
                     placeholder="••••••••"
-                    className="w-full pl-9 pr-3 py-2.5 text-xs font-mono font-bold bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500 placeholder-gray-400"
+                    className="w-full pl-9 pr-3 py-2.5 text-xs font-mono font-bold bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-400"
                   />
-                  <Lock className="h-4 w-4 text-gray-400 absolute left-3 top-3" />
+                  <Lock className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-gray-500 block mb-1">New Password</label>
+                <label className="font-bold text-slate-300 block mb-1">New Password</label>
                 <div className="relative">
                   <input
                     type="password"
@@ -532,14 +532,14 @@ export default function SettingsTab({
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
                     placeholder="At least 6 characters..."
-                    className="w-full pl-9 pr-3 py-2.5 text-xs font-mono font-bold bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500 placeholder-gray-400"
+                    className="w-full pl-9 pr-3 py-2.5 text-xs font-mono font-bold bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-400"
                   />
-                  <Key className="h-4 w-4 text-gray-400 absolute left-3 top-3" />
+                  <Key className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
                 </div>
               </div>
 
               <div>
-                <label className="font-bold text-gray-500 block mb-1">Confirm New Password</label>
+                <label className="font-bold text-slate-300 block mb-1">Confirm New Password</label>
                 <div className="relative">
                   <input
                     type="password"
@@ -547,9 +547,9 @@ export default function SettingsTab({
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     placeholder="Re-enter new password..."
-                    className="w-full pl-9 pr-3 py-2.5 text-xs font-mono font-bold bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500 placeholder-gray-400"
+                    className="w-full pl-9 pr-3 py-2.5 text-xs font-mono font-bold bg-slate-900/80 border border-slate-700/60 rounded-xl text-white focus:outline-none focus:border-violet-400 placeholder-slate-400"
                   />
-                  <Key className="h-4 w-4 text-gray-400 absolute left-3 top-3" />
+                  <Key className="h-4 w-4 text-slate-400 absolute left-3 top-3" />
                 </div>
               </div>
             </form>
@@ -559,7 +559,7 @@ export default function SettingsTab({
             type="submit"
             form="pass-form"
             disabled={isChangingPass}
-            className="w-full py-2.5 text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-xl cursor-pointer shadow-sm flex items-center justify-center gap-2 mt-4"
+            className="w-full py-2.5 text-xs font-extrabold text-white bg-violet-500 hover:bg-violet-600 disabled:opacity-50 rounded-xl cursor-pointer shadow-md shadow-violet-500/20 flex items-center justify-center gap-2 mt-4"
           >
             <Lock className="h-4 w-4" /> {isChangingPass ? "Updating Password..." : "Update Password"}
           </button>
@@ -571,60 +571,60 @@ export default function SettingsTab({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-gray-50 border border-gray-200 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4"
+        className="bg-slate-900/80 border border-slate-700/60 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4 backdrop-blur-xl"
       >
-        <div className="flex items-center gap-2 border-b border-gray-200 pb-3">
-          <Layers className="h-5 w-5 text-blue-600" />
-          <h2 className="text-base font-black text-gray-900 font-display">Appearance & Neon Visual Modes</h2>
+        <div className="flex items-center gap-2 border-b border-slate-700/60 pb-3">
+          <Layers className="h-5 w-5 text-cyan-400" />
+          <h2 className="text-base font-black text-white font-display">Appearance & Neon Visual Modes</h2>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Light Mode (Default) */}
+          {/* Cyber Neon (Default) */}
           <button
             type="button"
             onClick={() => onThemeChange("default")}
             className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between ${
               theme === "default"
-                ? "bg-white border-blue-200 text-gray-900 shadow-sm ring-2 ring-blue-200"
-                : "bg-gray-50 border-gray-200 text-gray-500 hover:border-blue-300 hover:text-gray-900"
+                ? "bg-slate-900/95 border-cyan-400 text-white shadow-[0_0_20px_rgba(0,240,255,0.35)] ring-2 ring-cyan-400/40"
+                : "bg-slate-950/70 border-slate-800/80 text-slate-300 hover:border-slate-600 hover:text-white"
             }`}
           >
             <div className="flex items-center gap-3.5">
-              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-200 shrink-0">
-                <Zap className="h-5 w-5" />
+              <div className="p-2.5 bg-cyan-500/20 text-cyan-300 rounded-xl border border-cyan-400/30 shrink-0">
+                <Zap className="h-5 w-5 drop-shadow-[0_0_8px_rgba(0,240,255,0.8)]" />
               </div>
               <div>
-                <h3 className="font-extrabold text-xs text-gray-900 flex items-center gap-1.5">
-                  Light Mode <span className="text-[10px] uppercase tracking-wider text-blue-600 font-mono font-bold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">Default</span>
+                <h3 className="font-extrabold text-xs text-white flex items-center gap-1.5">
+                  Cyber Neon <span className="text-[10px] uppercase tracking-wider text-cyan-400 font-mono font-bold bg-cyan-950/80 px-2 py-0.5 rounded-full border border-cyan-500/30">Default</span>
                 </h3>
-                <p className="text-[11px] text-gray-400 mt-0.5">Vibrant cyan, magenta & purple glow on deep navy canvas</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Vibrant cyan, magenta & purple glow on deep navy canvas</p>
               </div>
             </div>
-            {theme === "default" && <CheckCircle2 className="h-5 w-5 text-blue-600 shrink-0 ml-2" />}
+            {theme === "default" && <CheckCircle2 className="h-5 w-5 text-cyan-400 shrink-0 ml-2 drop-shadow-[0_0_10px_rgba(0,240,255,0.8)]" />}
           </button>
 
-          {/* Dark Mode */}
+          {/* Obsidian Neon (Darker Version) */}
           <button
             type="button"
             onClick={() => onThemeChange("dark")}
             className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between ${
               theme === "dark"
-                ? "bg-white border-blue-200 text-gray-900 shadow-sm ring-2 ring-blue-200"
-                : "bg-gray-50 border-gray-200 text-gray-500 hover:border-blue-300 hover:text-gray-900"
+                ? "bg-black/90 border-fuchsia-400 text-white shadow-[0_0_20px_rgba(217,70,239,0.35)] ring-2 ring-fuchsia-400/40"
+                : "bg-slate-950/70 border-slate-800/80 text-slate-300 hover:border-slate-600 hover:text-white"
             }`}
           >
             <div className="flex items-center gap-3.5">
-              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-200 shrink-0">
-                <Moon className="h-5 w-5" />
+              <div className="p-2.5 bg-fuchsia-500/20 text-fuchsia-300 rounded-xl border border-fuchsia-400/30 shrink-0">
+                <Moon className="h-5 w-5 drop-shadow-[0_0_8px_rgba(217,70,239,0.8)]" />
               </div>
               <div>
-                <h3 className="font-extrabold text-xs text-gray-900 flex items-center gap-1.5">
-                  Dark Mode <span className="text-[10px] uppercase tracking-wider text-blue-600 font-mono font-bold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">Darker</span>
+                <h3 className="font-extrabold text-xs text-white flex items-center gap-1.5">
+                  Obsidian Neon <span className="text-[10px] uppercase tracking-wider text-fuchsia-400 font-mono font-bold bg-fuchsia-950/80 px-2 py-0.5 rounded-full border border-fuchsia-500/30">Darker</span>
                 </h3>
-                <p className="text-[11px] text-gray-400 mt-0.5">Ultra-dark pitch-black backdrop with razor-sharp neon contrast</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Ultra-dark pitch-black backdrop with razor-sharp neon contrast</p>
               </div>
             </div>
-            {theme === "dark" && <CheckCircle2 className="h-5 w-5 text-blue-600 shrink-0 ml-2" />}
+            {theme === "dark" && <CheckCircle2 className="h-5 w-5 text-fuchsia-400 shrink-0 ml-2 drop-shadow-[0_0_10px_rgba(217,70,239,0.8)]" />}
           </button>
         </div>
       </motion.div>
@@ -648,7 +648,7 @@ export default function SettingsTab({
             disabled={isSyncing}
             className="w-full py-3 px-4 text-xs font-bold text-ink bg-white/40 hover:bg-white/80 dark:bg-white/5 dark:hover:bg-white/10 border border-ink-soft/20 rounded-2xl cursor-pointer flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.99]"
           >
-            <RefreshCw className={`h-4 w-4 text-blue-600 ${isSyncing ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-4 w-4 text-violet-500 ${isSyncing ? "animate-spin" : ""}`} />
             <span>{isSyncing ? "Re-synchronizing Live Data..." : "Refresh Live Connection"}</span>
           </button>
 
@@ -668,7 +668,7 @@ export default function SettingsTab({
             onClick={onLogout}
             className="w-full py-3 px-4 text-xs font-bold text-ink bg-white/40 hover:bg-white/80 dark:bg-white/5 dark:hover:bg-white/10 border border-ink-soft/20 rounded-2xl cursor-pointer flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.99]"
           >
-            <LogOut className="h-4 w-4 text-red-500" />
+            <LogOut className="h-4 w-4 text-coral-500" />
             <span>Sign Out</span>
           </button>
         </div>
@@ -696,13 +696,13 @@ export default function SettingsTab({
                 exit={{ opacity: 0, height: 0 }}
                 className="overflow-hidden pt-3 space-y-3"
               >
-                <div className="p-4 bg-red-50/40 border border-red-200/60 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="p-4 bg-coral-50/40 border border-coral-200/60 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   <div className="space-y-0.5">
-                    <h4 className="text-xs font-bold text-red-700 flex items-center gap-1.5">
-                      <Trash2 className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                    <h4 className="text-xs font-bold text-coral-900 flex items-center gap-1.5">
+                      <Trash2 className="h-3.5 w-3.5 text-coral-600 shrink-0" />
                       Delete Account
                     </h4>
-                    <p className="text-[11px] text-red-600/80 leading-relaxed">
+                    <p className="text-[11px] text-coral-800/80 leading-relaxed">
                       Permanently erase your user profile and attendance logs. No password required.
                     </p>
                   </div>
@@ -710,7 +710,7 @@ export default function SettingsTab({
                   <button
                     type="button"
                     onClick={() => setShowDeleteModal(true)}
-                    className="w-full sm:w-auto px-4 py-2 text-xs font-extrabold text-white bg-red-500 hover:bg-red-600 rounded-xl cursor-pointer flex items-center justify-center gap-1.5 shadow-sm shrink-0 transition-all"
+                    className="w-full sm:w-auto px-4 py-2 text-xs font-extrabold text-white bg-coral-600 hover:bg-coral-700 rounded-xl cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-coral-600/20 shrink-0 transition-all"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     <span>Delete Account</span>
@@ -729,27 +729,27 @@ export default function SettingsTab({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-gray-900/50 backdrop-blur-md z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4"
           >
-            <div className="bg-white border border-red-200 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
-              <div className="flex items-center gap-2 text-red-500 border-b border-ink-soft/10 pb-3">
+            <div className="bg-cream border border-coral-200 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+              <div className="flex items-center gap-2 text-coral-600 border-b border-ink-soft/10 pb-3">
                 <Trash2 className="h-6 w-6" />
                 <h3 className="font-black text-base text-ink">Delete Account Confirmation</h3>
               </div>
 
-              <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-xs space-y-1">
+              <div className="p-3 bg-coral-50 border border-coral-200 text-coral-900 rounded-2xl text-xs space-y-1">
                 <p className="font-extrabold flex items-center gap-1.5">
-                  <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
+                  <AlertTriangle className="h-4 w-4 text-coral-600 shrink-0" />
                   Are you sure you want to delete your account?
                 </p>
-                <p className="text-[11px] text-red-600 leading-relaxed">
+                <p className="text-[11px] text-coral-800 leading-relaxed">
                   This will permanently erase your profile, attendance history, and submissions. No password is required so you can easily reset if you forgot your login details.
                 </p>
               </div>
 
               {deleteError && (
-                <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs font-bold flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
+                <div className="p-3 bg-coral-50 text-coral-800 rounded-xl text-xs font-bold flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-coral-600 shrink-0" />
                   {deleteError}
                 </div>
               )}
@@ -766,7 +766,7 @@ export default function SettingsTab({
                   type="button"
                   disabled={isDeletingAccount}
                   onClick={handleDeleteAccount}
-                  className="px-5 py-2.5 text-xs font-extrabold text-white bg-red-500 hover:bg-red-600 disabled:opacity-50 rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
+                  className="px-5 py-2.5 text-xs font-extrabold text-white bg-coral-600 hover:bg-coral-700 disabled:opacity-50 rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
                 >
                   <Trash2 className="h-4 w-4" />
                   {isDeletingAccount ? "Deleting..." : "Permanently Delete"}

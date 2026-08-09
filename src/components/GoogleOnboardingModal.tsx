@@ -82,6 +82,7 @@ export default function GoogleOnboardingModal({
       return;
     }
 
+    // Check for duplicate Student ID among other users
     const existingUsers = getUsers();
     const duplicate = existingUsers.find(
       (u) =>
@@ -116,18 +117,18 @@ export default function GoogleOnboardingModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-xl z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
-        className="w-full max-w-lg bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden my-auto"
+        className="w-full max-w-lg bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl overflow-hidden text-white my-auto"
       >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 relative">
+        {/* Header Banner */}
+        <div className="bg-gradient-to-r from-cyan-600/30 via-fuchsia-600/20 to-slate-900 p-6 border-b border-slate-800 relative">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-2xl bg-white/20 flex items-center justify-center overflow-hidden">
+              <div className="h-12 w-12 rounded-2xl bg-gradient-to-tr from-cyan-500 to-fuchsia-500 p-0.5 shadow-lg shadow-cyan-500/20">
                 {user.avatarUrl ? (
                   <img
                     src={user.avatarUrl}
@@ -136,11 +137,13 @@ export default function GoogleOnboardingModal({
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <GraduationCap className="h-6 w-6 text-white" />
+                  <div className="w-full h-full bg-slate-900 rounded-[14px] flex items-center justify-center">
+                    <GraduationCap className="h-6 w-6 text-cyan-400" />
+                  </div>
                 )}
               </div>
               <div>
-                <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-200 uppercase tracking-wider">
+                <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-cyan-400 uppercase tracking-wider">
                   Google Sign-In Connected
                 </div>
                 <h2 className="text-lg font-black text-white leading-tight">
@@ -152,37 +155,37 @@ export default function GoogleOnboardingModal({
             <button
               onClick={onLogout}
               title="Sign Out"
-              className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-all cursor-pointer flex items-center gap-1 text-xs font-bold"
+              className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800/80 rounded-xl transition-all cursor-pointer flex items-center gap-1 text-xs font-bold"
             >
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">Sign Out</span>
             </button>
           </div>
 
-          <p className="text-xs text-blue-100 mt-3 leading-relaxed">
+          <p className="text-xs text-slate-300 mt-3 leading-relaxed">
             Welcome! To ensure your attendance and grades are correctly recorded by your instructors, please specify your <strong className="text-white">Department / Course</strong> and official <strong className="text-white">Student ID / Username</strong>.
           </p>
         </div>
 
-        {/* Form */}
+        {/* Modal Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-semibold flex items-start gap-2.5"
+              className="p-3.5 bg-rose-950/80 border border-rose-500/50 rounded-2xl text-rose-200 text-xs font-semibold flex items-start gap-2.5"
             >
-              <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+              <AlertCircle className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
               <span>{error}</span>
             </motion.div>
           )}
 
           {/* Student ID / Username */}
           <div>
-            <label className="text-xs font-bold text-gray-700 flex items-center gap-1.5 mb-1.5">
-              <IdCard className="h-4 w-4 text-blue-500" />
+            <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5 mb-1.5">
+              <IdCard className="h-4 w-4 text-cyan-400" />
               <span>Student ID / Username</span>
-              <span className="text-red-500">*</span>
+              <span className="text-rose-400">*</span>
             </label>
             <input
               type="text"
@@ -190,24 +193,24 @@ export default function GoogleOnboardingModal({
               onChange={(e) => setStudentId(e.target.value)}
               placeholder="e.g. 2024-00123 or student_alex"
               required
-              className="w-full p-3 text-xs bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+              className="w-full p-3 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none transition-all"
             />
-            <p className="text-[11px] text-gray-500 mt-1">
+            <p className="text-[11px] text-slate-400 mt-1">
               Your official school ID number or unique student username.
             </p>
           </div>
 
           {/* Department / Course */}
           <div>
-            <label className="text-xs font-bold text-gray-700 flex items-center gap-1.5 mb-1.5">
-              <Building2 className="h-4 w-4 text-teal-500" />
+            <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5 mb-1.5">
+              <Building2 className="h-4 w-4 text-fuchsia-400" />
               <span>Department / Course</span>
-              <span className="text-red-500">*</span>
+              <span className="text-rose-400">*</span>
             </label>
             <select
               value={selectedDeptPreset}
               onChange={(e) => setSelectedDeptPreset(e.target.value)}
-              className="w-full p-3 text-xs bg-white border border-gray-200 rounded-xl text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+              className="w-full p-3 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-fuchsia-400 focus:ring-1 focus:ring-fuchsia-400 focus:outline-none transition-all"
             >
               {COMMON_DEPARTMENTS.map((dept) => (
                 <option key={dept} value={dept}>
@@ -223,18 +226,18 @@ export default function GoogleOnboardingModal({
                 onChange={(e) => setCustomDept(e.target.value)}
                 placeholder="Type your specific Department or Course name..."
                 required
-                className="w-full mt-2 p-3 text-xs bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+                className="w-full mt-2 p-3 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-fuchsia-400 focus:ring-1 focus:ring-fuchsia-400 focus:outline-none transition-all"
               />
             )}
-            <p className="text-[11px] text-gray-500 mt-1">
+            <p className="text-[11px] text-slate-400 mt-1">
               Teachers filter students and assign section check-ins based on department.
             </p>
           </div>
 
           {/* Full Name */}
           <div>
-            <label className="text-xs font-bold text-gray-700 flex items-center gap-1.5 mb-1.5">
-              <UserCheck className="h-4 w-4 text-green-600" />
+            <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5 mb-1.5">
+              <UserCheck className="h-4 w-4 text-emerald-400" />
               <span>Full Name</span>
             </label>
             <input
@@ -243,14 +246,14 @@ export default function GoogleOnboardingModal({
               onChange={(e) => setFullName(e.target.value)}
               placeholder="e.g. Alex Rivera"
               required
-              className="w-full p-3 text-xs bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+              className="w-full p-3 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-emerald-400 focus:outline-none transition-all"
             />
           </div>
 
           {/* Email Address */}
           <div>
-            <label className="text-xs font-bold text-gray-700 flex items-center gap-1.5 mb-1.5">
-              <BookOpen className="h-4 w-4 text-amber-500" />
+            <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5 mb-1.5">
+              <BookOpen className="h-4 w-4 text-amber-400" />
               <span>Contact Email</span>
             </label>
             <input
@@ -258,16 +261,16 @@ export default function GoogleOnboardingModal({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="student@school.edu"
-              className="w-full p-3 text-xs bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none transition-all"
+              className="w-full p-3 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-amber-400 focus:outline-none transition-all"
             />
           </div>
 
           {/* Footer Actions */}
-          <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-3">
+          <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-3">
             <button
               type="button"
               onClick={onLogout}
-              className="px-4 py-2.5 text-xs font-bold text-gray-500 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-200 cursor-pointer transition-all"
+              className="px-4 py-2.5 text-xs font-bold text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 cursor-pointer transition-all"
             >
               Cancel / Logout
             </button>
@@ -275,9 +278,9 @@ export default function GoogleOnboardingModal({
             <button
               type="submit"
               disabled={isSaving}
-              className="flex-1 sm:flex-none px-6 py-3 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm cursor-pointer flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+              className="flex-1 sm:flex-none px-6 py-3 text-xs font-black text-slate-950 bg-gradient-to-r from-cyan-400 to-fuchsia-400 hover:from-cyan-300 hover:to-fuchsia-300 rounded-xl shadow-lg shadow-cyan-500/25 cursor-pointer flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
             >
-              <span>{isSaving ? "Saving Profile..." : "Complete Setup"}</span>
+              <span>{isSaving ? "Saving Profile..." : "Complete Setup & Launch Dashboard"}</span>
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>

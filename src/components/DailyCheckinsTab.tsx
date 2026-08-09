@@ -121,7 +121,7 @@ export default function DailyCheckinsTab({
         className="bg-cream rounded-3xl border border-ink-soft/10 p-5 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4"
       >
         <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-md shrink-0">
+          <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center text-white shadow-md shrink-0">
             <UserCheck className="h-6 w-6" />
           </div>
           <div>
@@ -140,18 +140,18 @@ export default function DailyCheckinsTab({
         </div>
 
         {/* Date Selector */}
-        <div className="flex items-center gap-2 self-start md:self-auto bg-gray-50 p-2 rounded-2xl border border-gray-200 shadow-sm">
-          <CalendarIcon className="h-4 w-4 text-blue-600 ml-1 shrink-0" />
+        <div className="flex items-center gap-2 self-start md:self-auto bg-slate-900/90 p-2 rounded-2xl border border-slate-700/80 shadow-md">
+          <CalendarIcon className="h-4 w-4 text-violet-400 ml-1 shrink-0" />
           <input
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="text-xs font-mono font-bold text-gray-900 bg-transparent focus:outline-none cursor-pointer pr-1 [color-scheme:light]"
+            className="text-xs font-mono font-bold text-slate-100 bg-transparent focus:outline-none cursor-pointer pr-1 [color-scheme:dark]"
           />
           {selectedDate !== formatDate(new Date()) && (
             <button
               onClick={() => setSelectedDate(formatDate(new Date()))}
-              className="px-2.5 py-1 text-[11px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors cursor-pointer"
+              className="px-2.5 py-1 text-[11px] font-bold text-violet-300 bg-violet-900/50 hover:bg-violet-800/60 border border-violet-600/40 rounded-xl transition-colors cursor-pointer"
             >
               Today
             </button>
@@ -164,26 +164,26 @@ export default function DailyCheckinsTab({
         <div
           onClick={() => setStatusFilter("All")}
           className={`bg-white border rounded-2xl p-4 shadow-sm cursor-pointer transition-all hover:-translate-y-0.5 ${
-            statusFilter === "All" ? "border-blue-500 ring-2 ring-blue-500/20" : "border-ink-soft/10"
+            statusFilter === "All" ? "border-violet-500 ring-2 ring-violet-500/20" : "border-ink-soft/10"
           }`}
         >
           <p className="text-[10px] font-bold text-ink-soft/60 uppercase tracking-wide">Total Roster</p>
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-2xl font-black text-ink font-display">{totalStudents}</span>
-            <span className="text-xs font-bold text-blue-600">Students</span>
+            <span className="text-xs font-bold text-violet-600">Students</span>
           </div>
         </div>
 
         <div
           onClick={() => setStatusFilter("Checked In")}
           className={`bg-white border rounded-2xl p-4 shadow-sm cursor-pointer transition-all hover:-translate-y-0.5 ${
-            statusFilter === "Checked In" ? "border-blue-500 ring-2 ring-blue-500/20" : "border-ink-soft/10"
+            statusFilter === "Checked In" ? "border-cyan-500 ring-2 ring-cyan-500/20" : "border-ink-soft/10"
           }`}
         >
           <p className="text-[10px] font-bold text-ink-soft/60 uppercase tracking-wide">Checked In</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-2xl font-black text-blue-600 font-display">{totalCheckedIn}</span>
-            <span className="text-[10px] font-bold text-blue-600/80">
+            <span className="text-2xl font-black text-cyan-600 font-display">{totalCheckedIn}</span>
+            <span className="text-[10px] font-bold text-cyan-600/80">
               {totalStudents > 0 ? Math.round((totalCheckedIn / totalStudents) * 100) : 0}%
             </span>
           </div>
@@ -192,39 +192,39 @@ export default function DailyCheckinsTab({
         <div
           onClick={() => setStatusFilter("Present")}
           className={`bg-white border rounded-2xl p-4 shadow-sm cursor-pointer transition-all hover:-translate-y-0.5 ${
-            statusFilter === "Present" ? "border-green-500 ring-2 ring-green-500/20" : "border-ink-soft/10"
+            statusFilter === "Present" ? "border-teal-500 ring-2 ring-teal-500/20" : "border-ink-soft/10"
           }`}
         >
-          <p className="text-[10px] font-bold text-green-600 uppercase tracking-wide">Present</p>
+          <p className="text-[10px] font-bold text-teal-300 uppercase tracking-wide">Present</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-2xl font-black text-green-600 font-display">{presentCount}</span>
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
+            <span className="text-2xl font-black text-teal-400 font-display">{presentCount}</span>
+            <CheckCircle2 className="h-4 w-4 text-teal-400" />
           </div>
         </div>
 
         <div
           onClick={() => setStatusFilter("Late")}
           className={`bg-white border rounded-2xl p-4 shadow-sm cursor-pointer transition-all hover:-translate-y-0.5 ${
-            statusFilter === "Late" ? "border-amber-500 ring-2 ring-amber-500/20" : "border-ink-soft/10"
+            statusFilter === "Late" ? "border-coral-500 ring-2 ring-coral-500/20" : "border-ink-soft/10"
           }`}
         >
-          <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wide">Late</p>
+          <p className="text-[10px] font-bold text-coral-300 uppercase tracking-wide">Late</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-2xl font-black text-amber-500 font-display">{lateCount}</span>
-            <Clock className="h-4 w-4 text-amber-500" />
+            <span className="text-2xl font-black text-coral-400 font-display">{lateCount}</span>
+            <Clock className="h-4 w-4 text-coral-400" />
           </div>
         </div>
 
         <div
           onClick={() => setStatusFilter("Not Checked In")}
           className={`bg-white border rounded-2xl p-4 shadow-sm cursor-pointer transition-all hover:-translate-y-0.5 col-span-2 sm:col-span-1 ${
-            statusFilter === "Not Checked In" ? "border-gray-500 ring-2 ring-gray-500/20" : "border-ink-soft/10"
+            statusFilter === "Not Checked In" ? "border-slate-500 ring-2 ring-slate-500/20" : "border-ink-soft/10"
           }`}
         >
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Not Checked In</p>
+          <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wide">Not Checked In</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-2xl font-black text-gray-700 font-display">{notCheckedInCount}</span>
-            <XCircle className="h-4 w-4 text-gray-400" />
+            <span className="text-2xl font-black text-slate-200 font-display">{notCheckedInCount}</span>
+            <XCircle className="h-4 w-4 text-slate-400" />
           </div>
         </div>
       </div>
@@ -239,7 +239,7 @@ export default function DailyCheckinsTab({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search student by name, ID, email, department, course..."
-            className="w-full pl-9 pr-4 py-2 text-xs font-semibold text-ink bg-cream-dim/60 border border-ink-soft/15 rounded-xl focus:outline-none focus:border-blue-500"
+            className="w-full pl-9 pr-4 py-2 text-xs font-semibold text-ink bg-cream-dim/60 border border-ink-soft/15 rounded-xl focus:outline-none focus:border-teal-500"
           />
           {searchQuery && (
             <button
@@ -259,7 +259,7 @@ export default function DailyCheckinsTab({
               onClick={() => setStatusFilter(sf)}
               className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer shrink-0 ${
                 statusFilter === sf
-                  ? "bg-blue-600 text-white shadow-sm"
+                  ? "bg-violet-600 text-white shadow-md"
                   : "bg-cream-dim/80 text-ink-soft hover:text-ink hover:bg-cream-dim"
               }`}
             >
@@ -290,7 +290,7 @@ export default function DailyCheckinsTab({
                 initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
                 onClick={() => setInfoModalStudent(student)}
-                className="bg-white border border-ink-soft/10 hover:border-blue-300 rounded-3xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+                className="bg-white border border-ink-soft/10 hover:border-violet-300 rounded-3xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
               >
                 <div>
                   {/* Top row: Avatar + Name + Status Pill */}
@@ -303,7 +303,7 @@ export default function DailyCheckinsTab({
                         size="md"
                       />
                       <div className="min-w-0">
-                        <h4 className="text-sm font-bold text-ink group-hover:text-blue-600 transition-colors truncate">
+                        <h4 className="text-sm font-bold text-ink group-hover:text-violet-600 transition-colors truncate">
                           {student.name}
                         </h4>
                         <p className="text-[11px] font-mono text-ink-soft/60 truncate">
@@ -315,23 +315,23 @@ export default function DailyCheckinsTab({
                     {/* Status Pill */}
                     <div className="shrink-0">
                       {status === "Present" && (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-green-50 text-green-600 border border-green-200">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" /> Present
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-teal-950/80 text-teal-300 border border-teal-500/40">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-teal-400" /> Present
                         </span>
                       )}
                       {status === "Late" && (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-amber-50 text-amber-600 border border-amber-200">
-                          <Clock className="h-3.5 w-3.5 text-amber-500" /> Late
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-coral-950/80 text-coral-300 border border-coral-500/40">
+                          <Clock className="h-3.5 w-3.5 text-coral-400" /> Late
                         </span>
                       )}
                       {status === "Absent" && (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-red-50 text-red-500 border border-red-200">
-                          <XCircle className="h-3.5 w-3.5 text-red-500" /> Absent
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-rose-950/80 text-rose-300 border border-rose-500/40">
+                          <XCircle className="h-3.5 w-3.5 text-rose-400" /> Absent
                         </span>
                       )}
                       {status === "Not Checked In" && (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-gray-100 text-gray-700 border border-gray-200">
-                          <Clock className="h-3.5 w-3.5 text-gray-400" /> Pending
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-slate-800 text-slate-200 border border-slate-700">
+                          <Clock className="h-3.5 w-3.5 text-slate-400" /> Pending
                         </span>
                       )}
                     </div>
@@ -354,7 +354,7 @@ export default function DailyCheckinsTab({
                         )}
                       </>
                     ) : (
-                      <p className="text-[11px] text-gray-400 italic">
+                      <p className="text-[11px] text-slate-400 italic">
                         Has not submitted check-in for {selectedDate}.
                       </p>
                     )}
@@ -362,7 +362,7 @@ export default function DailyCheckinsTab({
                     {/* Email / Contact info */}
                     {student.email && (
                       <div className="flex items-center gap-1.5 text-[11px] text-ink-soft/70 pt-1">
-                        <Mail className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                        <Mail className="h-3.5 w-3.5 text-violet-500 shrink-0" />
                         <span className="truncate">{student.email}</span>
                       </div>
                     )}
@@ -370,7 +370,7 @@ export default function DailyCheckinsTab({
                 </div>
 
                 {/* Bottom Action */}
-                <div className="mt-4 pt-3 border-t border-ink-soft/10 flex items-center justify-between text-xs font-bold text-blue-600">
+                <div className="mt-4 pt-3 border-t border-ink-soft/10 flex items-center justify-between text-xs font-bold text-violet-600">
                   <span className="flex items-center gap-1">
                     <Eye className="h-3.5 w-3.5" /> View Profile & Info
                   </span>
@@ -387,12 +387,12 @@ export default function DailyCheckinsTab({
       {/* STUDENT DETAIL INFO MODAL */}
       <AnimatePresence>
         {infoModalStudent && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-gray-900/50 backdrop-blur-sm overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-sm overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="bg-white border border-blue-100 rounded-3xl p-5 sm:p-6 shadow-2xl max-w-lg w-full relative my-8"
+              className="bg-white border border-violet-100 rounded-3xl p-5 sm:p-6 shadow-2xl max-w-lg w-full relative my-8"
             >
               {/* Close Button */}
               <button
@@ -418,8 +418,8 @@ export default function DailyCheckinsTab({
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                         infoModalStudent.isApproved
-                          ? "bg-green-50 text-green-600 border border-green-200"
-                          : "bg-amber-50 text-amber-600 border border-amber-200"
+                          ? "bg-teal-950/80 text-teal-300 border border-teal-500/40"
+                          : "bg-amber-950/80 text-amber-300 border border-amber-500/40"
                       }`}
                     >
                       {infoModalStudent.isApproved ? "Verified Account" : "Pending Approval"}
@@ -461,7 +461,7 @@ export default function DailyCheckinsTab({
                   {/* Department / Course */}
                   {infoModalStudent.department && (
                     <div className="bg-cream-dim/60 p-3 rounded-2xl border border-ink-soft/10 col-span-1 sm:col-span-2 flex items-center gap-2">
-                      <GraduationCap className="h-4 w-4 text-blue-600 shrink-0" />
+                      <GraduationCap className="h-4 w-4 text-cyan-500 shrink-0" />
                       <div>
                         <span className="text-[10px] font-bold text-ink-soft/60 block">Department / Course</span>
                         <span className="font-semibold text-ink">{infoModalStudent.department}</span>
@@ -479,7 +479,7 @@ export default function DailyCheckinsTab({
                         {infoModalStudent.enrolledSubjects.map((sb, idx) => (
                           <span
                             key={idx}
-                            className="px-2 py-0.5 text-[11px] font-bold bg-blue-50 text-blue-600 border border-blue-200 rounded-lg"
+                            className="px-2 py-0.5 text-[11px] font-bold bg-violet-950/80 text-violet-300 border border-violet-500/40 rounded-lg"
                           >
                             {sb}
                           </span>
@@ -494,37 +494,37 @@ export default function DailyCheckinsTab({
                   <p className="font-bold uppercase tracking-wider text-[10px] text-ink-soft/60 mb-2">
                     Check-in Status for {selectedDate}
                   </p>
-                  <div className="bg-gray-50 border border-gray-200 p-4 rounded-2xl space-y-2 shadow-inner">
+                  <div className="bg-slate-900/90 border border-violet-500/30 p-4 rounded-2xl space-y-2 shadow-inner">
                     {modalStudentRecord ? (
                       <>
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-gray-900">Status:</span>
+                          <span className="font-bold text-slate-100">Status:</span>
                           <span
                             className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold ${
                               modalStudentRecord.status === "Present"
-                                ? "bg-green-600 text-white"
+                                ? "bg-teal-500 text-white"
                                 : modalStudentRecord.status === "Late"
-                                ? "bg-amber-500 text-gray-900"
-                                : "bg-red-500 text-white"
+                                ? "bg-coral-500 text-white"
+                                : "bg-rose-500 text-white"
                             }`}
                           >
                             {modalStudentRecord.status}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between text-gray-500">
+                        <div className="flex items-center justify-between text-slate-300">
                           <span>Check-in Time:</span>
-                          <span className="font-mono font-bold text-gray-900">{modalStudentRecord.time}</span>
+                          <span className="font-mono font-bold text-white">{modalStudentRecord.time}</span>
                         </div>
                         {modalStudentRecord.notes && (
-                          <div className="pt-1 text-[11px] text-gray-500 italic">
+                          <div className="pt-1 text-[11px] text-slate-300 italic">
                             Notes: "{modalStudentRecord.notes}"
                           </div>
                         )}
                       </>
                     ) : (
-                      <div className="flex items-center gap-2.5 text-gray-700 font-medium">
-                        <AlertCircle className="h-4.5 w-4.5 text-amber-500 shrink-0" />
-                        <span className="text-gray-700 text-sm font-semibold">No check-in record submitted yet for this date.</span>
+                      <div className="flex items-center gap-2.5 text-slate-200 font-medium">
+                        <AlertCircle className="h-4.5 w-4.5 text-amber-400 shrink-0" />
+                        <span className="text-slate-200 text-sm font-semibold">No check-in record submitted yet for this date.</span>
                       </div>
                     )}
                   </div>
@@ -537,21 +537,21 @@ export default function DailyCheckinsTab({
                       Overall Attendance Statistics
                     </p>
                     <div className="grid grid-cols-3 gap-2 text-center">
-                      <div className="bg-green-50 border border-green-200 p-2.5 rounded-2xl">
-                        <span className="text-[10px] font-bold text-green-600 block">Attendance</span>
-                        <span className="text-base font-black text-green-600">
+                      <div className="bg-teal-950/60 border border-teal-500/30 p-2.5 rounded-2xl">
+                        <span className="text-[10px] font-bold text-teal-300 block">Attendance</span>
+                        <span className="text-base font-black text-teal-400">
                           {modalStudentStats.percentage}%
                         </span>
                       </div>
-                      <div className="bg-blue-50 border border-blue-200 p-2.5 rounded-2xl">
-                        <span className="text-[10px] font-bold text-blue-600 block">Total Days</span>
-                        <span className="text-base font-black text-blue-600">
+                      <div className="bg-cyan-950/60 border border-cyan-500/30 p-2.5 rounded-2xl">
+                        <span className="text-[10px] font-bold text-cyan-300 block">Total Days</span>
+                        <span className="text-base font-black text-cyan-400">
                           {modalStudentStats.totalDays}
                         </span>
                       </div>
-                      <div className="bg-blue-50 border border-blue-200 p-2.5 rounded-2xl">
-                        <span className="text-[10px] font-bold text-blue-600 block">Present</span>
-                        <span className="text-base font-black text-blue-600">
+                      <div className="bg-violet-950/60 border border-violet-500/30 p-2.5 rounded-2xl">
+                        <span className="text-[10px] font-bold text-violet-300 block">Present</span>
+                        <span className="text-base font-black text-violet-400">
                           {modalStudentStats.presentCount}
                         </span>
                       </div>
@@ -565,7 +565,7 @@ export default function DailyCheckinsTab({
                 {infoModalStudent.email && (
                   <a
                     href={`mailto:${infoModalStudent.email}`}
-                    className="flex-1 py-2.5 px-4 rounded-2xl text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 flex items-center justify-center gap-2 transition-all"
+                    className="flex-1 py-2.5 px-4 rounded-2xl text-xs font-bold text-violet-300 bg-violet-950/80 hover:bg-violet-900/80 border border-violet-500/40 flex items-center justify-center gap-2 transition-all"
                   >
                     <Mail className="h-4 w-4" /> Email Student
                   </a>
@@ -577,7 +577,7 @@ export default function DailyCheckinsTab({
                       setInfoModalStudent(null);
                       onSelectStudent(st);
                     }}
-                    className="flex-1 py-2.5 px-4 rounded-2xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
+                    className="flex-1 py-2.5 px-4 rounded-2xl text-xs font-bold text-white bg-violet-600 hover:bg-violet-700 flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer"
                   >
                     <User className="h-4 w-4" /> Full Calendar Profile
                   </button>

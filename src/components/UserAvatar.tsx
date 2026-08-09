@@ -43,13 +43,13 @@ export default function UserAvatar({
   const isStudent = role === "student";
 
   const fallbackGradient = isStudent
-    ? "bg-blue-50 text-blue-700 border border-blue-200"
-    : "bg-teal-50 text-teal-700 border border-teal-200";
+    ? "bg-gradient-to-br from-teal-500 to-emerald-600 text-white shadow-teal-500/20"
+    : "bg-gradient-to-br from-violet-600 to-indigo-700 text-white shadow-violet-500/20";
 
   if (avatarUrl && !imageError) {
     return (
       <div
-        className={`relative inline-flex items-center justify-center shrink-0 rounded-full overflow-hidden border border-gray-200 shadow-sm ${sizeClass} ${className}`}
+        className={`relative inline-flex items-center justify-center shrink-0 rounded-full overflow-hidden border border-white/20 shadow-sm ${sizeClass} ${className}`}
       >
         <img
           src={avatarUrl}
@@ -64,7 +64,7 @@ export default function UserAvatar({
 
   return (
     <div
-      className={`relative inline-flex items-center justify-center shrink-0 rounded-full font-semibold tracking-wide shadow-sm select-none ${fallbackGradient} ${sizeClass} ${className}`}
+      className={`relative inline-flex items-center justify-center shrink-0 rounded-full font-bold tracking-wider shadow-sm select-none ${fallbackGradient} ${sizeClass} ${className}`}
       title={name}
     >
       {initials ? initials : <UserIcon className="h-1/2 w-1/2" />}
