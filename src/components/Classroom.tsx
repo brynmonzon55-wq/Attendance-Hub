@@ -38,52 +38,52 @@ function timeAgo(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
-/** Subject Color Scheme & Icon helper for high-tech aesthetic */
+/** Subject Color Scheme & Icon helper for daylight register aesthetic */
 function getSubjectTheme(subject?: string) {
   const s = (subject || "").toLowerCase();
   if (s.includes("math") || s.includes("calc") || s.includes("alg") || s.includes("geom")) {
     return {
-      gradient: "from-cyan-600/30 via-blue-600/20 to-slate-900",
-      badgeBg: "bg-cyan-500/20 text-cyan-300 border-cyan-500/40",
+      gradient: "from-blue-600/10 via-blue-600/5 to-gray-50",
+      badgeBg: "bg-blue-50 text-blue-600 border-blue-200",
       accentHex: "#00f0ff",
       icon: "📐",
     };
   }
   if (s.includes("sci") || s.includes("phys") || s.includes("chem") || s.includes("bio")) {
     return {
-      gradient: "from-emerald-600/30 via-teal-600/20 to-slate-900",
-      badgeBg: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
+      gradient: "from-green-600/10 via-green-600/5 to-gray-50",
+      badgeBg: "bg-green-50 text-green-600 border-green-200",
       accentHex: "#10b981",
       icon: "🧬",
     };
   }
   if (s.includes("tech") || s.includes("comp") || s.includes("code") || s.includes("prog") || s.includes("cs")) {
     return {
-      gradient: "from-violet-600/30 via-purple-600/20 to-slate-900",
-      badgeBg: "bg-violet-500/20 text-violet-300 border-violet-500/40",
+      gradient: "from-blue-600/10 via-blue-600/5 to-gray-50",
+      badgeBg: "bg-blue-50 text-blue-600 border-blue-200",
       accentHex: "#8b5cf6",
       icon: "💻",
     };
   }
   if (s.includes("lit") || s.includes("eng") || s.includes("read") || s.includes("lang")) {
     return {
-      gradient: "from-amber-600/30 via-orange-600/20 to-slate-900",
-      badgeBg: "bg-amber-500/20 text-amber-300 border-amber-500/40",
+      gradient: "from-amber-500/10 via-amber-500/5 to-gray-50",
+      badgeBg: "bg-amber-50 text-amber-600 border-amber-200",
       accentHex: "#f59e0b",
       icon: "📚",
     };
   }
   if (s.includes("hist") || s.includes("soc") || s.includes("geog") || s.includes("civic")) {
     return {
-      gradient: "from-rose-600/30 via-pink-600/20 to-slate-900",
-      badgeBg: "bg-rose-500/20 text-rose-300 border-rose-500/40",
+      gradient: "from-red-500/10 via-red-500/5 to-gray-50",
+      badgeBg: "bg-red-50 text-red-500 border-red-200",
       accentHex: "#f43f5e",
       icon: "🏛️",
     };
   }
   return {
-    gradient: "from-fuchsia-600/30 via-pink-600/20 to-slate-900",
-    badgeBg: "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40",
+    gradient: "from-blue-600/10 via-blue-600/5 to-gray-50",
+    badgeBg: "bg-blue-50 text-blue-600 border-blue-200",
     accentHex: "#d946ef",
     icon: "🏫",
   };
@@ -201,17 +201,17 @@ function ClassList({
   return (
     <div className="space-y-6">
       {/* Top Banner Header */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl backdrop-blur-xl flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="bg-gray-50 border border-gray-200 rounded-3xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100 rounded-full blur-3xl pointer-events-none" />
         <div className="space-y-1 z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-xs font-bold mb-1">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-600 text-xs font-bold mb-1">
             <School className="h-3.5 w-3.5" />
             <span>Course Sections & Academic Subjects</span>
           </div>
-          <h2 className="text-2xl font-black text-white tracking-tight">
+          <h2 className="text-2xl font-black text-gray-900 tracking-tight">
             {isTeacher ? "Your Teaching Sections" : "Enrolled Class Sections"}
           </h2>
-          <p className="text-xs font-medium text-slate-400 max-w-xl">
+          <p className="text-xs font-medium text-gray-400 max-w-xl">
             {isTeacher
               ? "Manage distinct subject sections, post announcements, issue assignments, and track attendance per course section."
               : "Access your enrolled subjects, section feeds, homework submissions, and attendance logs."}
@@ -222,7 +222,7 @@ function ClassList({
           {isTeacher ? (
             <button
               onClick={() => setShowCreate(true)}
-              className="px-5 py-3 rounded-2xl bg-fuchsia-500 hover:bg-fuchsia-400 text-white font-extrabold text-xs shadow-lg shadow-fuchsia-500/25 flex items-center gap-2 transition-all cursor-pointer"
+              className="px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs shadow-sm flex items-center gap-2 transition-all cursor-pointer"
             >
               <Plus className="h-4 w-4" />
               <span>Create New Section</span>
@@ -230,7 +230,7 @@ function ClassList({
           ) : (
             <button
               onClick={() => setShowJoinModal(true)}
-              className="px-5 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-cyan-500/25 flex items-center gap-2 transition-all cursor-pointer"
+              className="px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs shadow-sm flex items-center gap-2 transition-all cursor-pointer"
             >
               <School className="h-4 w-4" />
               <span>Join Class by Code</span>
@@ -241,13 +241,13 @@ function ClassList({
 
       {/* Empty State */}
       {classes.length === 0 && (
-        <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-12 text-center space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-slate-800/80 text-violet-400 flex items-center justify-center mx-auto border border-slate-700">
+        <div className="bg-gray-50 border border-gray-200 rounded-3xl p-12 text-center space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-gray-100 text-blue-600 flex items-center justify-center mx-auto border border-gray-200">
             <BookOpen className="h-8 w-8" />
           </div>
           <div className="max-w-md mx-auto space-y-1">
-            <h3 className="text-base font-bold text-white">No active class sections found</h3>
-            <p className="text-xs text-slate-400">
+            <h3 className="text-base font-bold text-gray-900">No active class sections found</h3>
+            <p className="text-xs text-gray-400">
               {isTeacher
                 ? "Get started by creating your first course section above (e.g., Grade 10 - Mathematics)."
                 : "Ask your teacher for a class join code or to add your student ID to their section."}
@@ -256,14 +256,14 @@ function ClassList({
           {isTeacher ? (
             <button
               onClick={() => setShowCreate(true)}
-              className="px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-md"
+              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-md"
             >
               <Plus className="h-4 w-4" /> Create First Section
             </button>
           ) : (
             <button
               onClick={() => setShowJoinModal(true)}
-              className="px-4 py-2.5 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-md"
+              className="px-4 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs inline-flex items-center gap-1.5 cursor-pointer shadow-md"
             >
               <School className="h-4 w-4" /> Enter Join Code
             </button>
@@ -286,7 +286,7 @@ function ClassList({
               key={cls.id}
               whileHover={{ y: -4, scale: 1.01 }}
               onClick={() => onOpen(cls.id)}
-              className={`bg-gradient-to-b ${theme.gradient} border border-slate-800/80 hover:border-violet-500/50 rounded-3xl p-5 shadow-xl transition-all cursor-pointer flex flex-col justify-between group relative overflow-hidden`}
+              className={`bg-gradient-to-b ${theme.gradient} border border-gray-200 hover:border-blue-300 rounded-3xl p-5 shadow-sm transition-all cursor-pointer flex flex-col justify-between group relative overflow-hidden`}
             >
               <div className="space-y-4">
                 {/* Header Row */}
@@ -298,47 +298,47 @@ function ClassList({
                         {cls.subject || "General Subject"}
                       </span>
                     </div>
-                    <h3 className="text-lg font-black text-white group-hover:text-cyan-300 transition-colors truncate">
+                    <h3 className="text-lg font-black text-gray-900 group-hover:text-blue-700 transition-colors truncate">
                       {cls.name}
                     </h3>
                   </div>
 
-                  <div className="p-2 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-400 group-hover:text-white group-hover:border-violet-500/40 transition-all shrink-0">
+                  <div className="p-2 rounded-xl bg-gray-50 border border-gray-200 text-gray-400 group-hover:text-gray-900 group-hover:border-blue-300 transition-all shrink-0">
                     <ChevronRight className="h-4 w-4" />
                   </div>
                 </div>
 
                 {/* Sub Metadata */}
-                <div className="text-xs text-slate-400 space-y-1">
+                <div className="text-xs text-gray-400 space-y-1">
                   {!isTeacher && (
-                    <p className="flex items-center gap-1.5 text-slate-300 font-semibold">
-                      <Users className="h-3.5 w-3.5 text-cyan-400" />
+                    <p className="flex items-center gap-1.5 text-gray-500 font-semibold">
+                      <Users className="h-3.5 w-3.5 text-blue-600" />
                       <span>Instructor: {cls.teacherName}</span>
                     </p>
                   )}
                   <div className="flex items-center gap-4 text-[11px] pt-1">
-                    <span className="inline-flex items-center gap-1 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 text-slate-300 font-bold">
-                      <Users className="h-3 w-3 text-violet-400" /> {studentCount} Enrolled
+                    <span className="inline-flex items-center gap-1 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-200 text-gray-500 font-bold">
+                      <Users className="h-3 w-3 text-blue-600" /> {studentCount} Enrolled
                     </span>
-                    <span className="inline-flex items-center gap-1 bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 text-emerald-400 font-bold">
-                      <Activity className="h-3 w-3 text-emerald-400" /> {avgAttendance}% Health
+                    <span className="inline-flex items-center gap-1 bg-gray-50 px-2.5 py-1 rounded-lg border border-gray-200 text-green-600 font-bold">
+                      <Activity className="h-3 w-3 text-green-600" /> {avgAttendance}% Health
                     </span>
                   </div>
                 </div>
               </div>
 
               {/* Bottom Card Footer with Join Code Widget */}
-              <div className="pt-4 mt-4 border-t border-slate-800/80 flex items-center justify-between gap-2 text-xs">
+              <div className="pt-4 mt-4 border-t border-gray-200 flex items-center justify-between gap-2 text-xs">
                 <button
                   onClick={(e) => copyCode(cls.joinCode, e)}
-                  className="px-2.5 py-1 rounded-lg bg-slate-950/90 border border-slate-800 hover:border-cyan-500/50 text-cyan-300 font-mono text-[11px] font-bold flex items-center gap-1.5 transition-all"
+                  className="px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-200 hover:border-blue-300 text-blue-600 font-mono text-[11px] font-bold flex items-center gap-1.5 transition-all"
                   title="Click to copy section join code"
                 >
-                  <Copy className="h-3 w-3 text-cyan-400" />
+                  <Copy className="h-3 w-3 text-blue-600" />
                   <span>{copiedCode === cls.joinCode ? "Copied!" : `Code: ${cls.joinCode}`}</span>
                 </button>
 
-                <span className="text-[11px] font-bold text-violet-300 group-hover:underline flex items-center gap-1">
+                <span className="text-[11px] font-bold text-blue-600 group-hover:underline flex items-center gap-1">
                   View Stream & Roster &rarr;
                 </span>
               </div>
@@ -349,54 +349,54 @@ function ClassList({
 
       {/* Create Section Modal */}
       {showCreate && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-50" onClick={() => setShowCreate(false)}>
+        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-md flex items-center justify-center p-4 z-50" onClick={() => setShowCreate(false)}>
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6 w-full max-w-md space-y-4"
+            className="bg-white border border-gray-200 rounded-3xl shadow-2xl p-6 w-full max-w-md space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="font-extrabold text-white text-base flex items-center gap-2">
-                <School className="h-5 w-5 text-fuchsia-400" /> Create Course Section
+            <div className="flex items-center justify-between border-b border-gray-200 pb-3">
+              <h3 className="font-extrabold text-gray-900 text-base flex items-center gap-2">
+                <School className="h-5 w-5 text-blue-600" /> Create Course Section
               </h3>
-              <button onClick={() => setShowCreate(false)} className="text-slate-400 hover:text-white"><X className="h-5 w-5" /></button>
+              <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-gray-900"><X className="h-5 w-5" /></button>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-bold text-slate-300 block mb-1">Section / Class Name *</label>
+                <label className="text-xs font-bold text-gray-500 block mb-1">Section / Class Name *</label>
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g., Grade 10 - Section Alpha"
-                  className="w-full px-3.5 py-2.5 text-xs font-bold rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-fuchsia-500"
+                  className="w-full px-3.5 py-2.5 text-xs font-bold rounded-xl bg-white border border-gray-200 text-gray-900 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-300 block mb-1">Subject / Course Title</label>
+                <label className="text-xs font-bold text-gray-500 block mb-1">Subject / Course Title</label>
                 <input
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
                   placeholder="e.g., Mathematics / Computer Science"
-                  className="w-full px-3.5 py-2.5 text-xs font-bold rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-fuchsia-500"
+                  className="w-full px-3.5 py-2.5 text-xs font-bold rounded-xl bg-white border border-gray-200 text-gray-900 focus:outline-none focus:border-blue-500"
                 />
               </div>
             </div>
 
-            {error && <p className="text-xs text-rose-400 font-bold">{error}</p>}
+            {error && <p className="text-xs text-red-500 font-bold">{error}</p>}
 
             <div className="pt-2 flex gap-2">
               <button
                 onClick={() => setShowCreate(false)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs"
+                className="flex-1 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold text-xs"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCreate}
-                className="flex-1 py-2.5 rounded-xl bg-fuchsia-500 hover:bg-fuchsia-400 text-white font-extrabold text-xs shadow-md shadow-fuchsia-500/25"
+                className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs shadow-sm"
               >
                 Create Section
               </button>
@@ -407,43 +407,43 @@ function ClassList({
 
       {/* Join Section Modal */}
       {showJoinModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-50" onClick={() => setShowJoinModal(false)}>
+        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-md flex items-center justify-center p-4 z-50" onClick={() => setShowJoinModal(false)}>
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6 w-full max-w-md space-y-4"
+            className="bg-white border border-gray-200 rounded-3xl shadow-2xl p-6 w-full max-w-md space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="font-extrabold text-white text-base flex items-center gap-2">
-                <School className="h-5 w-5 text-cyan-400" /> Join Class Section
+            <div className="flex items-center justify-between border-b border-gray-200 pb-3">
+              <h3 className="font-extrabold text-gray-900 text-base flex items-center gap-2">
+                <School className="h-5 w-5 text-blue-600" /> Join Class Section
               </h3>
-              <button onClick={() => setShowJoinModal(false)} className="text-slate-400 hover:text-white"><X className="h-5 w-5" /></button>
+              <button onClick={() => setShowJoinModal(false)} className="text-gray-400 hover:text-gray-900"><X className="h-5 w-5" /></button>
             </div>
 
             <div>
-              <label className="text-xs font-bold text-slate-300 block mb-1">Class Join Code</label>
+              <label className="text-xs font-bold text-gray-500 block mb-1">Class Join Code</label>
               <input
                 value={joinCodeInput}
                 onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
                 placeholder="e.g. MATH101-X9"
-                className="w-full px-3.5 py-2.5 text-xs font-mono font-bold tracking-widest rounded-xl bg-slate-950 border border-slate-800 text-cyan-300 focus:outline-none focus:border-cyan-500"
+                className="w-full px-3.5 py-2.5 text-xs font-mono font-bold tracking-widest rounded-xl bg-white border border-gray-200 text-blue-600 focus:outline-none focus:border-blue-500"
               />
-              <p className="text-[11px] text-slate-400 mt-1">Ask your teacher for the 6-character join code.</p>
+              <p className="text-[11px] text-gray-400 mt-1">Ask your teacher for the 6-character join code.</p>
             </div>
 
-            {error && <p className="text-xs text-rose-400 font-bold">{error}</p>}
+            {error && <p className="text-xs text-red-500 font-bold">{error}</p>}
 
             <div className="pt-2 flex gap-2">
               <button
                 onClick={() => setShowJoinModal(false)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs"
+                className="flex-1 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold text-xs"
               >
                 Cancel
               </button>
               <button
                 onClick={handleJoin}
-                className="flex-1 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold text-xs shadow-md shadow-cyan-500/25"
+                className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs shadow-sm"
               >
                 Join Section
               </button>
@@ -518,13 +518,13 @@ function ClassDetail({
       {/* Back Button */}
       <button
         onClick={onBack}
-        className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white transition-colors cursor-pointer"
+        className="inline-flex items-center gap-2 text-xs font-bold text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"
       >
         <ArrowLeft className="h-4 w-4" /> Back to All Course Sections
       </button>
 
       {/* Hero Banner Header Card */}
-      <div className={`bg-gradient-to-r ${theme.gradient} border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden space-y-6`}>
+      <div className={`bg-gradient-to-r ${theme.gradient} border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden space-y-6`}>
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div className="space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
@@ -534,16 +534,16 @@ function ClassDetail({
               </span>
               <button
                 onClick={copyJoinCode}
-                className="px-3 py-1 rounded-full bg-slate-950/90 border border-slate-700 hover:border-cyan-500/50 text-cyan-300 font-mono text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                className="px-3 py-1 rounded-full bg-white border border-gray-200 hover:border-blue-300 text-blue-600 font-mono text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
               >
-                <Copy className="h-3.5 w-3.5 text-cyan-400" />
+                <Copy className="h-3.5 w-3.5 text-blue-600" />
                 <span>{copiedCode ? "Copied!" : `Join Code: ${cls.joinCode}`}</span>
               </button>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">{cls.name}</h1>
-            <p className="text-xs text-slate-300 font-medium">
-              Teacher: <span className="font-bold text-white">{cls.teacherName}</span> &bull; Enrolled: <span className="font-bold text-white">{cls.studentIds.length} Students</span>
+            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">{cls.name}</h1>
+            <p className="text-xs text-gray-500 font-medium">
+              Teacher: <span className="font-bold text-gray-900">{cls.teacherName}</span> &bull; Enrolled: <span className="font-bold text-gray-900">{cls.studentIds.length} Students</span>
             </p>
           </div>
 
@@ -552,14 +552,14 @@ function ClassDetail({
               <>
                 <button
                   onClick={() => setTab("attendance")}
-                  className="px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-extrabold text-xs shadow-lg shadow-violet-500/20 flex items-center gap-2 cursor-pointer transition-all"
+                  className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs shadow-sm flex items-center gap-2 cursor-pointer transition-all"
                 >
                   <ClipboardCheck className="h-4 w-4" /> Mark Attendance
                 </button>
                 <button
                   onClick={handleDeleteClass}
                   title="Delete Section"
-                  className="p-2.5 rounded-xl bg-slate-950/80 hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 border border-slate-800 transition-all cursor-pointer"
+                  className="p-2.5 rounded-xl bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 border border-gray-200 transition-all cursor-pointer"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -569,35 +569,35 @@ function ClassDetail({
         </div>
 
         {/* Today's Section Attendance Health Bar */}
-        <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200 flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-slate-300">Today's Attendance:</span>
+            <span className="font-bold text-gray-500">Today's Attendance:</span>
             {isTeacher ? (
               <>
-                <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold">
+                <span className="px-2.5 py-1 rounded-lg bg-green-50 border border-green-200 text-green-600 font-bold">
                   {presentT} Present
                 </span>
-                <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold">
+                <span className="px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 font-bold">
                   {lateT} Late
                 </span>
-                <span className="px-2.5 py-1 rounded-lg bg-rose-500/20 border border-rose-500/40 text-rose-300 font-bold">
+                <span className="px-2.5 py-1 rounded-lg bg-red-50 border border-red-200 text-red-500 font-bold">
                   {absentT} Absent
                 </span>
-                <span className="text-slate-400 text-[11px]">of {cls.studentIds.length} students</span>
+                <span className="text-gray-400 text-[11px]">of {cls.studentIds.length} students</span>
               </>
             ) : myToday ? (
               <span className={`px-3 py-1 rounded-lg border font-extrabold ${
-                myToday.status === "Present" ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300" : myToday.status === "Late" ? "bg-amber-500/20 border-amber-500/40 text-amber-300" : "bg-rose-500/20 border-rose-500/40 text-rose-300"
+                myToday.status === "Present" ? "bg-green-50 border-green-200 text-green-600" : myToday.status === "Late" ? "bg-amber-50 border-amber-200 text-amber-600" : "bg-red-50 border-red-200 text-red-500"
               }`}>
                 Your Status: {myToday.status}
               </span>
             ) : (
-              <span className="text-slate-400">Not recorded yet today</span>
+              <span className="text-gray-400">Not recorded yet today</span>
             )}
           </div>
 
           {isTeacher && atRiskCount > 0 && (
-            <div className="flex items-center gap-1.5 text-rose-400 font-bold text-xs bg-rose-950/40 px-3 py-1 rounded-lg border border-rose-800/40">
+            <div className="flex items-center gap-1.5 text-red-500 font-bold text-xs bg-red-50 px-3 py-1 rounded-lg border border-red-200">
               <AlertTriangle className="h-3.5 w-3.5" />
               <span>{atRiskCount} student(s) below 75% attendance</span>
             </div>
@@ -606,7 +606,7 @@ function ClassDetail({
       </div>
 
       {/* Sub Navigation Bar */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
+      <div className="flex items-center gap-2 border-b border-gray-200 pb-2 overflow-x-auto">
         {[
           { id: "stream", label: "Class Feed & Activity", icon: Activity },
           { id: "attendance", label: "Section Attendance Sheet", icon: ClipboardCheck },
@@ -621,14 +621,14 @@ function ClassDetail({
               onClick={() => setTab(item.id as any)}
               className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
                 active
-                  ? "bg-violet-500 text-white shadow-lg shadow-violet-500/25"
-                  : "bg-slate-900/80 border border-slate-800 text-slate-400 hover:text-white"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-gray-50 border border-gray-200 text-gray-400 hover:text-gray-900"
               }`}
             >
               <Icon className="h-4 w-4" />
               <span>{item.label}</span>
               {item.count !== undefined && (
-                <span className="px-1.5 py-0.2 rounded-full bg-slate-950 text-[10px] font-mono text-slate-300">
+                <span className="px-1.5 py-0.2 rounded-full bg-gray-100 text-[10px] font-mono text-gray-500">
                   {item.count}
                 </span>
               )}
@@ -701,14 +701,14 @@ function SectionAttendanceSheet({ cls, currentUser }: { cls: ClassRoom; currentU
   };
 
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+    <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-4">
         <div>
-          <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-            <ClipboardCheck className="h-5 w-5 text-violet-400" /> Section Attendance Log
+          <h3 className="text-base font-extrabold text-gray-900 flex items-center gap-2">
+            <ClipboardCheck className="h-5 w-5 text-blue-600" /> Section Attendance Log
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Mark daily attendance for enrolled students in <span className="text-white font-bold">{cls.name}</span>.
+          <p className="text-xs text-gray-400 mt-0.5">
+            Mark daily attendance for enrolled students in <span className="text-gray-900 font-bold">{cls.name}</span>.
           </p>
         </div>
 
@@ -717,20 +717,20 @@ function SectionAttendanceSheet({ cls, currentUser }: { cls: ClassRoom; currentU
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="px-3 py-2 text-xs font-bold rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-violet-500 [color-scheme:dark]"
+            className="px-3 py-2 text-xs font-bold rounded-xl bg-white border border-gray-200 text-gray-900 focus:outline-none focus:border-blue-500 [color-scheme:light]"
           />
 
           {isTeacher && (
             <>
               <button
                 onClick={markAllPresent}
-                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs transition-colors cursor-pointer"
+                className="px-3 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-green-600 font-bold text-xs transition-colors cursor-pointer"
               >
                 Mark All Present
               </button>
               <button
                 onClick={handleSave}
-                className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs shadow-md shadow-emerald-500/20 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-green-600 hover:bg-green-500 text-white font-extrabold text-xs shadow-sm cursor-pointer"
               >
                 Save Attendance
               </button>
@@ -740,14 +740,14 @@ function SectionAttendanceSheet({ cls, currentUser }: { cls: ClassRoom; currentU
       </div>
 
       {savedMsg && (
-        <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold rounded-xl flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+        <div className="p-3 bg-green-50 border border-green-200 text-green-600 text-xs font-bold rounded-xl flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
           <span>{savedMsg}</span>
         </div>
       )}
 
       {students.length === 0 ? (
-        <div className="p-8 text-center text-slate-400 text-xs">No students enrolled in this section yet.</div>
+        <div className="p-8 text-center text-gray-400 text-xs">No students enrolled in this section yet.</div>
       ) : (
         <div className="space-y-2">
           {students.map(({ student, stats }) => {
@@ -755,15 +755,15 @@ function SectionAttendanceSheet({ cls, currentUser }: { cls: ClassRoom; currentU
             return (
               <div
                 key={student.id}
-                className="p-3.5 rounded-2xl bg-slate-950/60 border border-slate-800 flex items-center justify-between gap-3"
+                className="p-3.5 rounded-2xl bg-gray-50 border border-gray-200 flex items-center justify-between gap-3"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-full bg-violet-500/20 border border-violet-500/40 text-violet-300 font-bold text-xs flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-blue-50 border border-blue-200 text-blue-600 font-bold text-xs flex items-center justify-center shrink-0">
                     {student.name.charAt(0)}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-white truncate">{student.name}</p>
-                    <p className="text-[11px] text-slate-400">
+                    <p className="text-xs font-bold text-gray-900 truncate">{student.name}</p>
+                    <p className="text-[11px] text-gray-400">
                       ID: {student.id} &bull; Overall: {stats.percentage}%
                     </p>
                   </div>
@@ -776,15 +776,15 @@ function SectionAttendanceSheet({ cls, currentUser }: { cls: ClassRoom; currentU
                       const colors =
                         st === "Present"
                           ? active
-                            ? "bg-emerald-500 text-slate-950 font-extrabold"
-                            : "bg-slate-900 text-slate-400 hover:text-emerald-400 border border-slate-800"
+                            ? "bg-green-600 text-white font-extrabold"
+                            : "bg-white text-gray-400 hover:text-green-600 border border-gray-200"
                           : st === "Late"
                           ? active
-                            ? "bg-amber-500 text-slate-950 font-extrabold"
-                            : "bg-slate-900 text-slate-400 hover:text-amber-400 border border-slate-800"
+                            ? "bg-amber-500 text-gray-900 font-extrabold"
+                            : "bg-white text-gray-400 hover:text-amber-500 border border-gray-200"
                           : active
-                          ? "bg-rose-500 text-white font-extrabold"
-                          : "bg-slate-900 text-slate-400 hover:text-rose-400 border border-slate-800";
+                          ? "bg-red-500 text-white font-extrabold"
+                          : "bg-white text-gray-400 hover:text-red-500 border border-gray-200";
 
                       return (
                         <button
@@ -801,10 +801,10 @@ function SectionAttendanceSheet({ cls, currentUser }: { cls: ClassRoom; currentU
                   <span
                     className={`px-3 py-1 rounded-xl text-xs font-extrabold ${
                       currentStatus === "Present"
-                        ? "bg-emerald-500/20 border border-emerald-500/40 text-emerald-300"
+                        ? "bg-green-50 border border-green-200 text-green-600"
                         : currentStatus === "Late"
-                        ? "bg-amber-500/20 border border-amber-500/40 text-amber-300"
-                        : "bg-rose-500/20 border border-rose-500/40 text-rose-300"
+                        ? "bg-amber-50 border border-amber-200 text-amber-600"
+                        : "bg-red-50 border border-red-200 text-red-500"
                     }`}
                   >
                     {currentStatus}
@@ -916,16 +916,16 @@ function ClassLog({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
   return (
     <div className="space-y-4">
       {isTeacher && !showComposer && (
-        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-4 flex gap-3">
+        <div className="bg-white border border-gray-200 rounded-3xl p-4 flex gap-3">
           <button
             onClick={() => { setPostType("announcement"); setShowComposer(true); }}
-            className="flex-1 inline-flex items-center justify-center gap-2 text-xs font-extrabold text-violet-300 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 py-3 rounded-2xl transition-all cursor-pointer"
+            className="flex-1 inline-flex items-center justify-center gap-2 text-xs font-extrabold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 py-3 rounded-2xl transition-all cursor-pointer"
           >
             <Megaphone className="h-4 w-4" /> Post Announcement
           </button>
           <button
             onClick={() => { setPostType("assignment"); setShowComposer(true); }}
-            className="flex-1 inline-flex items-center justify-center gap-2 text-xs font-extrabold text-fuchsia-300 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 border border-fuchsia-500/30 py-3 rounded-2xl transition-all cursor-pointer"
+            className="flex-1 inline-flex items-center justify-center gap-2 text-xs font-extrabold text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 py-3 rounded-2xl transition-all cursor-pointer"
           >
             <FileText className="h-4 w-4" /> Create Assignment
           </button>
@@ -933,13 +933,13 @@ function ClassLog({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
       )}
 
       {isTeacher && showComposer && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-2xl">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-            <h4 className="font-extrabold text-white text-sm flex items-center gap-2">
-              {postType === "assignment" ? <FileText className="h-4 w-4 text-fuchsia-400" /> : <Megaphone className="h-4 w-4 text-violet-400" />}
+        <div className="bg-white border border-gray-200 rounded-3xl p-6 space-y-4 shadow-sm">
+          <div className="flex items-center justify-between border-b border-gray-200 pb-3">
+            <h4 className="font-extrabold text-gray-900 text-sm flex items-center gap-2">
+              {postType === "assignment" ? <FileText className="h-4 w-4 text-blue-600" /> : <Megaphone className="h-4 w-4 text-blue-600" />}
               {postType === "assignment" ? "New Class Homework / Assignment" : "New Class Announcement"}
             </h4>
-            <button onClick={resetComposer} className="text-slate-400 hover:text-white"><X className="h-4 w-4" /></button>
+            <button onClick={resetComposer} className="text-gray-400 hover:text-gray-900"><X className="h-4 w-4" /></button>
           </div>
 
           {postType === "assignment" && (
@@ -947,7 +947,7 @@ function ClassLog({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Assignment Title (e.g., Chapter 4 Calculus Problem Set)"
-              className="w-full px-4 py-2.5 text-xs font-bold rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-violet-500"
+              className="w-full px-4 py-2.5 text-xs font-bold rounded-xl bg-white border border-gray-200 text-gray-900 focus:outline-none focus:border-blue-500"
             />
           )}
 
@@ -956,51 +956,51 @@ function ClassLog({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
             onChange={(e) => setContent(e.target.value)}
             placeholder={postType === "assignment" ? "Write submission guidelines & instructions..." : "Share an update with your class..."}
             rows={3}
-            className="w-full px-4 py-2.5 text-xs font-medium rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-violet-500 resize-none"
+            className="w-full px-4 py-2.5 text-xs font-medium rounded-xl bg-white border border-gray-200 text-gray-900 focus:outline-none focus:border-blue-500 resize-none"
           />
 
           <div className="flex items-center justify-between gap-3 flex-wrap pt-1">
             <div className="flex items-center gap-4 flex-wrap">
               {postType === "assignment" && (
-                <label className="text-xs font-bold text-slate-300 inline-flex items-center gap-2">
-                  <Calendar className="h-3.5 w-3.5 text-fuchsia-400" /> Due Date:
+                <label className="text-xs font-bold text-gray-500 inline-flex items-center gap-2">
+                  <Calendar className="h-3.5 w-3.5 text-blue-600" /> Due Date:
                   <input
                     type="date"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
-                    className="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-fuchsia-500 [color-scheme:dark]"
+                    className="px-2.5 py-1 text-xs font-bold rounded-lg bg-white border border-gray-200 text-gray-900 focus:outline-none focus:border-blue-500 [color-scheme:light]"
                   />
                 </label>
               )}
 
-              <label className="text-xs font-bold text-slate-300 inline-flex items-center gap-1.5 cursor-pointer hover:text-violet-400">
-                <Paperclip className="h-3.5 w-3.5 text-cyan-400" />
+              <label className="text-xs font-bold text-gray-500 inline-flex items-center gap-1.5 cursor-pointer hover:text-blue-600">
+                <Paperclip className="h-3.5 w-3.5 text-blue-600" />
                 <span>{attachment ? attachment.name : "Attach File / Image"}</span>
                 <input type="file" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
               </label>
 
               {attachment && (
-                <button onClick={() => setAttachment(null)} className="text-xs text-rose-400 font-bold">Remove</button>
+                <button onClick={() => setAttachment(null)} className="text-xs text-red-500 font-bold">Remove</button>
               )}
             </div>
 
             <button
               onClick={handlePost}
               disabled={posting}
-              className="px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-extrabold text-xs shadow-md shadow-violet-500/25 cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-extrabold text-xs shadow-sm cursor-pointer"
             >
               {posting ? "Posting..." : "Publish to Class"}
             </button>
           </div>
 
-          {fileError && <p className="text-xs text-rose-400 font-bold">{fileError}</p>}
+          {fileError && <p className="text-xs text-red-500 font-bold">{fileError}</p>}
         </div>
       )}
 
       {entries.length === 0 && (
-        <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-10 text-center space-y-2">
-          <Megaphone className="h-8 w-8 text-slate-600 mx-auto" />
-          <p className="text-xs text-slate-400">No activity logged in this section yet.</p>
+        <div className="bg-gray-50 border border-gray-200 rounded-3xl p-10 text-center space-y-2">
+          <Megaphone className="h-8 w-8 text-gray-400 mx-auto" />
+          <p className="text-xs text-gray-400">No activity logged in this section yet.</p>
         </div>
       )}
 
@@ -1048,9 +1048,9 @@ export function PostsPanel({
   return (
     <div className="space-y-4">
       {filtered.length === 0 ? (
-        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-10 text-center space-y-2">
-          <FileText className="h-8 w-8 text-slate-600 mx-auto" />
-          <p className="text-xs text-slate-400">
+        <div className="bg-gray-50 border border-gray-200 rounded-3xl p-10 text-center space-y-2">
+          <FileText className="h-8 w-8 text-gray-400 mx-auto" />
+          <p className="text-xs text-gray-400">
             {emptyText || `No ${filterType}s posted yet for this course section.`}
           </p>
         </div>
@@ -1136,27 +1136,27 @@ function PostCard({
   };
 
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">
+    <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-sm space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span
               className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${
                 isAssignment
-                  ? "bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40"
-                  : "bg-violet-500/20 text-violet-300 border-violet-500/40"
+                  ? "bg-blue-50 text-blue-600 border-blue-200"
+                  : "bg-blue-50 text-blue-600 border-blue-200"
               }`}
             >
               {isAssignment ? "Assignment / Homework" : "Announcement"}
             </span>
-            <span className="text-[11px] text-slate-400 font-medium">{timeAgo(post.createdAt)}</span>
+            <span className="text-[11px] text-gray-400 font-medium">{timeAgo(post.createdAt)}</span>
           </div>
 
-          {post.title && <h4 className="text-base font-extrabold text-white">{post.title}</h4>}
-          <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">{post.content}</p>
+          {post.title && <h4 className="text-base font-extrabold text-gray-900">{post.title}</h4>}
+          <p className="text-xs text-gray-500 leading-relaxed whitespace-pre-wrap">{post.content}</p>
 
           {post.dueDate && (
-            <p className="text-xs font-bold text-amber-400 flex items-center gap-1 mt-1">
+            <p className="text-xs font-bold text-amber-500 flex items-center gap-1 mt-1">
               <Clock className="h-3.5 w-3.5" /> Due: {formatDate(new Date(post.dueDate))}
             </p>
           )}
@@ -1166,9 +1166,9 @@ function PostCard({
               <a
                 href={post.attachmentDataUrl}
                 download={post.attachmentName || "attachment"}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-cyan-300 text-xs font-bold hover:border-cyan-500/50 transition-all"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-50 border border-gray-200 text-blue-600 text-xs font-bold hover:border-blue-300 transition-all"
               >
-                <Paperclip className="h-3.5 w-3.5 text-cyan-400" />
+                <Paperclip className="h-3.5 w-3.5 text-blue-600" />
                 <span>Download Attachment ({post.attachmentName})</span>
               </a>
             </div>
@@ -1178,7 +1178,7 @@ function PostCard({
         {isTeacher && (
           <button
             onClick={() => { deletePost(post.id); onDeleted(); }}
-            className="p-2 rounded-xl bg-slate-950 hover:bg-rose-950/80 text-slate-500 hover:text-rose-400 border border-slate-800 cursor-pointer"
+            className="p-2 rounded-xl bg-gray-50 hover:bg-red-50 text-gray-500 hover:text-red-500 border border-gray-200 cursor-pointer"
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -1187,11 +1187,11 @@ function PostCard({
 
       {/* Student Submission Controls */}
       {isAssignment && !isTeacher && (
-        <div className="pt-3 border-t border-slate-800">
+        <div className="pt-3 border-t border-gray-200">
           {mySubmission ? (
-            <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-between gap-2 text-xs">
-              <span className="text-emerald-300 font-bold flex items-center gap-1.5">
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Turned in on {formatDate(new Date(mySubmission.submittedAt))}
+            <div className="p-3 bg-green-50 border border-green-200 rounded-2xl flex items-center justify-between gap-2 text-xs">
+              <span className="text-green-600 font-bold flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-green-600" /> Turned in on {formatDate(new Date(mySubmission.submittedAt))}
               </span>
             </div>
           ) : (
@@ -1199,32 +1199,32 @@ function PostCard({
               {!showSubmitForm ? (
                 <button
                   onClick={() => setShowSubmitForm(true)}
-                  className="px-4 py-2 rounded-xl bg-fuchsia-500 hover:bg-fuchsia-400 text-white font-extrabold text-xs shadow-md cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs shadow-md cursor-pointer"
                 >
                   Turn In Homework
                 </button>
               ) : (
-                <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-3">
+                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-3">
                   <textarea
                     value={submitText}
                     onChange={(e) => setSubmitText(e.target.value)}
                     placeholder="Add student submission notes..."
                     rows={2}
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-white focus:outline-none"
+                    className="w-full px-3 py-2 text-xs rounded-xl bg-white border border-gray-200 text-gray-900 focus:outline-none"
                   />
                   <div className="flex items-center justify-between gap-2">
-                    <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5 cursor-pointer hover:text-cyan-400">
-                      <Paperclip className="h-3.5 w-3.5 text-cyan-400" />
+                    <label className="text-xs font-bold text-gray-500 flex items-center gap-1.5 cursor-pointer hover:text-blue-600">
+                      <Paperclip className="h-3.5 w-3.5 text-blue-600" />
                       <span>{submitAttachment ? submitAttachment.name : "Attach File"}</span>
                       <input type="file" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
                     </label>
 
                     <div className="flex gap-2">
-                      <button onClick={() => setShowSubmitForm(false)} className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs">Cancel</button>
-                      <button onClick={handleSubmitWork} className="px-4 py-1.5 rounded-xl bg-fuchsia-500 text-white font-bold text-xs">Submit</button>
+                      <button onClick={() => setShowSubmitForm(false)} className="px-3 py-1.5 rounded-xl bg-gray-100 text-gray-500 font-bold text-xs">Cancel</button>
+                      <button onClick={handleSubmitWork} className="px-4 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs">Submit</button>
                     </div>
                   </div>
-                  {fileError && <p className="text-xs text-rose-400 font-bold">{fileError}</p>}
+                  {fileError && <p className="text-xs text-red-500 font-bold">{fileError}</p>}
                 </div>
               )}
             </div>
@@ -1237,7 +1237,7 @@ function PostCard({
         <div className="pt-2">
           <button
             onClick={() => setShowSubmissions((v) => !v)}
-            className="text-xs font-bold text-fuchsia-400 hover:underline cursor-pointer"
+            className="text-xs font-bold text-blue-600 hover:underline cursor-pointer"
           >
             {submissions.length} Turn-in Submission(s) {showSubmissions ? "▲" : "▼"}
           </button>
@@ -1245,16 +1245,16 @@ function PostCard({
           {showSubmissions && (
             <div className="mt-3 space-y-2">
               {submissions.length === 0 ? (
-                <p className="text-xs text-slate-500">No student work submitted yet.</p>
+                <p className="text-xs text-gray-500">No student work submitted yet.</p>
               ) : (
                 submissions.map((s) => (
-                  <div key={s.id} className="p-3 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 text-xs">
+                  <div key={s.id} className="p-3 rounded-2xl bg-gray-50 border border-gray-200 flex items-center justify-between gap-3 text-xs">
                     <div>
-                      <p className="font-bold text-white">{s.studentName}</p>
-                      {s.content && <p className="text-slate-400">{s.content}</p>}
+                      <p className="font-bold text-gray-900">{s.studentName}</p>
+                      {s.content && <p className="text-gray-400">{s.content}</p>}
                     </div>
                     {s.attachmentDataUrl && (
-                      <a href={s.attachmentDataUrl} download={s.attachmentName} className="text-cyan-400 hover:underline flex items-center gap-1">
+                      <a href={s.attachmentDataUrl} download={s.attachmentName} className="text-blue-600 hover:underline flex items-center gap-1">
                         <Paperclip className="h-3.5 w-3.5" /> Download
                       </a>
                     )}
@@ -1267,24 +1267,24 @@ function PostCard({
       )}
 
       {/* Comments Section */}
-      <div className="pt-3 border-t border-slate-800">
+      <div className="pt-3 border-t border-gray-200">
         <button
           onClick={() => setShowComments((v) => !v)}
-          className="text-xs font-bold text-slate-400 hover:text-white flex items-center gap-1.5 cursor-pointer"
+          className="text-xs font-bold text-gray-400 hover:text-gray-900 flex items-center gap-1.5 cursor-pointer"
         >
-          <MessageSquare className="h-3.5 w-3.5 text-violet-400" />
+          <MessageSquare className="h-3.5 w-3.5 text-blue-600" />
           <span>{comments.length} Class Comment(s)</span>
         </button>
 
         {showComments && (
           <div className="mt-3 space-y-3">
             {comments.map((c) => (
-              <div key={c.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1">
+              <div key={c.id} className="p-3 rounded-xl bg-gray-50 border border-gray-200 text-xs space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-violet-300">{c.authorName}</span>
-                  <span className="text-[10px] text-slate-500">{timeAgo(c.createdAt)}</span>
+                  <span className="font-bold text-blue-600">{c.authorName}</span>
+                  <span className="text-[10px] text-gray-500">{timeAgo(c.createdAt)}</span>
                 </div>
-                <p className="text-slate-300">{c.content}</p>
+                <p className="text-gray-500">{c.content}</p>
               </div>
             ))}
 
@@ -1294,11 +1294,11 @@ function PostCard({
                 onChange={(e) => setCommentText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleComment()}
                 placeholder="Add a class comment..."
-                className="flex-1 px-3.5 py-2 text-xs font-medium rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-violet-500"
+                className="flex-1 px-3.5 py-2 text-xs font-medium rounded-xl bg-white border border-gray-200 text-gray-900 focus:outline-none focus:border-blue-500"
               />
               <button
                 onClick={handleComment}
-                className="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs cursor-pointer"
+                className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer"
               >
                 Send
               </button>
@@ -1316,22 +1316,22 @@ function PostCard({
 
 function AttendanceLogCard({ entry }: { entry: LogEntry & { kind: "attendance" }; isTeacher: boolean; currentUser: User }) {
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
+    <div className="bg-white border border-gray-200 rounded-3xl p-5 shadow-sm space-y-3">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-green-50 text-green-600 border border-green-200">
           Daily Attendance Recorded
         </span>
-        <span className="text-xs text-slate-400 font-bold">{entry.date}</span>
+        <span className="text-xs text-gray-400 font-bold">{entry.date}</span>
       </div>
 
       <div className="flex items-center gap-3 text-xs flex-wrap">
-        <span className="px-3 py-1 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-extrabold">
+        <span className="px-3 py-1 rounded-xl bg-green-50 border border-green-200 text-green-600 font-extrabold">
           {entry.present} Present
         </span>
-        <span className="px-3 py-1 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-extrabold">
+        <span className="px-3 py-1 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 font-extrabold">
           {entry.late} Late
         </span>
-        <span className="px-3 py-1 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-300 font-extrabold">
+        <span className="px-3 py-1 rounded-xl bg-red-50 border border-red-200 text-red-500 font-extrabold">
           {entry.absent} Absent
         </span>
       </div>
@@ -1370,14 +1370,14 @@ function Classmates({ cls, isTeacher }: { cls: ClassRoom; isTeacher: boolean }) 
   };
 
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+    <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-4">
         <div>
-          <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-            <Users className="h-5 w-5 text-violet-400" /> Enrolled Section Roster
+          <h3 className="text-base font-extrabold text-gray-900 flex items-center gap-2">
+            <Users className="h-5 w-5 text-blue-600" /> Enrolled Section Roster
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Students currently enrolled in <span className="text-white font-bold">{cls.name}</span>.
+          <p className="text-xs text-gray-400 mt-0.5">
+            Students currently enrolled in <span className="text-gray-900 font-bold">{cls.name}</span>.
           </p>
         </div>
 
@@ -1388,11 +1388,11 @@ function Classmates({ cls, isTeacher }: { cls: ClassRoom; isTeacher: boolean }) 
               onChange={(e) => setAddId(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAdd()}
               placeholder="Enter Student ID (e.g. student101)"
-              className="px-3.5 py-2 text-xs font-bold rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-violet-500"
+              className="px-3.5 py-2 text-xs font-bold rounded-xl bg-white border border-gray-200 text-gray-900 focus:outline-none focus:border-blue-500"
             />
             <button
               onClick={handleAdd}
-              className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-extrabold text-xs shadow-md cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs shadow-md cursor-pointer"
             >
               Enroll Student
             </button>
@@ -1400,25 +1400,25 @@ function Classmates({ cls, isTeacher }: { cls: ClassRoom; isTeacher: boolean }) 
         )}
       </div>
 
-      {addError && <p className="text-xs text-rose-400 font-bold">{addError}</p>}
+      {addError && <p className="text-xs text-red-500 font-bold">{addError}</p>}
 
       {rows.length === 0 ? (
-        <div className="p-8 text-center text-slate-400 text-xs">No students enrolled in this section yet.</div>
+        <div className="p-8 text-center text-gray-400 text-xs">No students enrolled in this section yet.</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {rows.map(({ student, stats }) => (
             <div
               key={student.id}
-              className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 flex items-center justify-between gap-3"
+              className="p-4 rounded-2xl bg-gray-50 border border-gray-200 flex items-center justify-between gap-3"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-2xl bg-violet-500/20 border border-violet-500/40 text-violet-300 font-black text-sm flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 font-black text-sm flex items-center justify-center shrink-0">
                   {student.name.charAt(0)}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-white truncate">{student.name}</p>
-                  <p className="text-[11px] text-slate-400">
-                    Attendance: <span className="text-emerald-400 font-bold">{stats.percentage}%</span> &bull; ({stats.presentCount}P / {stats.lateCount}L / {stats.absentCount}A)
+                  <p className="text-xs font-bold text-gray-900 truncate">{student.name}</p>
+                  <p className="text-[11px] text-gray-400">
+                    Attendance: <span className="text-green-600 font-bold">{stats.percentage}%</span> &bull; ({stats.presentCount}P / {stats.lateCount}L / {stats.absentCount}A)
                   </p>
                 </div>
               </div>
@@ -1426,7 +1426,7 @@ function Classmates({ cls, isTeacher }: { cls: ClassRoom; isTeacher: boolean }) 
               {isTeacher && (
                 <button
                   onClick={() => { removeStudentFromClass(cls.id, student.id); setRows(getClassmatesWithStats(cls.id)); }}
-                  className="p-2 rounded-xl bg-slate-900 hover:bg-rose-950 text-slate-500 hover:text-rose-400 border border-slate-800 cursor-pointer"
+                  className="p-2 rounded-xl bg-white hover:bg-red-50 text-gray-500 hover:text-red-500 border border-gray-200 cursor-pointer"
                   title="Remove student from section"
                 >
                   <UserMinus className="h-4 w-4" />

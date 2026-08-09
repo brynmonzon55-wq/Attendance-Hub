@@ -21,7 +21,7 @@ function getStoredTheme(): AppTheme {
   if (stored === "default" || stored === "dark") {
     return stored;
   }
-  return "dark";
+  return "default";
 }
 
 export default function App() {
@@ -53,14 +53,12 @@ export default function App() {
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
 
-  // Explicit theme pick from Settings
   const handleThemeChange = (newTheme: AppTheme) => {
     setTheme(newTheme);
     localStorage.setItem(THEME_STORAGE_KEY, newTheme);
   };
 
   useEffect(() => {
-    // Initialize the Database
     initDB();
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -98,21 +96,34 @@ export default function App() {
 
   if (checkingSession) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-sm text-cyan-400 font-bold font-display animate-pulse">Loading Attendance Hub...</div>
+      <div className="min-h-screen flex items-center justify-center bg-[#f8f9fa]">
+        <div className="text-sm text-blue-600 font-semibold font-display animate-pulse tracking-tight">
+          Loading Attendance Hub...
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-[100dvh] text-ink selection:bg-cyan-500/30 selection:text-cyan-300 antialiased font-sans flex flex-col justify-between relative overflow-x-hidden" id="app-root">
+    <div
+      className={`min-h-[100dvh] selection:bg-blue-100 selection:text-blue-900 antialiased font-sans flex flex-col justify-between relative overflow-x-hidden ${
+        theme === "dark"
+          ? "bg-slate-900 text-slate-100"
+          : "bg-[#f8f9fa] text-gray-900"
+      }`}
+      id="app-root"
+    >
       <AnimatedThemeBackground theme={theme} />
 
-      {/* Floating Fullscreen Mode Toggle */}
+      {/* Floating Fullscreen Toggle */}
       <button
         onClick={toggleFullscreen}
         title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-        className="fixed top-3 right-3 sm:top-4 sm:right-4 z-50 p-2 sm:p-2.5 rounded-xl bg-slate-900/80 border border-white/10 hover:border-cyan-400/50 text-slate-300 hover:text-cyan-300 backdrop-blur-md transition-all shadow-lg hover:shadow-cyan-500/20 active:scale-95 group cursor-pointer"
+        className={`fixed top-3 right-3 sm:top-4 sm:right-4 z-50 p-2 sm:p-2.5 rounded-xl transition-all shadow-sm hover:shadow-md active:scale-95 group cursor-pointer ${
+          theme === "dark"
+            ? "bg-slate-800 border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600"
+            : "bg-white border border-gray-200 text-gray-500 hover:text-gray-700 hover:border-gray-300"
+        }`}
         aria-label="Toggle Fullscreen"
       >
         {isFullscreen ? (
@@ -145,7 +156,6 @@ export default function App() {
           <TeacherDashboard user={currentUser} onLogout={handleLogout} theme={theme} onThemeChange={handleThemeChange} />
         )}
 
-        {/* Modal requiring students who signed in with Google to enter their Student ID and Department/Course */}
         {needsStudentOnboarding && currentUser && (
           <GoogleOnboardingModal
             user={currentUser}
@@ -155,10 +165,13 @@ export default function App() {
         )}
       </main>
 
-      <footer className="py-2.5 sm:py-3 mb-2 sm:mb-3 border-t border-white/10 text-center text-[10px] sm:text-xs text-slate-300 font-medium font-sans relative z-10 backdrop-blur-md bg-slate-950/40 shrink-0 pb-[calc(10px+env(safe-area-inset-bottom))]">
+      <footer className={`py-2.5 sm:py-3 mb-2 sm:mb-3 border-t text-center text-[10px] sm:text-xs font-medium font-sans relative z-10 shrink-0 pb-[calc(10px+env(safe-area-inset-bottom))] ${
+        theme === "dark"
+          ? "border-slate-800 text-slate-500"
+          : "border-gray-200 text-gray-400"
+      }`}>
         &copy; {new Date().getFullYear()} Attendance Hub &bull; Made by Bryn Monzon
       </footer>
     </div>
   );
 }
-

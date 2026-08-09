@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   LogOut,
@@ -659,18 +659,18 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
         <motion.div
           initial={{ opacity: 0, y: -15 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-cream rounded-3xl border border-ink-soft/10 p-4 sm:p-5 shadow-xl flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4 min-w-0 overflow-hidden"
+          className="bg-cream rounded-3xl border border-gray-200/10 p-4 sm:p-5 shadow-xl flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4 min-w-0 overflow-hidden"
         >
           <div className="flex items-center gap-3 min-w-0">
             <UserAvatar name={dbUser.name} avatarUrl={dbUser.avatarUrl} role="teacher" size="lg" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold bg-violet-50 text-violet-600 rounded-full border border-violet-200 shrink-0">
+                <span className="px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold bg-blue-50 text-blue-600 rounded-full border border-blue-200 shrink-0">
                   Teacher Portal
                 </span>
-                <span className="text-xs font-mono text-ink-soft/70 truncate">ID: {user.id}</span>
+                <span className="text-xs font-mono text-gray-500 truncate">ID: {user.id}</span>
               </div>
-              <h1 className="text-xl sm:text-2xl font-black text-ink tracking-tight mt-0.5 truncate">
+              <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight mt-0.5 truncate">
                 Welcome, {dbUser.name}
               </h1>
             </div>
@@ -684,20 +684,20 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
               onClick={() => onThemeChange(theme === "dark" ? "default" : "dark")}
               className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold transition-all cursor-pointer ${
                 theme === "dark"
-                  ? "bg-black/80 text-fuchsia-300 border-fuchsia-500/50 hover:bg-slate-900 shadow-[0_0_15px_rgba(217,70,239,0.3)]"
-                  : "bg-slate-900/90 text-cyan-300 border-cyan-500/50 hover:bg-slate-800 shadow-[0_0_15px_rgba(0,240,255,0.3)]"
+                  ? "bg-black/80 text-blue-600 border-blue-200 hover:bg-slate-900 shadow-[0_0_15px_rgba(217,70,239,0.3)]"
+                  : "bg-slate-900/90 text-blue-600 border-cyan-500/50 hover:bg-slate-800 shadow-[0_0_15px_rgba(0,240,255,0.3)]"
               }`}
               title="Switch Theme Mode"
             >
               {theme === "dark" ? (
                 <>
-                  <Moon className="h-4 w-4 shrink-0 text-fuchsia-400 drop-shadow-[0_0_6px_rgba(217,70,239,0.8)]" />
-                  <span className="hidden sm:inline font-mono">Obsidian Neon</span>
+                  <Moon className="h-4 w-4 shrink-0 text-blue-600 drop-shadow-[0_0_6px_rgba(217,70,239,0.8)]" />
+                  <span className="hidden sm:inline font-mono">Dark Mode</span>
                 </>
               ) : (
                 <>
-                  <Zap className="h-4 w-4 shrink-0 text-cyan-400 drop-shadow-[0_0_6px_rgba(0,240,255,0.8)]" />
-                  <span className="hidden sm:inline font-mono">Cyber Neon</span>
+                  <Zap className="h-4 w-4 shrink-0 text-blue-600 drop-shadow-[0_0_6px_rgba(0,240,255,0.8)]" />
+                  <span className="hidden sm:inline font-mono">Light Mode</span>
                 </>
               )}
             </motion.button>
@@ -717,24 +717,24 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
         <motion.div
           initial={{ opacity: 0, y: -5 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-cream/90 backdrop-blur-xl border border-ink-soft/10 rounded-2xl p-3.5 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
+          className="bg-cream/90 border border-gray-200/10 rounded-2xl p-3.5 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
         >
           <div className="flex items-center gap-3 min-w-0">
-            <div className="p-2.5 bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-300 rounded-xl shrink-0">
+            <div className="p-2.5 bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-600 rounded-xl shrink-0">
               <School className="h-5 w-5" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-ink-soft/60">
+                <span className="text-[10px] font-black uppercase tracking-wider text-gray-500">
                   Switch Class Section View
                 </span>
                 {selectedClassId !== "all" && (
-                  <span className="px-2 py-0.2 text-[10px] font-bold bg-violet-500 text-white rounded-full">
+                  <span className="px-2 py-0.2 text-[10px] font-bold bg-blue-500 text-white rounded-full">
                     Filtered View
                   </span>
                 )}
               </div>
-              <p className="text-xs sm:text-sm font-extrabold text-ink truncate mt-0.5">
+              <p className="text-xs sm:text-sm font-extrabold text-gray-900 truncate mt-0.5">
                 {selectedClassId === "all" ? (
                   <span className="text-teal-600 dark:text-teal-400">
                     Viewing combined roster & feed for All Class Sections ({teacherClasses.length} section{teacherClasses.length === 1 ? "" : "s"})
@@ -742,11 +742,11 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                 ) : (
                   <span className="flex items-center gap-1.5 flex-wrap">
                     <span>Viewing Section: </span>
-                    <span className="text-violet-600 dark:text-violet-400 font-black">
+                    <span className="text-blue-600 dark:text-blue-600 font-black">
                       {selectedClass?.name}
                     </span>
                     {selectedClass?.subject && (
-                      <span className="px-2 py-0.5 text-[10px] bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 rounded-lg border border-violet-200 dark:border-violet-800">
+                      <span className="px-2 py-0.5 text-[10px] bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-lg border border-blue-200 dark:border-blue-800">
                         {selectedClass.subject}
                       </span>
                     )}
@@ -757,10 +757,10 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                           setCopiedCode(selectedClass.joinCode);
                           setTimeout(() => setCopiedCode(null), 2000);
                         }}
-                        className="px-2 py-0.5 text-[10px] font-mono font-bold bg-cyan-100 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 rounded-lg border border-cyan-200 dark:border-cyan-800 hover:bg-cyan-200 transition-all cursor-pointer flex items-center gap-1"
+                        className="px-2 py-0.5 text-[10px] font-mono font-bold bg-blue-50 dark:bg-cyan-950 text-cyan-700 dark:text-blue-600 rounded-lg border border-blue-200 dark:border-cyan-800 hover:bg-cyan-200 transition-all cursor-pointer flex items-center gap-1"
                         title="Click to copy join code"
                       >
-                        <Copy className="h-3 w-3 text-cyan-400" />
+                        <Copy className="h-3 w-3 text-blue-600" />
                         <span>{copiedCode === selectedClass.joinCode ? "Copied!" : `Code: ${selectedClass.joinCode}`}</span>
                       </button>
                     )}
@@ -771,7 +771,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
           </div>
 
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full md:w-auto shrink-0">
-            <label htmlFor="teacher-class-select" className="text-xs font-bold text-ink-soft hidden sm:inline shrink-0">
+            <label htmlFor="teacher-class-select" className="text-xs font-bold text-gray-500 hidden sm:inline shrink-0">
               Section:
             </label>
             <select
@@ -784,7 +784,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                   setSelectedClassId(e.target.value);
                 }
               }}
-              className="w-full md:w-auto px-3.5 py-2 text-xs font-bold bg-white dark:bg-slate-800 border border-ink-soft/20 rounded-xl text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
+              className="w-full md:w-auto px-3.5 py-2 text-xs font-bold bg-white dark:bg-slate-800 border border-gray-200 rounded-xl text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             >
               <option value="all">All Class Sections</option>
               {teacherClasses.map((c) => (
@@ -797,7 +797,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
 
             <button
               onClick={() => setShowCreateSectionModal(true)}
-              className="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-sm cursor-pointer shrink-0 transition-all"
+              className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-sm cursor-pointer shrink-0 transition-all"
             >
               <Plus className="h-4 w-4" />
               <span>New Section</span>
@@ -806,7 +806,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
         </motion.div>
 
         {/* Navigation Tabs - Responsive Grid on Mobile, Flex Row on Desktop */}
-        <div className="bg-cream/80 backdrop-blur-xl p-1.5 rounded-2xl border border-ink-soft/10 shadow-lg grid grid-cols-2 sm:grid-cols-3 md:flex md:items-center md:justify-start gap-1.5 max-w-full">
+        <div className="bg-cream/80 p-1.5 rounded-2xl border border-gray-200/10 shadow-lg grid grid-cols-2 sm:grid-cols-3 md:flex md:items-center md:justify-start gap-1.5 max-w-full">
           {[
             { id: "roster", label: "Student Roster", icon: Users, count: sectionStudents.length },
             {
@@ -829,20 +829,20 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`relative flex items-center justify-center md:justify-start gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2 sm:py-2.5 text-xs font-bold rounded-xl transition-colors cursor-pointer w-full md:w-auto ${
-                  isActive ? "text-violet-600" : "text-ink-soft hover:text-ink"
+                  isActive ? "text-blue-600" : "text-gray-500 hover:text-gray-900"
                 }`}
               >
                 {isActive && (
                   <motion.div
                     layoutId="teacherActiveTabPill"
-                    className="absolute inset-0 bg-violet-500/15 border border-violet-500/30 rounded-xl"
+                    className="absolute inset-0 bg-blue-50 border border-blue-200 rounded-xl"
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                   />
                 )}
                 <Icon className="h-4 w-4 relative z-10 shrink-0" />
                 <span className="relative z-10 truncate">{tab.label}</span>
                 {tab.count !== undefined && tab.count > 0 && (
-                  <span className={`relative z-10 px-1.5 py-0.2 text-[10px] font-extrabold ${tab.badgeColor || "bg-violet-500"} text-white rounded-full shrink-0`}>
+                  <span className={`relative z-10 px-1.5 py-0.2 text-[10px] font-extrabold ${tab.badgeColor || "bg-blue-500"} text-white rounded-full shrink-0`}>
                     {tab.count}
                   </span>
                 )}
@@ -858,10 +858,10 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
             animate={{ opacity: 1, y: 0 }}
             className="space-y-4 sm:space-y-6 min-w-0"
           >
-            <div className="bg-slate-900/80 border border-slate-700/60 rounded-3xl p-4 sm:p-6 shadow-xl space-y-4 min-w-0 overflow-hidden backdrop-blur-xl">
+            <div className="bg-white border border-gray-200/60 rounded-3xl p-4 sm:p-6 shadow-xl space-y-4 min-w-0 overflow-hidden">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-                <div className="flex items-center gap-3 flex-1 min-w-0 bg-slate-950/80 px-3.5 py-2.5 rounded-2xl border border-slate-700/60 focus-within:border-fuchsia-400 focus-within:shadow-[0_0_15px_rgba(217,70,239,0.3)] transition-all">
-                  <Search className="h-5 w-5 text-fuchsia-400 shrink-0" />
+                <div className="flex items-center gap-3 flex-1 min-w-0 bg-white px-3.5 py-2.5 rounded-2xl border border-gray-200/60 focus-within:border-blue-200 focus-within:shadow-[0_0_15px_rgba(217,70,239,0.3)] transition-all">
+                  <Search className="h-5 w-5 text-blue-600 shrink-0" />
                   <input
                     type="text"
                     value={searchQuery}
@@ -874,15 +874,15 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
 
                 <button
                   onClick={() => setShowAddStudentModal(true)}
-                  className="px-4 py-2.5 text-xs font-extrabold text-white bg-fuchsia-500 hover:bg-fuchsia-400 rounded-xl cursor-pointer shadow-md shadow-fuchsia-500/20 flex items-center justify-center gap-2 shrink-0 transition-all"
+                  className="px-4 py-2.5 text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-700 rounded-xl cursor-pointer shadow-sm flex items-center justify-center gap-2 shrink-0 transition-all"
                 >
                   <UserPlus className="h-4 w-4" /> <span>Add Student</span>
                 </button>
               </div>
 
               {filteredStudents.length === 0 ? (
-                <div className="p-8 sm:p-12 text-center text-slate-400 space-y-2">
-                  <Users className="h-10 w-10 mx-auto text-slate-500" />
+                <div className="p-8 sm:p-12 text-center text-gray-400 space-y-2">
+                  <Users className="h-10 w-10 mx-auto text-gray-500" />
                   <p className="text-sm font-bold text-white">No students registered.</p>
                 </div>
               ) : (
@@ -895,11 +895,11 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.04 }}
-                        className="bg-slate-950/70 border border-slate-700/60 rounded-2xl p-3.5 sm:p-4 shadow-sm flex flex-col justify-between space-y-3 min-w-0 hover:border-fuchsia-500/40 transition-all"
+                        className="bg-white border border-gray-200/60 rounded-2xl p-3.5 sm:p-4 shadow-sm flex flex-col justify-between space-y-3 min-w-0 hover:border-blue-300 transition-all"
                       >
                         <div className="min-w-0">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-[10px] font-mono font-bold text-slate-400 truncate">
+                            <span className="text-[10px] font-mono font-bold text-gray-400 truncate">
                               ID: {st.id}
                             </span>
                             <button
@@ -907,13 +907,13 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                               className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full border cursor-pointer shrink-0 ${
                                 st.isApproved
                                   ? "bg-teal-500/20 text-teal-300 border-teal-500/40"
-                                  : "bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse"
+                                  : "bg-amber-50 text-amber-600 border-amber-500/40 animate-pulse"
                               }`}
                             >
                               {st.isApproved ? "Verified" : "Approve Pending"}
                             </button>
                           </div>
-                          <h3 className="text-base font-black text-ink mt-1 truncate">{st.name}</h3>
+                          <h3 className="text-base font-black text-gray-900 mt-1 truncate">{st.name}</h3>
                         </div>
 
                         <div className="p-2.5 bg-cream rounded-xl text-xs flex justify-between font-mono gap-1">
@@ -921,10 +921,10 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                           <span>Attended: <strong>{stStats.presentCount}</strong></span>
                         </div>
 
-                        <div className="flex items-center gap-1.5 pt-1 border-t border-ink-soft/10">
+                        <div className="flex items-center gap-1.5 pt-1 border-t border-gray-200/10">
                           <button
                             onClick={() => setViewingStudent(st)}
-                            className="flex-1 py-1.5 text-xs font-bold text-violet-300 bg-violet-500/20 border border-violet-500/40 rounded-lg hover:bg-violet-500/30 cursor-pointer flex items-center justify-center gap-1 transition-all"
+                            className="flex-1 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-500/30 cursor-pointer flex items-center justify-center gap-1 transition-all"
                           >
                             <Eye className="h-3.5 w-3.5" /> Profile
                           </button>
@@ -934,13 +934,13 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                               setEditStudentName(st.name);
                               setEditStudentEmail(st.email || "");
                             }}
-                            className="p-1.5 text-slate-300 hover:text-white bg-slate-800 rounded-lg border border-slate-700 cursor-pointer transition-colors"
+                            className="p-1.5 text-gray-500 hover:text-gray-900 bg-slate-800 rounded-lg border border-gray-200 cursor-pointer transition-colors"
                           >
                             <Edit className="h-3.5 w-3.5" />
                           </button>
                           <button
                             onClick={() => setStudentToDelete({ id: st.id, name: st.name })}
-                            className="p-1.5 text-rose-400 hover:text-rose-300 bg-rose-500/20 rounded-lg border border-rose-500/30 cursor-pointer transition-colors"
+                            className="p-1.5 text-red-500 hover:text-red-500 bg-rose-500/20 rounded-lg border border-rose-500/30 cursor-pointer transition-colors"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -964,9 +964,9 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
             {/* Banner if Current Teacher is Pending Verification */}
             {!dbUser.isApproved && (
               <div className="bg-amber-950/80 border border-amber-500/40 p-4 rounded-2xl flex items-center gap-3 text-amber-200 text-xs font-semibold shadow-lg">
-                <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0" />
+                <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0" />
                 <div>
-                  <span className="font-extrabold text-amber-300 block text-sm">Account Pending Verification</span>
+                  <span className="font-extrabold text-amber-600 block text-sm">Account Pending Verification</span>
                   Your teacher account is waiting for approval by fellow faculty members. Once verified, your status badge will update across the portal.
                 </div>
               </div>
@@ -976,18 +976,18 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               <div
                 onClick={() => setTeacherStatusFilter("All")}
-                className="bg-slate-900/80 border border-slate-700/60 p-4 rounded-2xl backdrop-blur-xl cursor-pointer hover:border-violet-500/60 transition-all"
+                className="bg-white border border-gray-200/60 p-4 rounded-2xl cursor-pointer hover:border-blue-300 transition-all"
               >
-                <div className="flex items-center justify-between text-slate-400 mb-1">
+                <div className="flex items-center justify-between text-gray-400 mb-1">
                   <span className="text-[11px] font-bold uppercase tracking-wider">Total Teachers</span>
-                  <GraduationCap className="h-4 w-4 text-violet-400" />
+                  <GraduationCap className="h-4 w-4 text-blue-600" />
                 </div>
                 <p className="text-2xl font-black text-white font-display">{teachers.length}</p>
               </div>
 
               <div
                 onClick={() => setTeacherStatusFilter("Verified")}
-                className="bg-slate-900/80 border border-teal-500/30 p-4 rounded-2xl backdrop-blur-xl cursor-pointer hover:border-teal-500/60 transition-all"
+                className="bg-white border border-teal-500/30 p-4 rounded-2xl cursor-pointer hover:border-teal-500/60 transition-all"
               >
                 <div className="flex items-center justify-between text-teal-300 mb-1">
                   <span className="text-[11px] font-bold uppercase tracking-wider">Verified Teachers</span>
@@ -1000,28 +1000,28 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
 
               <div
                 onClick={() => setTeacherStatusFilter("Pending")}
-                className="bg-slate-900/80 border border-amber-500/30 p-4 rounded-2xl backdrop-blur-xl cursor-pointer hover:border-amber-500/60 transition-all"
+                className="bg-white border border-amber-500/30 p-4 rounded-2xl cursor-pointer hover:border-amber-500/60 transition-all"
               >
-                <div className="flex items-center justify-between text-amber-300 mb-1">
+                <div className="flex items-center justify-between text-amber-600 mb-1">
                   <span className="text-[11px] font-bold uppercase tracking-wider">Pending Verification</span>
-                  <Clock className="h-4 w-4 text-amber-400" />
+                  <Clock className="h-4 w-4 text-amber-500" />
                 </div>
-                <p className="text-2xl font-black text-amber-400 font-display">
+                <p className="text-2xl font-black text-amber-500 font-display">
                   {teachers.filter((t) => !t.isApproved).length}
                 </p>
               </div>
 
-              <div className="bg-slate-900/80 border border-slate-700/60 p-4 rounded-2xl backdrop-blur-xl">
-                <div className="flex items-center justify-between text-slate-400 mb-1">
+              <div className="bg-white border border-gray-200/60 p-4 rounded-2xl">
+                <div className="flex items-center justify-between text-gray-400 mb-1">
                   <span className="text-[11px] font-bold uppercase tracking-wider">Your Status</span>
-                  <UserCheck className="h-4 w-4 text-cyan-400" />
+                  <UserCheck className="h-4 w-4 text-blue-600" />
                 </div>
                 <div className="mt-1">
                   <span
                     className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-extrabold ${
                       dbUser.isApproved
                         ? "bg-teal-950/80 text-teal-300 border border-teal-500/40"
-                        : "bg-amber-950/80 text-amber-300 border border-amber-500/40"
+                        : "bg-amber-950/80 text-amber-600 border border-amber-500/40"
                     }`}
                   >
                     {dbUser.isApproved ? "Verified Teacher" : "Pending Approval"}
@@ -1031,11 +1031,11 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
             </div>
 
             {/* Controls Header: Search, Status Filter, Add Teacher Button */}
-            <div className="bg-slate-900/80 border border-slate-700/60 rounded-3xl p-4 sm:p-5 shadow-xl backdrop-blur-xl space-y-4">
+            <div className="bg-white border border-gray-200/60 rounded-3xl p-4 sm:p-5 shadow-xl space-y-4">
               <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
                 {/* Search */}
-                <div className="flex items-center gap-3 flex-1 bg-slate-950/80 px-3.5 py-2.5 rounded-2xl border border-slate-700/60 focus-within:border-violet-400 focus-within:shadow-[0_0_15px_rgba(139,92,246,0.3)] transition-all">
-                  <Search className="h-5 w-5 text-violet-400 shrink-0" />
+                <div className="flex items-center gap-3 flex-1 bg-white px-3.5 py-2.5 rounded-2xl border border-gray-200/60 focus-within:border-blue-200 focus-within:shadow-[0_0_15px_rgba(139,92,246,0.3)] transition-all">
+                  <Search className="h-5 w-5 text-blue-600 shrink-0" />
                   <input
                     type="text"
                     value={teacherSearchQuery}
@@ -1045,7 +1045,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                   />
                   {teacherSearchQuery && (
                     <button onClick={() => setTeacherSearchQuery("")}>
-                      <X className="h-4 w-4 text-slate-400 hover:text-white" />
+                      <X className="h-4 w-4 text-gray-400 hover:text-gray-900" />
                     </button>
                   )}
                 </div>
@@ -1058,8 +1058,8 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                       onClick={() => setTeacherStatusFilter(st)}
                       className={`px-3.5 py-2 text-xs font-extrabold rounded-xl transition-all shrink-0 cursor-pointer ${
                         teacherStatusFilter === st
-                          ? "bg-violet-600 text-white shadow-lg shadow-violet-600/30"
-                          : "bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
+                          ? "bg-blue-600 text-white shadow-lg shadow-sm"
+                          : "bg-slate-800 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
                       }`}
                     >
                       {st === "All" ? "All Faculty" : st === "Pending" ? "Pending Approval" : "Verified Only"}
@@ -1070,7 +1070,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                 {/* Add Teacher Button */}
                 <button
                   onClick={() => setShowAddTeacherModal(true)}
-                  className="px-4 py-2.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2 cursor-pointer transition-all shrink-0"
+                  className="px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-sm flex items-center justify-center gap-2 cursor-pointer transition-all shrink-0"
                 >
                   <UserPlus className="h-4 w-4" />
                   <span>Add Teacher Account</span>
@@ -1094,10 +1094,10 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
 
                 if (filteredTeachers.length === 0) {
                   return (
-                    <div className="text-center py-12 bg-slate-950/40 rounded-2xl border border-slate-800/80">
-                      <GraduationCap className="h-10 w-10 text-slate-600 mx-auto mb-2" />
-                      <p className="text-sm font-bold text-slate-300">No teacher accounts found</p>
-                      <p className="text-xs text-slate-500 mt-1">Try resetting your search query or status filter.</p>
+                    <div className="text-center py-12 bg-slate-900/40 rounded-2xl border border-gray-100/80">
+                      <GraduationCap className="h-10 w-10 text-gray-600 mx-auto mb-2" />
+                      <p className="text-sm font-bold text-gray-500">No teacher accounts found</p>
+                      <p className="text-xs text-gray-500 mt-1">Try resetting your search query or status filter.</p>
                     </div>
                   );
                 }
@@ -1109,10 +1109,10 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                       return (
                         <div
                           key={`${t.id || t.uid || 'teacher'}-${idx}`}
-                          className={`bg-slate-950/70 border rounded-2xl p-4 space-y-3.5 transition-all relative ${
+                          className={`bg-white border rounded-2xl p-4 space-y-3.5 transition-all relative ${
                             !t.isApproved
                               ? "border-amber-500/40 bg-amber-950/10"
-                              : "border-slate-800 hover:border-violet-500/40"
+                              : "border-gray-100 hover:border-blue-200"
                           }`}
                         >
                           {/* Header: Avatar, Info, Status Badge */}
@@ -1123,12 +1123,12 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                                 <div className="flex items-center gap-2">
                                   <h4 className="font-extrabold text-sm text-white">{t.name}</h4>
                                   {isMe && (
-                                    <span className="px-2 py-0.2 text-[9px] font-black uppercase tracking-wider bg-cyan-950 text-cyan-300 border border-cyan-500/40 rounded-full">
+                                    <span className="px-2 py-0.2 text-[9px] font-black uppercase tracking-wider bg-cyan-950 text-blue-600 border border-cyan-500/40 rounded-full">
                                       You
                                     </span>
                                   )}
                                 </div>
-                                <p className="text-xs font-mono font-semibold text-slate-400">ID: {t.id}</p>
+                                <p className="text-xs font-mono font-semibold text-gray-400">ID: {t.id}</p>
                               </div>
                             </div>
 
@@ -1139,8 +1139,8 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                                   <CheckCircle2 className="h-3.5 w-3.5 text-teal-400" /> Verified Teacher
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-amber-950/80 text-amber-300 border border-amber-500/40 animate-pulse">
-                                  <Clock className="h-3.5 w-3.5 text-amber-400" /> Pending Approval
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold bg-amber-950/80 text-amber-600 border border-amber-500/40 animate-pulse">
+                                  <Clock className="h-3.5 w-3.5 text-amber-500" /> Pending Approval
                                 </span>
                               )}
                             </div>
@@ -1149,11 +1149,11 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                           {/* Details Pills / Meta */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                             {t.subject && (
-                              <div className="flex items-start gap-2 text-slate-300 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-800 sm:col-span-2">
-                                <BookOpen className="h-3.5 w-3.5 text-violet-400 shrink-0 mt-0.5" />
+                              <div className="flex items-start gap-2 text-gray-500 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-gray-100 sm:col-span-2">
+                                <BookOpen className="h-3.5 w-3.5 text-blue-600 shrink-0 mt-0.5" />
                                 <div className="flex flex-wrap gap-1 min-w-0">
                                   {t.subject.split(',').map((sub, sIdx) => (
-                                    <span key={sIdx} className="bg-violet-950/80 text-violet-300 px-2 py-0.5 rounded text-[11px] font-semibold border border-violet-800/40">
+                                    <span key={sIdx} className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded text-[11px] font-semibold border border-blue-800/40">
                                       {sub.trim()}
                                     </span>
                                   ))}
@@ -1161,9 +1161,9 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                               </div>
                             )}
                             {t.email && (
-                              <div className="flex items-center gap-2 text-slate-300 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-800 sm:col-span-2">
-                                <Mail className="h-3.5 w-3.5 text-fuchsia-400 shrink-0" />
-                                <a href={`mailto:${t.email}`} className="hover:underline text-fuchsia-300 truncate">
+                              <div className="flex items-center gap-2 text-gray-500 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-gray-100 sm:col-span-2">
+                                <Mail className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                                <a href={`mailto:${t.email}`} className="hover:underline text-blue-600 truncate">
                                   {t.email}
                                 </a>
                               </div>
@@ -1171,8 +1171,8 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                           </div>
 
                           {/* Action Toolbar */}
-                          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2">
-                            <div className="text-[10px] text-slate-500 font-mono">
+                          <div className="pt-2 border-t border-gray-100/80 flex items-center justify-between gap-2">
+                            <div className="text-[10px] text-gray-500 font-mono">
                               Joined: {t.createdAt || "N/A"}
                             </div>
 
@@ -1180,10 +1180,10 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                               {/* View Profile Button */}
                               <button
                                 onClick={() => setViewingTeacherProfile(t)}
-                                className="px-3 py-1.5 text-xs font-extrabold text-violet-300 bg-violet-950/80 hover:bg-violet-900 border border-violet-500/40 rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                                className="px-3 py-1.5 text-xs font-extrabold text-blue-600 bg-blue-50 hover:bg-blue-800 border border-blue-200 rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
                                 id={`view-teacher-profile-${t.id}`}
                               >
-                                <GraduationCap className="h-3.5 w-3.5 text-violet-400" />
+                                <GraduationCap className="h-3.5 w-3.5 text-blue-600" />
                                 <span>View Profile</span>
                               </button>
 
@@ -1213,7 +1213,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                                   setEditTeacherSubject(t.subject || "");
                                   setEditTeacherEmail(t.email || "");
                                 }}
-                                className="p-1.5 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 rounded-xl border border-slate-800 transition-all cursor-pointer"
+                                className="p-1.5 text-gray-400 hover:text-gray-900 bg-slate-900 hover:bg-slate-800 rounded-xl border border-gray-100 transition-all cursor-pointer"
                                 title="Edit Details"
                               >
                                 <Edit className="h-4 w-4" />
@@ -1223,7 +1223,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                               {!isMe && (
                                 <button
                                   onClick={() => setTeacherToDelete({ id: t.id, name: t.name })}
-                                  className="p-1.5 text-rose-400 hover:text-rose-300 bg-rose-950/40 hover:bg-rose-900/60 rounded-xl border border-rose-800/40 transition-all cursor-pointer"
+                                  className="p-1.5 text-red-500 hover:text-red-500 bg-rose-950/40 hover:bg-rose-900/60 rounded-xl border border-rose-800/40 transition-all cursor-pointer"
                                   title="Delete Teacher Account"
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -1262,8 +1262,8 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
             className="space-y-6"
           >
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-black text-ink flex items-center gap-2">
-                <Megaphone className="h-5 w-5 text-violet-500" />
+              <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                <Megaphone className="h-5 w-5 text-blue-600" />
                 Course Announcements
               </h2>
               <button
@@ -1272,84 +1272,84 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                   if (selectedClass?.subject) setAnnSubject(selectedClass.subject);
                   setShowCreateAnnModal(true);
                 }}
-                className="px-4 py-2 text-xs font-extrabold text-white bg-violet-500 hover:bg-violet-600 rounded-xl cursor-pointer shadow-md shadow-violet-500/20 flex items-center gap-2"
+                className="px-4 py-2 text-xs font-extrabold text-white bg-blue-500 hover:bg-blue-600 rounded-xl cursor-pointer shadow-md shadow-sm flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" /> Post Announcement
               </button>
             </div>
 
             {filteredAnnouncements.length === 0 ? (
-              <div className="bg-cream border border-ink-soft/10 rounded-3xl p-12 text-center text-ink-soft/60 space-y-2">
-                <Megaphone className="h-10 w-10 mx-auto text-ink-soft/30" />
-                <p className="text-sm font-bold text-ink">No announcements posted for this section yet.</p>
+              <div className="bg-cream border border-gray-200/10 rounded-3xl p-12 text-center text-gray-500 space-y-2">
+                <Megaphone className="h-10 w-10 mx-auto text-gray-400" />
+                <p className="text-sm font-bold text-gray-900">No announcements posted for this section yet.</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {filteredAnnouncements.map((post) => (
                   <div
                     key={post.id}
-                    className="bg-cream border border-ink-soft/10 rounded-3xl p-6 shadow-xl space-y-3"
+                    className="bg-cream border border-gray-200/10 rounded-3xl p-6 shadow-xl space-y-3"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-violet-500/20 text-violet-300 rounded-full border border-violet-500/40">
+                        <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-blue-50 text-blue-600 rounded-full border border-blue-200">
                           {!post.classId || post.classId === "all"
                             ? "🌐 All Sections"
                             : `📚 ${teacherClasses.find((c) => c.id === post.classId)?.name || "Section"}`}
                         </span>
-                        <span className="px-2.5 py-0.5 text-[10px] font-bold bg-slate-800 text-slate-300 rounded-full border border-slate-700">
+                        <span className="px-2.5 py-0.5 text-[10px] font-bold bg-slate-800 text-gray-500 rounded-full border border-gray-200">
                           {post.subject || "General"}
                         </span>
-                        <h3 className="text-base font-black text-ink">{post.title}</h3>
+                        <h3 className="text-base font-black text-gray-900">{post.title}</h3>
                       </div>
                       <button
                         onClick={() => {
                           deletePost(post.id);
                           loadDatabase();
                         }}
-                        className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 rounded-lg cursor-pointer transition-colors"
+                        className="p-1.5 text-red-500 hover:text-red-500 hover:bg-rose-500/20 rounded-lg cursor-pointer transition-colors"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
 
-                    <p className="text-xs text-ink/90 font-sans leading-relaxed whitespace-pre-wrap">
+                    <p className="text-xs text-gray-900 font-sans leading-relaxed whitespace-pre-wrap">
                       {post.content}
                     </p>
 
                     {post.attachmentDataUrl && (
                       post.attachmentDataUrl.startsWith("data:image/") || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(post.attachmentName || "") ? (
-                        <div className="mt-3 overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-950/40 max-w-lg">
+                        <div className="mt-3 overflow-hidden rounded-2xl border border-gray-200/60 bg-slate-900/40 max-w-lg">
                           <img
                             src={post.attachmentDataUrl}
                             alt={post.attachmentName || "Attached photo"}
                             className="max-h-72 w-full object-cover rounded-t-2xl hover:opacity-95 transition-opacity cursor-pointer"
                             onClick={() => window.open(post.attachmentDataUrl, "_blank")}
                           />
-                          <div className="p-2.5 bg-slate-900/90 flex items-center justify-between text-xs font-bold text-slate-200">
+                          <div className="p-2.5 bg-slate-900/90 flex items-center justify-between text-xs font-bold text-gray-700">
                             <span className="flex items-center gap-1.5 truncate">
-                              <ImageIcon className="h-4 w-4 text-violet-400 shrink-0" />
+                              <ImageIcon className="h-4 w-4 text-blue-600 shrink-0" />
                               <span className="truncate">{post.attachmentName || "Attached Photo"}</span>
                             </span>
                             <a
                               href={post.attachmentDataUrl}
                               download={post.attachmentName || "photo.png"}
-                              className="px-3 py-1 text-[11px] font-extrabold text-white bg-violet-600 hover:bg-violet-500 rounded-lg shadow-sm transition-all"
+                              className="px-3 py-1 text-[11px] font-extrabold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-sm transition-all"
                             >
                               Download Photo
                             </a>
                           </div>
                         </div>
                       ) : (
-                        <div className="p-3 bg-slate-900/80 border border-slate-700/60 rounded-xl flex items-center justify-between text-xs font-bold text-slate-200">
+                        <div className="p-3 bg-white border border-gray-200/60 rounded-xl flex items-center justify-between text-xs font-bold text-gray-700">
                           <span className="flex items-center gap-1.5 truncate">
-                            <Paperclip className="h-4 w-4 text-violet-400 shrink-0" />
+                            <Paperclip className="h-4 w-4 text-blue-600 shrink-0" />
                             <span className="truncate">{post.attachmentName || "Attachment"}</span>
                           </span>
                           <a
                             href={post.attachmentDataUrl}
                             download={post.attachmentName || "attachment"}
-                            className="px-3 py-1 text-xs font-extrabold text-white bg-violet-600 hover:bg-violet-500 rounded-lg shrink-0 shadow-sm transition-all"
+                            className="px-3 py-1 text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shrink-0 shadow-sm transition-all"
                           >
                             Download
                           </a>
@@ -1371,8 +1371,8 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
             className="space-y-6"
           >
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-black text-ink flex items-center gap-2">
-                <FileText className="h-5 w-5 text-violet-400" />
+              <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                <FileText className="h-5 w-5 text-blue-600" />
                 Assignments & Student Submissions
               </h2>
               <button
@@ -1381,16 +1381,16 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                   if (selectedClass?.subject) setAssSubject(selectedClass.subject);
                   setShowCreateAssModal(true);
                 }}
-                className="px-4 py-2 text-xs font-extrabold text-white bg-violet-600 hover:bg-violet-500 rounded-xl cursor-pointer shadow-md shadow-violet-600/30 flex items-center gap-2"
+                className="px-4 py-2 text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-500 rounded-xl cursor-pointer shadow-md shadow-sm flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" /> Create Assignment
               </button>
             </div>
 
             {filteredAssignments.length === 0 ? (
-              <div className="bg-cream border border-ink-soft/10 rounded-3xl p-12 text-center text-ink-soft/60 space-y-2">
-                <FileText className="h-10 w-10 mx-auto text-ink-soft/30" />
-                <p className="text-sm font-bold text-ink">No assignments created for this section yet.</p>
+              <div className="bg-cream border border-gray-200/10 rounded-3xl p-12 text-center text-gray-500 space-y-2">
+                <FileText className="h-10 w-10 mx-auto text-gray-400" />
+                <p className="text-sm font-bold text-gray-900">No assignments created for this section yet.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1401,32 +1401,32 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                   return (
                     <div
                       key={assignment.id}
-                      className="bg-cream border border-ink-soft/10 rounded-3xl p-6 shadow-xl flex flex-col justify-between space-y-4"
+                      className="bg-cream border border-gray-200/10 rounded-3xl p-6 shadow-xl flex flex-col justify-between space-y-4"
                     >
                       <div className="space-y-2">
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-violet-500/20 text-violet-300 rounded-full border border-violet-500/40">
+                            <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-blue-50 text-blue-600 rounded-full border border-blue-200">
                               {!assignment.classId || assignment.classId === "all"
                                 ? "🌐 All Sections"
                                 : `📚 ${teacherClasses.find((c) => c.id === assignment.classId)?.name || "Section"}`}
                             </span>
-                            <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-slate-800 text-slate-300 rounded-full border border-slate-700">
+                            <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-slate-800 text-gray-500 rounded-full border border-gray-200">
                               Due: {assignment.dueDate || "N/A"}
                             </span>
                           </div>
-                          <span className="text-xs font-mono font-bold text-slate-400">
+                          <span className="text-xs font-mono font-bold text-gray-400">
                             Max Points: {assignment.maxPoints || 100}
                           </span>
                         </div>
 
-                        <h3 className="text-base font-black text-ink">{assignment.title}</h3>
-                        <p className="text-xs text-ink/80 font-sans line-clamp-3">
+                        <h3 className="text-base font-black text-gray-900">{assignment.title}</h3>
+                        <p className="text-xs text-gray-900 font-sans line-clamp-3">
                           {assignment.content}
                         </p>
                       </div>
 
-                      <div className="p-3 bg-slate-900/80 border border-slate-700/70 rounded-2xl flex items-center justify-between text-xs font-bold text-slate-200">
+                      <div className="p-3 bg-white border border-gray-200/70 rounded-2xl flex items-center justify-between text-xs font-bold text-gray-700">
                         <span>
                           Submissions: <strong className="text-white">{subs.length}</strong> ({gradedCount} graded)
                         </span>
@@ -1434,7 +1434,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleOpenGradingModal(assignment)}
-                            className="px-3.5 py-1.5 text-xs font-extrabold text-white bg-violet-600 hover:bg-violet-500 rounded-xl shadow-md shadow-violet-600/30 cursor-pointer transition-all flex items-center gap-1"
+                            className="px-3.5 py-1.5 text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-500 rounded-xl shadow-md shadow-sm cursor-pointer transition-all flex items-center gap-1"
                           >
                             Review & Grade
                           </button>
@@ -1443,7 +1443,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                               deletePost(assignment.id);
                               loadDatabase();
                             }}
-                            className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 rounded-lg cursor-pointer transition-colors"
+                            className="p-1.5 text-red-500 hover:text-red-500 hover:bg-rose-500/20 rounded-lg cursor-pointer transition-colors"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -1464,19 +1464,19 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
           >
-            <div className="bg-slate-900/80 border border-slate-700/60 rounded-3xl p-6 shadow-xl space-y-4 backdrop-blur-xl">
+            <div className="bg-white border border-gray-200/60 rounded-3xl p-6 shadow-xl space-y-4">
               <h2 className="text-lg font-black text-white flex items-center gap-2">
-                <ShieldAlert className="h-5 w-5 text-fuchsia-400" />
+                <ShieldAlert className="h-5 w-5 text-blue-600" />
                 Security & Audit Event Logs
               </h2>
 
               {securityLogs.length === 0 ? (
-                <p className="text-xs text-slate-400 italic">No security alerts logged.</p>
+                <p className="text-xs text-gray-400 italic">No security alerts logged.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="border-b border-slate-700/60 text-slate-400 font-bold uppercase tracking-wider text-[11px]">
+                      <tr className="border-b border-gray-200/60 text-gray-400 font-bold uppercase tracking-wider text-[11px]">
                         <th className="pb-3 px-3 whitespace-nowrap">Time</th>
                         <th className="pb-3 px-3 whitespace-nowrap">Event Type</th>
                         <th className="pb-3 px-3 whitespace-nowrap">Details</th>
@@ -1484,10 +1484,10 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                     </thead>
                     <tbody className="divide-y divide-slate-700/60">
                       {securityLogs.map((log) => (
-                        <tr key={log.id} className="hover:bg-fuchsia-500/5 transition-colors">
-                          <td className="py-3 px-3 font-mono text-slate-300 whitespace-nowrap">{log.timestamp}</td>
-                          <td className="py-3 px-3 font-bold text-fuchsia-400 whitespace-nowrap">{log.type}</td>
-                          <td className="py-3 px-3 text-slate-200">{log.details}</td>
+                        <tr key={log.id} className="hover:bg-blue-50 transition-colors">
+                          <td className="py-3 px-3 font-mono text-gray-500 whitespace-nowrap">{log.timestamp}</td>
+                          <td className="py-3 px-3 font-bold text-blue-600 whitespace-nowrap">{log.type}</td>
+                          <td className="py-3 px-3 text-gray-700">{log.details}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1523,17 +1523,17 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4"
             >
-              <div className="bg-cream border border-ink-soft/15 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
-                <div className="flex justify-between items-center border-b border-ink-soft/10 pb-3">
-                  <h3 className="font-black text-base text-ink">New Course Announcement</h3>
+              <div className="bg-cream border border-gray-200/15 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+                <div className="flex justify-between items-center border-b border-gray-200/10 pb-3">
+                  <h3 className="font-black text-base text-gray-900">New Course Announcement</h3>
                   <button onClick={() => setShowCreateAnnModal(false)}>
-                    <X className="h-5 w-5 text-ink-soft" />
+                    <X className="h-5 w-5 text-gray-500" />
                   </button>
                 </div>
 
                 <form onSubmit={handleCreateAnnouncement} className="space-y-3">
                   <div>
-                    <label className="block text-[10px] font-bold text-ink-soft dark:text-slate-300 mb-1">
+                    <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-500 mb-1">
                       Target Class Section
                     </label>
                     <select
@@ -1546,7 +1546,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                           if (cls?.subject) setAnnSubject(cls.subject);
                         }
                       }}
-                      className="w-full p-2.5 text-xs font-semibold bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                      className="w-full p-2.5 text-xs font-semibold bg-white/90 dark:bg-white border border-gray-200 dark:border-gray-200 rounded-xl text-gray-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                     >
                       <option value="all">🌐 All Class Sections (Broadcast to all students)</option>
                       {teacherClasses.map((c) => (
@@ -1563,14 +1563,14 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                     onChange={(e) => setAnnTitle(e.target.value)}
                     placeholder="Announcement Title..."
                     required
-                    className="w-full p-3 text-xs font-medium bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 placeholder:text-ink-soft/50 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                    className="w-full p-3 text-xs font-medium bg-white/90 dark:bg-white border border-gray-200 dark:border-gray-200 rounded-xl text-gray-900 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                   />
                   <input
                     type="text"
                     value={annSubject}
                     onChange={(e) => setAnnSubject(e.target.value)}
                     placeholder="Subject Category (e.g. Computer Science)..."
-                    className="w-full p-3 text-xs font-medium bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 placeholder:text-ink-soft/50 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                    className="w-full p-3 text-xs font-medium bg-white/90 dark:bg-white border border-gray-200 dark:border-gray-200 rounded-xl text-gray-900 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                   />
                   <textarea
                     value={annContent}
@@ -1578,16 +1578,16 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                     placeholder="Announcement details..."
                     rows={4}
                     required
-                    className="w-full p-3 text-xs font-medium bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 placeholder:text-ink-soft/50 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 resize-none"
+                    className="w-full p-3 text-xs font-medium bg-white/90 dark:bg-white border border-gray-200 dark:border-gray-200 rounded-xl text-gray-900 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none"
                   />
 
                   {/* File / Photo Resource Attachment */}
                   <div className="space-y-1.5 pt-1">
-                    <label className="block text-[11px] font-bold text-ink-soft dark:text-slate-300">
+                    <label className="block text-[11px] font-bold text-gray-500 dark:text-gray-500">
                       Classroom Resource / Photo Attachment
                     </label>
                     <div className="flex items-center gap-2">
-                      <label className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-violet-600 dark:text-violet-300 bg-violet-50 dark:bg-violet-900/30 border border-violet-200 dark:border-violet-700 rounded-xl hover:bg-violet-100 dark:hover:bg-violet-800/40 cursor-pointer transition-colors">
+                      <label className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-blue-600 dark:text-blue-600 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-800/40 cursor-pointer transition-colors">
                         <Paperclip className="h-4 w-4" />
                         <span>{annAttachmentName ? "Change Attachment" : "Attach File or Photo"}</span>
                         <input
@@ -1612,12 +1612,12 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                       )}
                     </div>
                     {annAttachmentName && (
-                      <div className="mt-1.5 p-2.5 bg-violet-500/10 border border-violet-500/20 rounded-xl flex items-center justify-between text-xs font-bold text-violet-700 dark:text-violet-300">
+                      <div className="mt-1.5 p-2.5 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between text-xs font-bold text-blue-700 dark:text-blue-600">
                         <span className="truncate">📎 {annAttachmentName}</span>
                       </div>
                     )}
                     {annAttachmentDataUrl?.startsWith("data:image/") && (
-                      <div className="mt-2 relative max-w-xs rounded-xl overflow-hidden border border-violet-500/30 shadow-md">
+                      <div className="mt-2 relative max-w-xs rounded-xl overflow-hidden border border-blue-200 shadow-md">
                         <img
                           src={annAttachmentDataUrl}
                           alt="Resource Preview"
@@ -1631,13 +1631,13 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                     <button
                       type="button"
                       onClick={() => setShowCreateAnnModal(false)}
-                      className="px-4 py-2 text-xs font-bold text-ink-soft bg-white border border-ink-soft/15 rounded-xl"
+                      className="px-4 py-2 text-xs font-bold text-gray-500 bg-white border border-gray-200/15 rounded-xl"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-5 py-2 text-xs font-extrabold text-white bg-violet-500 rounded-xl hover:bg-violet-600"
+                      className="px-5 py-2 text-xs font-extrabold text-white bg-blue-500 rounded-xl hover:bg-blue-600"
                     >
                       Publish Announcement
                     </button>
@@ -1657,17 +1657,17 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4"
             >
-              <div className="bg-cream border border-ink-soft/15 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
-                <div className="flex justify-between items-center border-b border-ink-soft/10 pb-3">
-                  <h3 className="font-black text-base text-ink">New Assignment</h3>
+              <div className="bg-cream border border-gray-200/15 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+                <div className="flex justify-between items-center border-b border-gray-200/10 pb-3">
+                  <h3 className="font-black text-base text-gray-900">New Assignment</h3>
                   <button onClick={() => setShowCreateAssModal(false)}>
-                    <X className="h-5 w-5 text-ink-soft" />
+                    <X className="h-5 w-5 text-gray-500" />
                   </button>
                 </div>
 
                 <form onSubmit={handleCreateAssignment} className="space-y-3">
                   <div>
-                    <label className="block text-[10px] font-bold text-ink-soft dark:text-slate-300 mb-1">
+                    <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-500 mb-1">
                       Target Class Section
                     </label>
                     <select
@@ -1680,7 +1680,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                           if (cls?.subject) setAssSubject(cls.subject);
                         }
                       }}
-                      className="w-full p-2.5 text-xs font-semibold bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                      className="w-full p-2.5 text-xs font-semibold bg-white/90 dark:bg-white border border-gray-200 dark:border-gray-200 rounded-xl text-gray-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                     >
                       <option value="all">🌐 All Class Sections (Broadcast to all students)</option>
                       {teacherClasses.map((c) => (
@@ -1692,72 +1692,72 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-bold text-ink-soft block mb-1">Assignment Title</label>
+                    <label className="text-[10px] font-bold text-gray-500 block mb-1">Assignment Title</label>
                     <input
                       type="text"
                       value={assTitle}
                       onChange={(e) => setAssTitle(e.target.value)}
                       placeholder="e.g. Chapter 4 Calculus Homework"
                       required
-                      className="w-full p-3 text-xs font-semibold bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 placeholder:text-ink-soft/50 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                      className="w-full p-3 text-xs font-semibold bg-white/90 dark:bg-white border border-gray-200 dark:border-gray-200 rounded-xl text-gray-900 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <div>
-                      <label className="text-[10px] font-bold text-ink-soft block mb-1">Subject Tag</label>
+                      <label className="text-[10px] font-bold text-gray-500 block mb-1">Subject Tag</label>
                       <input
                         type="text"
                         value={assSubject}
                         onChange={(e) => setAssSubject(e.target.value)}
                         placeholder="e.g. Mathematics"
-                        className="w-full p-2.5 text-xs bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 placeholder:text-ink-soft/50 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                        className="w-full p-2.5 text-xs bg-white/90 dark:bg-white border border-gray-200 dark:border-gray-200 rounded-xl text-gray-900 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-bold text-ink-soft block mb-1">Due Date</label>
+                      <label className="text-[10px] font-bold text-gray-500 block mb-1">Due Date</label>
                       <input
                         type="date"
                         value={assDueDate}
                         onChange={(e) => setAssDueDate(e.target.value)}
-                        className="w-full p-2.5 text-xs bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 font-mono [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                        className="w-full p-2.5 text-xs bg-white/90 dark:bg-white border border-gray-200 dark:border-gray-200 rounded-xl text-gray-900 dark:text-slate-100 font-mono [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-bold text-ink-soft block mb-1">Max Points</label>
+                      <label className="text-[10px] font-bold text-gray-500 block mb-1">Max Points</label>
                       <input
                         type="number"
                         min={1}
                         max={1000}
                         value={assMaxPoints}
                         onChange={(e) => setAssMaxPoints(Number(e.target.value))}
-                        className="w-full p-2.5 text-xs bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                        className="w-full p-2.5 text-xs bg-white/90 dark:bg-white border border-gray-200 dark:border-gray-200 rounded-xl text-gray-900 dark:text-slate-100 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-bold text-ink-soft block mb-1">Instructions & Guidelines</label>
+                    <label className="text-[10px] font-bold text-gray-500 block mb-1">Instructions & Guidelines</label>
                     <textarea
                       value={assContent}
                       onChange={(e) => setAssContent(e.target.value)}
                       placeholder="Detailed instructions for students..."
                       rows={4}
                       required
-                      className="w-full p-3 text-xs bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 placeholder:text-ink-soft/50 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 resize-none"
+                      className="w-full p-3 text-xs bg-white/90 dark:bg-white border border-gray-200 dark:border-gray-200 rounded-xl text-gray-900 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-ink-soft block">Attach File / Reference Document (Optional)</label>
+                    <label className="text-[10px] font-bold text-gray-500 block">Attach File / Reference Document (Optional)</label>
                     <div className="flex items-center gap-2">
-                      <label className="px-3 py-2 text-xs font-bold text-violet-700 bg-violet-50 border border-violet-200 rounded-xl hover:bg-violet-100 cursor-pointer flex items-center gap-1.5 transition-all">
+                      <label className="px-3 py-2 text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 cursor-pointer flex items-center gap-1.5 transition-all">
                         <Paperclip className="h-4 w-4" />
                         <span>{assAttachmentName ? "Change File" : "Choose File"}</span>
                         <input type="file" onChange={handleAssFileChange} className="hidden" />
                       </label>
                       {assAttachmentName && (
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800 bg-green-50 px-3 py-1.5 rounded-xl border border-green-200">
                           <Paperclip className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                           <span className="truncate max-w-[160px]">{assAttachmentName}</span>
                           <button
@@ -1772,17 +1772,17 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-2 pt-3 border-t border-ink-soft/10">
+                  <div className="flex justify-end gap-2 pt-3 border-t border-gray-200/10">
                     <button
                       type="button"
                       onClick={() => setShowCreateAssModal(false)}
-                      className="px-4 py-2 text-xs font-bold text-ink-soft bg-white border border-ink-soft/15 rounded-xl hover:bg-black/5 cursor-pointer"
+                      className="px-4 py-2 text-xs font-bold text-gray-500 bg-white border border-gray-200/15 rounded-xl hover:bg-black/5 cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-5 py-2 text-xs font-extrabold text-white bg-violet-500 rounded-xl hover:bg-violet-600 shadow-md shadow-violet-500/20 cursor-pointer flex items-center gap-1.5"
+                      className="px-5 py-2 text-xs font-extrabold text-white bg-blue-500 rounded-xl hover:bg-blue-600 shadow-md shadow-sm cursor-pointer flex items-center gap-1.5"
                     >
                       <Send className="h-3.5 w-3.5" /> Publish Assignment
                     </button>
@@ -1802,20 +1802,20 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto"
             >
-              <div className="bg-cream border border-ink-soft/15 rounded-3xl p-6 max-w-2xl w-full space-y-4 shadow-2xl my-8">
-                <div className="flex justify-between items-center border-b border-ink-soft/10 pb-3">
+              <div className="bg-cream border border-gray-200/15 rounded-3xl p-6 max-w-2xl w-full space-y-4 shadow-2xl my-8">
+                <div className="flex justify-between items-center border-b border-gray-200/10 pb-3">
                   <div>
-                    <h3 className="font-black text-base text-ink">
+                    <h3 className="font-black text-base text-gray-900">
                       Submissions: {selectedAssignmentForGrading.title}
                     </h3>
                   </div>
                   <button onClick={() => setSelectedAssignmentForGrading(null)}>
-                    <X className="h-5 w-5 text-ink-soft" />
+                    <X className="h-5 w-5 text-gray-500" />
                   </button>
                 </div>
 
                 {assignmentSubmissions.length === 0 ? (
-                  <p className="text-xs text-ink-soft/60 italic p-6 text-center">
+                  <p className="text-xs text-gray-500 italic p-6 text-center">
                     No student submissions received yet for this assignment.
                   </p>
                 ) : (
@@ -1823,14 +1823,14 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                     {assignmentSubmissions.map((sub) => (
                       <div
                         key={sub.id}
-                        className="p-4 bg-white/70 border border-ink-soft/10 rounded-2xl space-y-2 text-xs"
+                        className="p-4 bg-white/70 border border-gray-200/10 rounded-2xl space-y-2 text-xs"
                       >
-                        <div className="flex items-center justify-between font-bold text-ink">
+                        <div className="flex items-center justify-between font-bold text-gray-900">
                           <span>{sub.studentName}</span>
                           <span
                             className={`px-2 py-0.5 text-[10px] rounded-full border ${
                               sub.status === "Graded"
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                ? "bg-green-50 text-emerald-700 border-green-200"
                                 : "bg-amber-50 text-amber-700 border-amber-200"
                             }`}
                           >
@@ -1838,7 +1838,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                           </span>
                         </div>
 
-                        <p className="text-ink-soft bg-cream/80 p-3 rounded-xl whitespace-pre-wrap font-sans">
+                        <p className="text-gray-500 bg-cream/80 p-3 rounded-xl whitespace-pre-wrap font-sans">
                           {sub.content || "No text provided"}
                         </p>
 
@@ -1847,7 +1847,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                             <a
                               href={sub.attachmentDataUrl}
                               download={sub.attachmentName || "student-file"}
-                              className="px-3 py-1 text-[11px] font-extrabold text-white bg-violet-600 hover:bg-violet-500 rounded-lg shadow-sm transition-all"
+                              className="px-3 py-1 text-[11px] font-extrabold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-sm transition-all"
                             >
                               Download File ({sub.attachmentName})
                             </a>
@@ -1857,7 +1857,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                         <div className="pt-2 flex justify-end">
                           <button
                             onClick={() => handleStartGrade(sub)}
-                            className="px-3.5 py-1.5 text-xs font-extrabold text-white bg-violet-500 hover:bg-violet-600 rounded-xl cursor-pointer"
+                            className="px-3.5 py-1.5 text-xs font-extrabold text-white bg-blue-500 hover:bg-blue-600 rounded-xl cursor-pointer"
                           >
                             {sub.status === "Graded" ? "Update Grade" : "Grade Submission"}
                           </button>
@@ -1880,19 +1880,19 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/70 backdrop-blur-md z-[60] flex items-center justify-center p-4"
             >
-              <div className="bg-cream border border-ink-soft/15 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
-                <div className="flex justify-between items-center border-b border-ink-soft/10 pb-3">
-                  <h3 className="font-black text-sm text-ink">
+              <div className="bg-cream border border-gray-200/15 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+                <div className="flex justify-between items-center border-b border-gray-200/10 pb-3">
+                  <h3 className="font-black text-sm text-gray-900">
                     Grade {gradingSubmission.studentName}
                   </h3>
                   <button onClick={() => setGradingSubmission(null)}>
-                    <X className="h-5 w-5 text-ink-soft" />
+                    <X className="h-5 w-5 text-gray-500" />
                   </button>
                 </div>
 
                 <form onSubmit={handleSaveGrade} className="space-y-3">
                   <div>
-                    <label className="text-xs font-bold text-ink-soft block mb-1">
+                    <label className="text-xs font-bold text-gray-500 block mb-1">
                       Score / Grade (e.g. 95 or A):
                     </label>
                     <input
@@ -1901,12 +1901,12 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                       onChange={(e) => setGradeInputScore(e.target.value)}
                       placeholder="e.g. 95 / 100"
                       required
-                      className="w-full p-2.5 text-xs bg-white/70 border border-ink-soft/15 rounded-xl text-ink font-mono font-bold"
+                      className="w-full p-2.5 text-xs bg-white/70 border border-gray-200/15 rounded-xl text-gray-900 font-mono font-bold"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-ink-soft block mb-1">
+                    <label className="text-xs font-bold text-gray-500 block mb-1">
                       Teacher Feedback Note:
                     </label>
                     <textarea
@@ -1914,7 +1914,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                       onChange={(e) => setGradeInputFeedback(e.target.value)}
                       placeholder="Great job! Excellent problem analysis..."
                       rows={3}
-                      className="w-full p-2.5 text-xs bg-white/70 border border-ink-soft/15 rounded-xl text-ink resize-none"
+                      className="w-full p-2.5 text-xs bg-white/70 border border-gray-200/15 rounded-xl text-gray-900 resize-none"
                     />
                   </div>
 
@@ -1922,7 +1922,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                     <button
                       type="button"
                       onClick={() => setGradingSubmission(null)}
-                      className="px-4 py-2 text-xs font-bold text-ink-soft bg-white border border-ink-soft/15 rounded-xl"
+                      className="px-4 py-2 text-xs font-bold text-gray-500 bg-white border border-gray-200/15 rounded-xl"
                     >
                       Cancel
                     </button>
@@ -1948,10 +1948,10 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
             >
-              <div className="bg-slate-900 border border-slate-700/80 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-white">
-                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="bg-slate-900 border border-gray-200 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-white">
+                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
                   <div className="flex items-center gap-2">
-                    <UserPlus className="h-5 w-5 text-violet-400" />
+                    <UserPlus className="h-5 w-5 text-blue-600" />
                     <h3 className="font-extrabold text-base text-white">Add New Teacher Account</h3>
                   </div>
                   <button
@@ -1960,21 +1960,21 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                       setAddTeacherError(null);
                     }}
                   >
-                    <X className="h-5 w-5 text-slate-400 hover:text-white" />
+                    <X className="h-5 w-5 text-gray-400 hover:text-gray-900" />
                   </button>
                 </div>
 
                 {addTeacherError && (
-                  <div className="p-3 bg-rose-950/80 border border-rose-500/50 rounded-xl text-rose-200 text-xs font-semibold flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-rose-200 text-xs font-semibold flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
                     <span>{addTeacherError}</span>
                   </div>
                 )}
 
                 <form onSubmit={handleAddTeacherSubmit} className="space-y-3">
                   <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1">
-                      Teacher ID / Username <span className="text-rose-400">*</span>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">
+                      Teacher ID / Username <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -1982,13 +1982,13 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                       onChange={(e) => setNewTeacherId(e.target.value)}
                       placeholder="e.g. teacher4 or prof_smith"
                       required
-                      className="w-full p-2.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-violet-400 focus:outline-none"
+                      className="w-full p-2.5 text-xs bg-slate-900 border border-gray-200 rounded-xl text-white placeholder-slate-500 focus:border-blue-200 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1">
-                      Full Name <span className="text-rose-400">*</span>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">
+                      Full Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -1996,13 +1996,13 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                       onChange={(e) => setNewTeacherName(e.target.value)}
                       placeholder="e.g. Dr. Eleanor Vance"
                       required
-                      className="w-full p-2.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-violet-400 focus:outline-none"
+                      className="w-full p-2.5 text-xs bg-slate-900 border border-gray-200 rounded-xl text-white placeholder-slate-500 focus:border-blue-200 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1">
-                      Password <span className="text-rose-400">*</span>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">
+                      Password <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -2010,47 +2010,47 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                       onChange={(e) => setNewTeacherPassword(e.target.value)}
                       placeholder="e.g. teacher123"
                       required
-                      className="w-full p-2.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-violet-400 focus:outline-none"
+                      className="w-full p-2.5 text-xs bg-slate-900 border border-gray-200 rounded-xl text-white placeholder-slate-500 focus:border-blue-200 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1">Subject(s) / Specialization(s)</label>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">Subject(s) / Specialization(s)</label>
                     <input
                       type="text"
                       value={newTeacherSubject}
                       onChange={(e) => setNewTeacherSubject(e.target.value)}
                       placeholder="e.g. Mathematics, Computer Science, Physics"
-                      className="w-full p-2.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-violet-400 focus:outline-none"
+                      className="w-full p-2.5 text-xs bg-slate-900 border border-gray-200 rounded-xl text-white placeholder-slate-500 focus:border-blue-200 focus:outline-none"
                     />
-                    <p className="text-[10px] text-slate-400 mt-1">For multiple subjects, separate with commas (e.g. DCPE, DCS, Computer Engineering).</p>
+                    <p className="text-[10px] text-gray-400 mt-1">For multiple subjects, separate with commas (e.g. DCPE, DCS, Computer Engineering).</p>
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1">Email Address</label>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">Email Address</label>
                     <input
                       type="email"
                       value={newTeacherEmail}
                       onChange={(e) => setNewTeacherEmail(e.target.value)}
                       placeholder="e.g. eleanor.vance@school.edu"
-                      className="w-full p-2.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-violet-400 focus:outline-none"
+                      className="w-full p-2.5 text-xs bg-slate-900 border border-gray-200 rounded-xl text-white placeholder-slate-500 focus:border-blue-200 focus:outline-none"
                     />
                   </div>
 
-                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                  <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
                     <button
                       type="button"
                       onClick={() => {
                         setShowAddTeacherModal(false);
                         setAddTeacherError(null);
                       }}
-                      className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-800 rounded-xl border border-slate-700"
+                      className="px-4 py-2 text-xs font-bold text-gray-400 hover:text-gray-900 bg-slate-800 rounded-xl border border-gray-200"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-5 py-2 text-xs font-extrabold text-white bg-violet-600 hover:bg-violet-500 rounded-xl shadow-lg shadow-violet-600/30 cursor-pointer"
+                      className="px-5 py-2 text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-500 rounded-xl shadow-lg shadow-sm cursor-pointer"
                     >
                       Create Teacher Account
                     </button>
@@ -2070,63 +2070,63 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
             >
-              <div className="bg-slate-900 border border-slate-700/80 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-white">
-                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="bg-slate-900 border border-gray-200 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-white">
+                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
                   <div className="flex items-center gap-2">
-                    <Edit className="h-5 w-5 text-violet-400" />
+                    <Edit className="h-5 w-5 text-blue-600" />
                     <h3 className="font-extrabold text-base text-white">Edit Faculty Details</h3>
                   </div>
                   <button onClick={() => setTeacherToEdit(null)}>
-                    <X className="h-5 w-5 text-slate-400 hover:text-white" />
+                    <X className="h-5 w-5 text-gray-400 hover:text-gray-900" />
                   </button>
                 </div>
 
                 <form onSubmit={handleSaveTeacherEdit} className="space-y-3">
                   <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1">Full Name</label>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">Full Name</label>
                     <input
                       type="text"
                       value={editTeacherName}
                       onChange={(e) => setEditTeacherName(e.target.value)}
                       required
-                      className="w-full p-2.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-violet-400 focus:outline-none"
+                      className="w-full p-2.5 text-xs bg-slate-900 border border-gray-200 rounded-xl text-white focus:border-blue-200 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1">Subject(s) / Specialization(s)</label>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">Subject(s) / Specialization(s)</label>
                     <input
                       type="text"
                       value={editTeacherSubject}
                       onChange={(e) => setEditTeacherSubject(e.target.value)}
                       placeholder="e.g. Mathematics, Computer Science, Physics"
-                      className="w-full p-2.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-violet-400 focus:outline-none"
+                      className="w-full p-2.5 text-xs bg-slate-900 border border-gray-200 rounded-xl text-white focus:border-blue-200 focus:outline-none"
                     />
-                    <p className="text-[10px] text-slate-400 mt-1">Separate multiple subjects with commas.</p>
+                    <p className="text-[10px] text-gray-400 mt-1">Separate multiple subjects with commas.</p>
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1">Email Address</label>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">Email Address</label>
                     <input
                       type="email"
                       value={editTeacherEmail}
                       onChange={(e) => setEditTeacherEmail(e.target.value)}
                       placeholder="teacher@school.edu"
-                      className="w-full p-2.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-violet-400 focus:outline-none"
+                      className="w-full p-2.5 text-xs bg-slate-900 border border-gray-200 rounded-xl text-white focus:border-blue-200 focus:outline-none"
                     />
                   </div>
 
-                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                  <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
                     <button
                       type="button"
                       onClick={() => setTeacherToEdit(null)}
-                      className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-800 rounded-xl border border-slate-700"
+                      className="px-4 py-2 text-xs font-bold text-gray-400 hover:text-gray-900 bg-slate-800 rounded-xl border border-gray-200"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-5 py-2 text-xs font-extrabold text-white bg-violet-600 hover:bg-violet-500 rounded-xl shadow-lg shadow-violet-600/30 cursor-pointer"
+                      className="px-5 py-2 text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-500 rounded-xl shadow-lg shadow-sm cursor-pointer"
                     >
                       Save Changes
                     </button>
@@ -2147,8 +2147,8 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
               className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
             >
               <div className="bg-slate-900 border border-rose-500/40 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-white">
-                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                  <div className="flex items-center gap-2 text-rose-400">
+                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+                  <div className="flex items-center gap-2 text-red-500">
                     <Trash2 className="h-5 w-5" />
                     <h3 className="font-extrabold text-base">Delete Teacher Account</h3>
                   </div>
@@ -2159,31 +2159,31 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                       setDeletePasswordError(null);
                     }}
                   >
-                    <X className="h-5 w-5 text-slate-400 hover:text-white" />
+                    <X className="h-5 w-5 text-gray-400 hover:text-gray-900" />
                   </button>
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-xs text-slate-300 leading-relaxed">
+                  <p className="text-xs text-gray-500 leading-relaxed">
                     Are you sure you want to permanently delete the teacher account for{" "}
                     <strong className="text-white">{teacherToDelete.name}</strong> ({teacherToDelete.id})? This action cannot be undone.
                   </p>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-gray-400">
                     For security verification, please enter your password to authorize account deletion.
                   </p>
                 </div>
 
                 {deletePasswordError && (
-                  <div className="p-3 bg-rose-950/80 border border-rose-500/50 rounded-xl text-rose-200 text-xs font-semibold flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-rose-200 text-xs font-semibold flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
                     <span>{deletePasswordError}</span>
                   </div>
                 )}
 
                 <form onSubmit={handleConfirmDeleteTeacher} className="space-y-4 pt-1">
                   <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1">
-                      Your Account Password <span className="text-rose-400">*</span>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">
+                      Your Account Password <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="password"
@@ -2195,11 +2195,11 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                       placeholder="Enter your password..."
                       required
                       autoFocus
-                      className="w-full p-2.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-rose-400 focus:outline-none"
+                      className="w-full p-2.5 text-xs bg-slate-900 border border-gray-200 rounded-xl text-white placeholder-slate-500 focus:border-red-200 focus:outline-none"
                     />
                   </div>
 
-                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                  <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
                     <button
                       type="button"
                       onClick={() => {
@@ -2207,7 +2207,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                         setDeletePassword("");
                         setDeletePasswordError(null);
                       }}
-                      className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-800 rounded-xl border border-slate-700 cursor-pointer"
+                      className="px-4 py-2 text-xs font-bold text-gray-400 hover:text-gray-900 bg-slate-800 rounded-xl border border-gray-200 cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -2234,12 +2234,12 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
             >
-              <div className="bg-slate-900 border border-slate-700/80 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-white">
-                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="bg-slate-900 border border-gray-200 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-white">
+                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
                   <div className="flex items-center gap-2">
                     <ShieldAlert
                       className={`h-5 w-5 ${
-                        pendingTeacherAction.action === "verify" ? "text-teal-400" : "text-amber-400"
+                        pendingTeacherAction.action === "verify" ? "text-teal-400" : "text-amber-500"
                       }`}
                     />
                     <h3 className="font-extrabold text-base text-white">
@@ -2253,18 +2253,18 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                       setActionPasswordError(null);
                     }}
                   >
-                    <X className="h-5 w-5 text-slate-400 hover:text-white" />
+                    <X className="h-5 w-5 text-gray-400 hover:text-gray-900" />
                   </button>
                 </div>
 
                 <div className="space-y-2">
-                  <p className="text-xs text-slate-300 leading-relaxed">
+                  <p className="text-xs text-gray-500 leading-relaxed">
                     Are you sure you want to{" "}
                     <strong
                       className={
                         pendingTeacherAction.action === "verify"
                           ? "text-teal-300 font-extrabold"
-                          : "text-amber-300 font-extrabold"
+                          : "text-amber-600 font-extrabold"
                       }
                     >
                       {pendingTeacherAction.action === "verify"
@@ -2272,24 +2272,24 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                         : "revoke verification for"}
                     </strong>{" "}
                     <span className="text-white font-extrabold">{pendingTeacherAction.teacher.name}</span> (ID:{" "}
-                    <span className="font-mono text-slate-300">{pendingTeacherAction.teacher.id}</span>)?
+                    <span className="font-mono text-gray-500">{pendingTeacherAction.teacher.id}</span>)?
                   </p>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-gray-400">
                     For security verification, please enter your password to authorize this action.
                   </p>
                 </div>
 
                 {actionPasswordError && (
-                  <div className="p-3 bg-rose-950/80 border border-rose-500/50 rounded-xl text-rose-200 text-xs font-semibold flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-rose-200 text-xs font-semibold flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
                     <span>{actionPasswordError}</span>
                   </div>
                 )}
 
                 <form onSubmit={handleConfirmTeacherAction} className="space-y-4 pt-1">
                   <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1">
-                      Your Account Password <span className="text-rose-400">*</span>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">
+                      Your Account Password <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="password"
@@ -2301,11 +2301,11 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                       placeholder="Enter your password..."
                       required
                       autoFocus
-                      className="w-full p-2.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-violet-400 focus:outline-none"
+                      className="w-full p-2.5 text-xs bg-slate-900 border border-gray-200 rounded-xl text-white placeholder-slate-500 focus:border-blue-200 focus:outline-none"
                     />
                   </div>
 
-                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                  <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
                     <button
                       type="button"
                       onClick={() => {
@@ -2313,7 +2313,7 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                         setActionPassword("");
                         setActionPasswordError(null);
                       }}
-                      className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-800 rounded-xl border border-slate-700 cursor-pointer"
+                      className="px-4 py-2 text-xs font-bold text-gray-400 hover:text-gray-900 bg-slate-800 rounded-xl border border-gray-200 cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -2354,10 +2354,10 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
             >
-              <div className="bg-slate-900 border border-slate-700/80 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-white">
-                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="bg-slate-900 border border-gray-200 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-white">
+                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
                   <div className="flex items-center gap-2">
-                    <School className="h-5 w-5 text-violet-400" />
+                    <School className="h-5 w-5 text-blue-600" />
                     <h3 className="font-extrabold text-base text-white">Create New Class Section</h3>
                   </div>
                   <button
@@ -2366,33 +2366,33 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                       setCreateSectionError(null);
                     }}
                   >
-                    <X className="h-5 w-5 text-slate-400 hover:text-white" />
+                    <X className="h-5 w-5 text-gray-400 hover:text-gray-900" />
                   </button>
                 </div>
 
                 <div className="space-y-4">
                   {createSectionError && (
-                    <div className="p-3 bg-rose-950/80 border border-rose-500/40 text-rose-300 rounded-xl text-xs flex items-center gap-2">
+                    <div className="p-3 bg-red-50 border border-rose-500/40 text-red-500 rounded-xl text-xs flex items-center gap-2">
                       <AlertCircle className="h-4 w-4 shrink-0" />
                       <span>{createSectionError}</span>
                     </div>
                   )}
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">
-                      Section Name <span className="text-rose-400">*</span>
+                    <label className="block text-xs font-bold text-gray-500 mb-1">
+                      Section Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       placeholder="e.g. Grade 10 - Section Alpha"
                       value={newSectionName}
                       onChange={(e) => setNewSectionName(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-violet-500"
+                      className="w-full px-3.5 py-2.5 text-xs bg-slate-900 border border-gray-200 rounded-xl text-white focus:outline-none focus:border-blue-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1">
+                    <label className="block text-xs font-bold text-gray-500 mb-1">
                       Course / Subject Title
                     </label>
                     <input
@@ -2400,30 +2400,30 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                       placeholder="e.g. Algebra & Geometry (Optional)"
                       value={newSectionSubject}
                       onChange={(e) => setNewSectionSubject(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-violet-500"
+                      className="w-full px-3.5 py-2.5 text-xs bg-slate-900 border border-gray-200 rounded-xl text-white focus:outline-none focus:border-blue-500"
                     />
                   </div>
 
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                  <p className="text-[11px] text-gray-400 leading-relaxed">
                     Once created, a unique 6-character Join Code will automatically be generated for this section so your students can enroll directly!
                   </p>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
                   <button
                     type="button"
                     onClick={() => {
                       setShowCreateSectionModal(false);
                       setCreateSectionError(null);
                     }}
-                    className="px-4 py-2 text-xs font-bold text-slate-300 hover:bg-slate-800 rounded-xl"
+                    className="px-4 py-2 text-xs font-bold text-gray-500 hover:bg-slate-800 rounded-xl"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={handleCreateSection}
-                    className="px-5 py-2 text-xs font-extrabold text-white bg-violet-600 hover:bg-violet-500 rounded-xl shadow-lg shadow-violet-600/30 flex items-center gap-2 cursor-pointer"
+                    className="px-5 py-2 text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-500 rounded-xl shadow-lg shadow-sm flex items-center gap-2 cursor-pointer"
                   >
                     <Plus className="h-4 w-4" />
                     <span>Create Section</span>
@@ -2443,10 +2443,10 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
             >
-              <div className="bg-slate-900 border border-slate-700/80 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-white">
-                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="bg-slate-900 border border-gray-200 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-white">
+                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
                   <div className="flex items-center gap-2">
-                    <UserPlus className="h-5 w-5 text-fuchsia-400" />
+                    <UserPlus className="h-5 w-5 text-blue-600" />
                     <h3 className="font-extrabold text-base text-white">Add New Student Account</h3>
                   </div>
                   <button
@@ -2455,21 +2455,21 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                       setAddStudentError(null);
                     }}
                   >
-                    <X className="h-5 w-5 text-slate-400 hover:text-white" />
+                    <X className="h-5 w-5 text-gray-400 hover:text-gray-900" />
                   </button>
                 </div>
 
                 {addStudentError && (
-                  <div className="p-3 bg-rose-950/80 border border-rose-500/50 rounded-xl text-rose-200 text-xs font-semibold flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-rose-200 text-xs font-semibold flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
                     <span>{addStudentError}</span>
                   </div>
                 )}
 
                 <form onSubmit={handleAddStudentSubmit} className="space-y-3">
                   <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1">
-                      Student ID / Username <span className="text-rose-400">*</span>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">
+                      Student ID / Username <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -2477,13 +2477,13 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                       onChange={(e) => setNewStudentId(e.target.value)}
                       placeholder="e.g. student101 or alex_r"
                       required
-                      className="w-full p-2.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-fuchsia-400 focus:outline-none"
+                      className="w-full p-2.5 text-xs bg-slate-900 border border-gray-200 rounded-xl text-white placeholder-slate-500 focus:border-blue-200 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1">
-                      Full Name <span className="text-rose-400">*</span>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">
+                      Full Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -2491,13 +2491,13 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                       onChange={(e) => setNewStudentName(e.target.value)}
                       placeholder="e.g. Alex Rivera"
                       required
-                      className="w-full p-2.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-fuchsia-400 focus:outline-none"
+                      className="w-full p-2.5 text-xs bg-slate-900 border border-gray-200 rounded-xl text-white placeholder-slate-500 focus:border-blue-200 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1">
-                      Password <span className="text-rose-400">*</span>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">
+                      Password <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -2505,19 +2505,19 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                       onChange={(e) => setNewStudentPassword(e.target.value)}
                       placeholder="At least 6 characters (e.g. pass123)"
                       required
-                      className="w-full p-2.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-fuchsia-400 focus:outline-none"
+                      className="w-full p-2.5 text-xs bg-slate-900 border border-gray-200 rounded-xl text-white placeholder-slate-500 focus:border-blue-200 focus:outline-none"
                     />
-                    <p className="text-[10px] text-slate-400 mt-1">Firebase Auth requires passwords to be at least 6 characters long.</p>
+                    <p className="text-[10px] text-gray-400 mt-1">Firebase Auth requires passwords to be at least 6 characters long.</p>
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1">
+                    <label className="text-xs font-bold text-gray-500 block mb-1">
                       Assign to Course Section (Optional)
                     </label>
                     <select
                       value={addStudentClassId}
                       onChange={(e) => setAddStudentClassId(e.target.value)}
-                      className="w-full p-2.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-fuchsia-400 focus:outline-none"
+                      className="w-full p-2.5 text-xs bg-slate-900 border border-gray-200 rounded-xl text-white focus:border-blue-200 focus:outline-none"
                     >
                       <option value="none">None (Unassigned / General Roster)</option>
                       {teacherClasses.map((cls) => (
@@ -2528,21 +2528,21 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
                     </select>
                   </div>
 
-                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                  <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
                     <button
                       type="button"
                       onClick={() => {
                         setShowAddStudentModal(false);
                         setAddStudentError(null);
                       }}
-                      className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-800 rounded-xl border border-slate-700 cursor-pointer"
+                      className="px-4 py-2 text-xs font-bold text-gray-400 hover:text-gray-900 bg-slate-800 rounded-xl border border-gray-200 cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={isCreatingStudent}
-                      className="px-5 py-2 text-xs font-extrabold text-white bg-fuchsia-600 hover:bg-fuchsia-500 rounded-xl shadow-lg shadow-fuchsia-600/30 cursor-pointer flex items-center gap-1.5"
+                      className="px-5 py-2 text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm cursor-pointer flex items-center gap-1.5"
                     >
                       {isCreatingStudent ? (
                         <>
@@ -2570,51 +2570,51 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
             >
-              <div className="bg-slate-900 border border-slate-700/80 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-white">
-                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+              <div className="bg-slate-900 border border-gray-200 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-white">
+                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
                   <div className="flex items-center gap-2">
-                    <Edit className="h-5 w-5 text-fuchsia-400" />
+                    <Edit className="h-5 w-5 text-blue-600" />
                     <h3 className="font-extrabold text-base text-white">Edit Student Details</h3>
                   </div>
                   <button onClick={() => setStudentToEdit(null)}>
-                    <X className="h-5 w-5 text-slate-400 hover:text-white" />
+                    <X className="h-5 w-5 text-gray-400 hover:text-gray-900" />
                   </button>
                 </div>
 
                 <form onSubmit={handleSaveStudentEdit} className="space-y-3">
                   <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1">Full Name</label>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">Full Name</label>
                     <input
                       type="text"
                       value={editStudentName}
                       onChange={(e) => setEditStudentName(e.target.value)}
                       required
-                      className="w-full p-2.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-fuchsia-400 focus:outline-none"
+                      className="w-full p-2.5 text-xs bg-slate-900 border border-gray-200 rounded-xl text-white focus:border-blue-200 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1">Email Address</label>
+                    <label className="text-xs font-bold text-gray-500 block mb-1">Email Address</label>
                     <input
                       type="email"
                       value={editStudentEmail}
                       onChange={(e) => setEditStudentEmail(e.target.value)}
                       placeholder="student@school.edu"
-                      className="w-full p-2.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-fuchsia-400 focus:outline-none"
+                      className="w-full p-2.5 text-xs bg-slate-900 border border-gray-200 rounded-xl text-white focus:border-blue-200 focus:outline-none"
                     />
                   </div>
 
-                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                  <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
                     <button
                       type="button"
                       onClick={() => setStudentToEdit(null)}
-                      className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-800 rounded-xl border border-slate-700"
+                      className="px-4 py-2 text-xs font-bold text-gray-400 hover:text-gray-900 bg-slate-800 rounded-xl border border-gray-200"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-5 py-2 text-xs font-extrabold text-white bg-fuchsia-600 hover:bg-fuchsia-500 rounded-xl shadow-lg shadow-fuchsia-600/30 cursor-pointer"
+                      className="px-5 py-2 text-xs font-extrabold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm cursor-pointer"
                     >
                       Save Changes
                     </button>
@@ -2635,26 +2635,26 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
               className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
             >
               <div className="bg-slate-900 border border-rose-500/40 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-white">
-                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                  <div className="flex items-center gap-2 text-rose-400">
+                <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+                  <div className="flex items-center gap-2 text-red-500">
                     <Trash2 className="h-5 w-5" />
                     <h3 className="font-extrabold text-base">Delete Student Account</h3>
                   </div>
                   <button onClick={() => setStudentToDelete(null)}>
-                    <X className="h-5 w-5 text-slate-400 hover:text-white" />
+                    <X className="h-5 w-5 text-gray-400 hover:text-gray-900" />
                   </button>
                 </div>
 
-                <p className="text-xs text-slate-300 leading-relaxed">
+                <p className="text-xs text-gray-500 leading-relaxed">
                   Are you sure you want to permanently delete the student account for{" "}
                   <strong className="text-white">{studentToDelete.name}</strong> ({studentToDelete.id})? This action cannot be undone.
                 </p>
 
-                <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
                   <button
                     type="button"
                     onClick={() => setStudentToDelete(null)}
-                    className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-800 rounded-xl border border-slate-700"
+                    className="px-4 py-2 text-xs font-bold text-gray-400 hover:text-gray-900 bg-slate-800 rounded-xl border border-gray-200"
                   >
                     Cancel
                   </button>
@@ -2673,14 +2673,14 @@ export default function TeacherDashboard({ user, onLogout, theme, onThemeChange 
 
         {/* VIEW STUDENT PROFILE SECTION */}
         {viewingStudent && (
-          <div className="pt-8 mt-10 border-t border-slate-700/60">
+          <div className="pt-8 mt-10 border-t border-gray-200/60">
             <StudentProfile student={viewingStudent} onClose={() => setViewingStudent(null)} />
           </div>
         )}
 
         {/* VIEW TEACHER PROFILE SECTION */}
         {viewingTeacherProfile && (
-          <div className="pt-8 mt-10 border-t border-slate-700/60">
+          <div className="pt-8 mt-10 border-t border-gray-200/60">
             <TeacherProfile
               teacher={viewingTeacherProfile}
               currentUser={dbUser}

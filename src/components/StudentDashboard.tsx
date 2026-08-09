@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   LogOut,
@@ -432,9 +432,9 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                 <span className="px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold bg-teal-50 text-teal-600 rounded-full border border-teal-200 shrink-0">
                   Student Portal
                 </span>
-                <span className="text-xs font-mono text-ink-soft/70 truncate">ID: {user.id}</span>
+                <span className="text-xs font-mono text-gray-500/70 truncate">ID: {user.id}</span>
               </div>
-              <h1 className="text-xl sm:text-2xl font-black text-ink tracking-tight mt-0.5 truncate">
+              <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight mt-0.5 truncate">
                 Hello, {dbUser.name}
               </h1>
             </div>
@@ -448,20 +448,20 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
               onClick={() => onThemeChange(theme === "dark" ? "default" : "dark")}
               className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold transition-all cursor-pointer ${
                 theme === "dark"
-                  ? "bg-black/80 text-fuchsia-300 border-fuchsia-500/50 hover:bg-slate-900 shadow-[0_0_15px_rgba(217,70,239,0.3)]"
-                  : "bg-slate-900/90 text-cyan-300 border-cyan-500/50 hover:bg-slate-800 shadow-[0_0_15px_rgba(0,240,255,0.3)]"
+                  ? "bg-slate-900 text-blue-400 border-slate-700 hover:bg-slate-800 shadow-sm"
+                  : "bg-white text-blue-600 border-blue-200 hover:bg-gray-100 shadow-sm"
               }`}
               title="Switch Theme Mode"
             >
               {theme === "dark" ? (
                 <>
-                  <Moon className="h-4 w-4 shrink-0 text-fuchsia-400 drop-shadow-[0_0_6px_rgba(217,70,239,0.8)]" />
-                  <span className="hidden sm:inline font-mono">Obsidian Neon</span>
+                  <Moon className="h-4 w-4 shrink-0 text-blue-400" />
+                  <span className="hidden sm:inline font-mono">Dark Mode</span>
                 </>
               ) : (
                 <>
-                  <Zap className="h-4 w-4 shrink-0 text-cyan-400 drop-shadow-[0_0_6px_rgba(0,240,255,0.8)]" />
-                  <span className="hidden sm:inline font-mono">Cyber Neon</span>
+                  <Zap className="h-4 w-4 shrink-0 text-blue-600" />
+                  <span className="hidden sm:inline font-mono">Light Mode</span>
                 </>
               )}
             </motion.button>
@@ -478,11 +478,11 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
         </motion.div>
 
         {/* Navigation Tabs - Responsive Grid on Mobile, Flex Row on Desktop */}
-        <div className="bg-cream/80 backdrop-blur-xl p-1.5 rounded-2xl border border-ink-soft/10 shadow-lg grid grid-cols-2 sm:flex sm:items-center sm:justify-start gap-1.5 max-w-full">
+        <div className="bg-cream/80 p-1.5 rounded-2xl border border-ink-soft/10 shadow-lg grid grid-cols-2 sm:flex sm:items-center sm:justify-start gap-1.5 max-w-full">
           <button
             onClick={() => setActiveTab("classes")}
             className={`relative flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 py-2.5 sm:px-4 text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto ${
-              activeTab === "classes" ? "text-teal-600" : "text-ink-soft hover:text-ink"
+              activeTab === "classes" ? "text-teal-600" : "text-gray-500 hover:text-gray-900"
             }`}
           >
             {activeTab === "classes" && (
@@ -499,7 +499,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
           <button
             onClick={() => setActiveTab("attendance")}
             className={`relative flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 py-2.5 sm:px-4 text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto ${
-              activeTab === "attendance" ? "text-teal-600" : "text-ink-soft hover:text-ink"
+              activeTab === "attendance" ? "text-teal-600" : "text-gray-500 hover:text-gray-900"
             }`}
           >
             {activeTab === "attendance" && (
@@ -516,7 +516,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
           <button
             onClick={() => setActiveTab("checkins")}
             className={`relative flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 py-2.5 sm:px-4 text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto ${
-              activeTab === "checkins" ? "text-teal-600" : "text-ink-soft hover:text-ink"
+              activeTab === "checkins" ? "text-teal-600" : "text-gray-500 hover:text-gray-900"
             }`}
           >
             {activeTab === "checkins" && (
@@ -533,7 +533,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
           <button
             onClick={() => setActiveTab("announcements")}
             className={`relative flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 py-2.5 sm:px-4 text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto ${
-              activeTab === "announcements" ? "text-teal-600" : "text-ink-soft hover:text-ink"
+              activeTab === "announcements" ? "text-teal-600" : "text-gray-500 hover:text-gray-900"
             }`}
           >
             {activeTab === "announcements" && (
@@ -555,7 +555,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
           <button
             onClick={() => setActiveTab("assignments")}
             className={`relative flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 py-2.5 sm:px-4 text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto ${
-              activeTab === "assignments" ? "text-teal-600" : "text-ink-soft hover:text-ink"
+              activeTab === "assignments" ? "text-teal-600" : "text-gray-500 hover:text-gray-900"
             }`}
           >
             {activeTab === "assignments" && (
@@ -577,7 +577,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
           <button
             onClick={() => setActiveTab("faculty")}
             className={`relative flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 py-2.5 sm:px-4 text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto ${
-              activeTab === "faculty" ? "text-teal-600" : "text-ink-soft hover:text-ink"
+              activeTab === "faculty" ? "text-teal-600" : "text-gray-500 hover:text-gray-900"
             }`}
           >
             {activeTab === "faculty" && (
@@ -594,7 +594,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
           <button
             onClick={() => setActiveTab("settings")}
             className={`relative flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 py-2.5 sm:px-4 text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto ${
-              activeTab === "settings" ? "text-teal-600" : "text-ink-soft hover:text-ink"
+              activeTab === "settings" ? "text-teal-600" : "text-gray-500 hover:text-gray-900"
             }`}
           >
             {activeTab === "settings" && (
@@ -614,32 +614,32 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
           <motion.div
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-cream/90 backdrop-blur-xl border border-ink-soft/10 rounded-2xl p-3.5 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
+            className="bg-cream/90 border border-ink-soft/10 rounded-2xl p-3.5 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="p-2.5 bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-300 rounded-xl shrink-0">
+              <div className="p-2.5 bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-600 rounded-xl shrink-0">
                 <UserCheck className="h-5 w-5" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-ink-soft/60">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-gray-500/60">
                     Switch Teacher / Class View
                   </span>
                   {selectedTeacherId !== "all" && (
-                    <span className="px-2 py-0.2 text-[10px] font-bold bg-violet-500 text-white rounded-full">
+                    <span className="px-2 py-0.2 text-[10px] font-bold bg-blue-500 text-white rounded-full">
                       Filtered View
                     </span>
                   )}
                 </div>
                 {selectedTeacherId !== "all" && selectedTeacher && (
-                  <p className="text-xs sm:text-sm font-extrabold text-ink truncate mt-0.5">
+                  <p className="text-xs sm:text-sm font-extrabold text-gray-900 truncate mt-0.5">
                     <span className="flex items-center gap-1.5 flex-wrap">
                       <span>Viewing Feed of: </span>
-                      <span className="text-violet-600 dark:text-violet-400 font-black">
+                      <span className="text-blue-600 dark:text-blue-600 font-black">
                         {selectedTeacher?.name}
                       </span>
                       {selectedTeacher?.subject && (
-                        <span className="px-2 py-0.5 text-[10px] bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 rounded-lg border border-violet-200 dark:border-violet-800">
+                        <span className="px-2 py-0.5 text-[10px] bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-600 rounded-lg border border-blue-200 dark:border-blue-800">
                           {selectedTeacher.subject}
                         </span>
                       )}
@@ -650,14 +650,14 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
             </div>
 
             <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full md:w-auto shrink-0">
-              <label htmlFor="teacher-select" className="text-xs font-bold text-ink-soft hidden sm:inline shrink-0">
+              <label htmlFor="teacher-select" className="text-xs font-bold text-gray-500 hidden sm:inline shrink-0">
                 Teacher:
               </label>
               <select
                 id="teacher-select"
                 value={selectedTeacherId}
                 onChange={(e) => setSelectedTeacherId(e.target.value)}
-                className="w-full md:w-auto px-3.5 py-2 text-xs font-bold bg-white dark:bg-slate-800 border border-ink-soft/20 rounded-xl text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
+                className="w-full md:w-auto px-3.5 py-2 text-xs font-bold bg-white dark:bg-slate-800 border border-gray-200 rounded-xl text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               >
                 <option value="all">All Teachers & Classes</option>
                 {teachers.map((t, idx) => (
@@ -670,10 +670,10 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
               {selectedTeacher && (
                 <button
                   onClick={() => setViewingTeacher(selectedTeacher)}
-                  className="px-3 py-2 text-xs font-bold text-violet-600 dark:text-violet-300 bg-violet-50 hover:bg-violet-100 dark:bg-violet-950/80 border border-violet-200 dark:border-violet-800/80 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shrink-0 shadow-sm"
+                  className="px-3 py-2 text-xs font-bold text-blue-600 dark:text-blue-600 bg-blue-50 hover:bg-blue-50 dark:bg-blue-950/80 border border-blue-200 dark:border-blue-800/80 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 shrink-0 shadow-sm"
                   id="view-selected-teacher-profile-btn"
                 >
-                  <GraduationCap className="h-3.5 w-3.5 text-violet-500" />
+                  <GraduationCap className="h-3.5 w-3.5 text-blue-500" />
                   <span>Teacher Profile</span>
                 </button>
               )}
@@ -703,7 +703,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
             <div className="lg:col-span-1 space-y-4 sm:space-y-6 min-w-0">
               <div className="bg-cream border border-ink-soft/10 rounded-3xl p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-5 relative overflow-hidden min-w-0">
                 <div className="flex items-center justify-between gap-2">
-                  <h2 className="text-base sm:text-lg font-black text-ink flex items-center gap-2 truncate">
+                  <h2 className="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2 truncate">
                     <Calendar className="h-5 w-5 text-teal-500 shrink-0" />
                     Daily Check-In
                   </h2>
@@ -732,7 +732,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
 
                 <form onSubmit={handleRecordAttendance} className="space-y-3 sm:space-y-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-ink-soft block">
+                    <label className="text-xs font-bold text-gray-500 block">
                       Select Status for Today:
                     </label>
                     <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
@@ -743,11 +743,11 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                         onClick={() => setSelectedStatus("Present")}
                         className={`py-2.5 px-1 sm:py-3 sm:px-2 rounded-2xl border text-xs font-bold flex flex-col items-center gap-1 cursor-pointer transition-all ${
                           selectedStatus === "Present"
-                            ? "border-cyan-400 bg-cyan-500/20 text-cyan-300 shadow-[0_0_15px_rgba(0,240,255,0.3)]"
-                            : "border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-slate-600 hover:text-white"
+                            ? "border-blue-200 bg-blue-50 text-blue-600 shadow-sm"
+                            : "border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300 hover:text-gray-900"
                         }`}
                       >
-                        <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-400" />
+                        <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                         <span>Present</span>
                       </motion.button>
 
@@ -758,11 +758,11 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                         onClick={() => setSelectedStatus("Late")}
                         className={`py-2.5 px-1 sm:py-3 sm:px-2 rounded-2xl border text-xs font-bold flex flex-col items-center gap-1 cursor-pointer transition-all ${
                           selectedStatus === "Late"
-                            ? "border-amber-400 bg-amber-500/20 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.3)]"
-                            : "border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-slate-600 hover:text-white"
+                            ? "border-amber-200 bg-amber-50 text-amber-600 shadow-sm"
+                            : "border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300 hover:text-gray-900"
                         }`}
                       >
-                        <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-amber-400" />
+                        <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
                         <span>Late</span>
                       </motion.button>
 
@@ -773,18 +773,18 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                         onClick={() => setSelectedStatus("Absent")}
                         className={`py-2.5 px-1 sm:py-3 sm:px-2 rounded-2xl border text-xs font-bold flex flex-col items-center gap-1 cursor-pointer transition-all ${
                           selectedStatus === "Absent"
-                            ? "border-rose-400 bg-rose-500/20 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.3)]"
-                            : "border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-slate-600 hover:text-white"
+                            ? "border-red-200 bg-red-50 text-red-600 shadow-sm"
+                            : "border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300 hover:text-gray-900"
                         }`}
                       >
-                        <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-rose-400" />
+                        <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-500" />
                         <span>Absent</span>
                       </motion.button>
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-300 block">
+                    <label className="text-xs font-bold text-gray-500 block">
                       Optional Note:
                     </label>
                     <textarea
@@ -792,7 +792,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder="e.g. Arrived 5 mins late due to traffic"
                       rows={2}
-                      className="w-full p-2.5 sm:p-3 text-xs bg-slate-950/80 border border-slate-700/80 rounded-2xl focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,240,255,0.3)] text-white placeholder-slate-400 resize-none transition-all"
+                      className="w-full p-2.5 sm:p-3 text-xs bg-white border border-gray-200 rounded-2xl focus:outline-none focus:border-blue-500 focus:shadow-sm text-gray-900 placeholder-gray-400 resize-none transition-all"
                     />
                   </div>
 
@@ -810,44 +810,44 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
 
               {/* Stats Overview */}
               <div className="bg-cream border border-ink-soft/10 rounded-3xl p-4 sm:p-6 shadow-xl space-y-3 sm:space-y-4 min-w-0 overflow-hidden">
-                <h3 className="text-sm font-black text-ink flex items-center gap-2">
+                <h3 className="text-sm font-black text-gray-900 flex items-center gap-2">
                   <TrendingUp className="h-4.5 w-4.5 text-teal-500 shrink-0" />
                   <span>Attendance Record Summary</span>
                 </h3>
 
                 <div className="grid grid-cols-2 gap-2 sm:gap-3 min-w-0">
-                  <div className="p-2.5 sm:p-3.5 bg-teal-500/10 rounded-2xl border border-teal-500/20 text-center min-w-0">
-                    <span className="text-[10px] font-bold text-teal-300 block uppercase tracking-normal sm:tracking-wider truncate">
+                  <div className="p-2.5 sm:p-3.5 bg-teal-50 rounded-2xl border border-teal-100 text-center min-w-0">
+                    <span className="text-[10px] font-bold text-teal-600 block uppercase tracking-normal sm:tracking-wider truncate">
                       Present
                     </span>
-                    <span className="text-lg sm:text-xl font-black text-teal-400 mt-0.5 block">
+                    <span className="text-lg sm:text-xl font-black text-teal-600 mt-0.5 block">
                       {displayStats.presentCount}
                     </span>
                   </div>
 
-                  <div className="p-2.5 sm:p-3.5 bg-amber-500/10 rounded-2xl border border-amber-500/20 text-center min-w-0">
-                    <span className="text-[10px] font-bold text-amber-300 block uppercase tracking-normal sm:tracking-wider truncate">
+                  <div className="p-2.5 sm:p-3.5 bg-amber-50 rounded-2xl border border-amber-100 text-center min-w-0">
+                    <span className="text-[10px] font-bold text-amber-600 block uppercase tracking-normal sm:tracking-wider truncate">
                       Late
                     </span>
-                    <span className="text-lg sm:text-xl font-black text-amber-400 mt-0.5 block">
+                    <span className="text-lg sm:text-xl font-black text-amber-500 mt-0.5 block">
                       {displayStats.lateCount}
                     </span>
                   </div>
 
-                  <div className="p-2.5 sm:p-3.5 bg-coral-500/10 rounded-2xl border border-coral-500/20 text-center min-w-0">
-                    <span className="text-[10px] font-bold text-coral-300 block uppercase tracking-normal sm:tracking-wider truncate">
+                  <div className="p-2.5 sm:p-3.5 bg-coral-50 rounded-2xl border border-coral-100 text-center min-w-0">
+                    <span className="text-[10px] font-bold text-coral-600 block uppercase tracking-normal sm:tracking-wider truncate">
                       Absent
                     </span>
-                    <span className="text-lg sm:text-xl font-black text-coral-400 mt-0.5 block">
+                    <span className="text-lg sm:text-xl font-black text-coral-600 mt-0.5 block">
                       {displayStats.absentCount}
                     </span>
                   </div>
 
-                  <div className="p-2.5 sm:p-3.5 bg-violet-500/10 rounded-2xl border border-violet-500/20 text-center min-w-0">
-                    <span className="text-[10px] font-bold text-violet-300 block uppercase tracking-normal sm:tracking-wider truncate">
+                  <div className="p-2.5 sm:p-3.5 bg-blue-50 rounded-2xl border border-blue-100 text-center min-w-0">
+                    <span className="text-[10px] font-bold text-blue-600 block uppercase tracking-normal sm:tracking-wider truncate">
                       Punctuality Rate
                     </span>
-                    <span className="text-lg sm:text-xl font-black text-violet-400 mt-0.5 block">
+                    <span className="text-lg sm:text-xl font-black text-blue-600 mt-0.5 block">
                       {displayStats.percentage}%
                     </span>
                   </div>
@@ -856,22 +856,22 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
             </div>
 
             {/* Right Column: Attendance History Table */}
-            <div className="lg:col-span-2 bg-slate-900/80 border border-slate-700/60 rounded-3xl p-4 sm:p-6 shadow-xl space-y-4 min-w-0 overflow-hidden backdrop-blur-xl">
-              <h2 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
-                <Clock className="h-5 w-5 text-cyan-400 shrink-0" />
+            <div className="lg:col-span-2 bg-white border border-gray-200 rounded-3xl p-4 sm:p-6 shadow-xl space-y-4 min-w-0 overflow-hidden">
+              <h2 className="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
+                <Clock className="h-5 w-5 text-blue-600 shrink-0" />
                 <span>Attendance Log History</span>
               </h2>
 
               {displayHistory.length === 0 ? (
-                <div className="p-10 text-center text-slate-400 space-y-2">
-                  <ClipboardList className="h-8 w-8 mx-auto text-slate-500" />
+                <div className="p-10 text-center text-gray-400 space-y-2">
+                  <ClipboardList className="h-8 w-8 mx-auto text-gray-500" />
                   <p className="text-xs font-semibold">No attendance logged for this view yet.</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
                     <thead>
-                      <tr className="border-b border-slate-700/60 text-slate-400 font-bold uppercase tracking-wider text-[11px]">
+                      <tr className="border-b border-gray-200 text-gray-400 font-bold uppercase tracking-wider text-[11px]">
                         <th className="pb-3 px-3 whitespace-nowrap">Date</th>
                         <th className="pb-3 px-3 whitespace-nowrap">Time</th>
                         <th className="pb-3 px-3 whitespace-nowrap">Subject / Class</th>
@@ -879,13 +879,13 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                         <th className="pb-3 px-3 whitespace-nowrap">Notes</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-700/60">
+                    <tbody className="divide-y divide-gray-200">
                       {displayHistory.map((record) => (
-                        <tr key={record.id} className="hover:bg-cyan-500/5 transition-colors">
-                          <td className="py-3 px-3 font-mono font-bold text-white whitespace-nowrap">{record.date}</td>
-                          <td className="py-3 px-3 text-slate-300 font-mono whitespace-nowrap">{record.time}</td>
+                        <tr key={record.id} className="hover:bg-blue-50 transition-colors">
+                          <td className="py-3 px-3 font-mono font-bold text-gray-900 whitespace-nowrap">{record.date}</td>
+                          <td className="py-3 px-3 text-gray-500 font-mono whitespace-nowrap">{record.time}</td>
                           <td className="py-3 px-3 whitespace-nowrap">
-                            <span className="px-2.5 py-1 bg-violet-500/20 text-violet-300 font-extrabold text-[10px] rounded-lg border border-violet-500/40 shadow-[0_0_10px_rgba(168,85,247,0.2)] whitespace-nowrap inline-block">
+                            <span className="px-2.5 py-1 bg-blue-50 text-blue-600 font-extrabold text-[10px] rounded-lg border border-blue-200 whitespace-nowrap inline-block">
                               {record.subject || "General Class"}
                             </span>
                           </td>
@@ -893,10 +893,10 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                             <span
                               className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-extrabold whitespace-nowrap ${
                                 record.status === "Present"
-                                  ? "bg-teal-500/20 text-teal-300 border border-teal-500/40 shadow-[0_0_10px_rgba(20,184,166,0.2)]"
+                                  ? "bg-teal-50 text-teal-600 border border-teal-200"
                                   : record.status === "Late"
-                                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
-                                  : "bg-rose-500/20 text-rose-300 border border-rose-500/40 shadow-[0_0_10px_rgba(244,63,94,0.2)]"
+                                  ? "bg-amber-50 text-amber-600 border border-amber-200"
+                                  : "bg-red-50 text-red-600 border border-red-200"
                               }`}
                             >
                               {record.status === "Present" && <CheckCircle className="h-3.5 w-3.5" />}
@@ -905,7 +905,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                               {record.status}
                             </span>
                           </td>
-                          <td className="py-3 px-3 text-slate-300 italic max-w-xs truncate font-medium">
+                          <td className="py-3 px-3 text-gray-500 italic max-w-xs truncate font-medium">
                             {record.notes || "—"}
                           </td>
                         </tr>
@@ -948,15 +948,15 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                 value={announcementSearch}
                 onChange={(e) => setAnnouncementSearch(e.target.value)}
                 placeholder="Search announcements by title or content..."
-                className="w-full text-xs font-semibold bg-transparent !border-none !outline-none focus:!bg-transparent focus:!outline-none focus:!border-none focus:!ring-0 text-ink placeholder-ink-soft/50"
+                className="w-full text-xs font-semibold bg-transparent !border-none !outline-none focus:!bg-transparent focus:!outline-none focus:!border-none focus:!ring-0 text-gray-900 placeholder-ink-soft/50"
                 style={{ border: "none", outline: "none", boxShadow: "none" }}
               />
             </div>
 
             {filteredAnnouncements.length === 0 ? (
-              <div className="bg-cream border border-ink-soft/10 rounded-3xl p-12 text-center text-ink-soft/60 space-y-2">
-                <Megaphone className="h-10 w-10 mx-auto text-ink-soft/30" />
-                <p className="text-sm font-bold text-ink">No announcements found.</p>
+              <div className="bg-cream border border-ink-soft/10 rounded-3xl p-12 text-center text-gray-500/60 space-y-2">
+                <Megaphone className="h-10 w-10 mx-auto text-gray-500/30" />
+                <p className="text-sm font-bold text-gray-900">No announcements found.</p>
                 <p className="text-xs">Check back later for course updates from your teachers.</p>
               </div>
             ) : (
@@ -972,24 +972,24 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-ink-soft/10 pb-4">
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-teal-950/80 text-teal-300 rounded-full border border-teal-500/40">
+                          <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-teal-50 text-teal-600 rounded-full border border-teal-200">
                             Announcement
                           </span>
-                          <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-indigo-950/80 text-indigo-300 rounded-full border border-indigo-500/40 flex items-center gap-1">
+                          <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-indigo-50 text-indigo-600 rounded-full border border-indigo-200 flex items-center gap-1">
                             <GraduationCap className="h-3 w-3" />
                             Teacher: {post.authorName || teachers.find((t) => t.id === post.authorId)?.name || "Faculty"}
                           </span>
                           {post.subject && (
-                            <span className="px-2.5 py-0.5 text-[10px] font-bold bg-violet-950/80 text-violet-300 rounded-full border border-violet-500/40">
+                            <span className="px-2.5 py-0.5 text-[10px] font-bold bg-blue-50 text-blue-600 rounded-full border border-blue-200">
                               {post.subject}
                             </span>
                           )}
                         </div>
-                        <h2 className="text-lg font-black text-ink tracking-tight mt-1">
+                        <h2 className="text-lg font-black text-gray-900 tracking-tight mt-1">
                           {post.title || "Course Announcement"}
                         </h2>
                       </div>
-                      <span className="text-xs font-mono text-ink-soft/60">
+                      <span className="text-xs font-mono text-gray-500/60">
                         {new Date(post.createdAt).toLocaleDateString("en-US", {
                           month: "short",
                           day: "numeric",
@@ -1000,21 +1000,21 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                       </span>
                     </div>
 
-                    <p className="text-xs leading-relaxed text-ink/90 whitespace-pre-wrap font-sans">
+                    <p className="text-xs leading-relaxed text-gray-900/90 whitespace-pre-wrap font-sans">
                       {post.content}
                     </p>
 
                     {/* Attachment preview if any */}
                     {post.attachmentDataUrl && (
                       post.attachmentDataUrl.startsWith("data:image/") || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(post.attachmentName || "") ? (
-                        <div className="mt-3 overflow-hidden rounded-2xl border border-ink-soft/15 bg-slate-950/20 max-w-lg">
+                        <div className="mt-3 overflow-hidden rounded-2xl border border-ink-soft/15 bg-gray-50 max-w-lg">
                           <img
                             src={post.attachmentDataUrl}
                             alt={post.attachmentName || "Attached photo"}
                             className="max-h-72 w-full object-cover rounded-t-2xl hover:opacity-95 transition-opacity cursor-pointer"
                             onClick={() => window.open(post.attachmentDataUrl, "_blank")}
                           />
-                          <div className="p-2.5 bg-white/80 dark:bg-slate-900/80 flex items-center justify-between text-xs font-bold text-ink dark:text-slate-200">
+                          <div className="p-2.5 bg-white/80 dark:bg-slate-900/80 flex items-center justify-between text-xs font-bold text-gray-900 dark:text-slate-200">
                             <span className="flex items-center gap-1.5 truncate">
                               <ImageIcon className="h-4 w-4 text-teal-500 shrink-0" />
                               <span className="truncate">{post.attachmentName || "Attached Photo"}</span>
@@ -1030,7 +1030,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                         </div>
                       ) : (
                         <div className="p-3 bg-white/60 border border-ink-soft/15 rounded-2xl flex items-center justify-between">
-                          <div className="flex items-center gap-2 text-xs font-bold text-ink truncate">
+                          <div className="flex items-center gap-2 text-xs font-bold text-gray-900 truncate">
                             <Paperclip className="h-4 w-4 text-teal-500 shrink-0" />
                             <span className="truncate">{post.attachmentName || "Attachment"}</span>
                           </div>
@@ -1047,13 +1047,13 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
 
                     {/* Comment Thread Trigger */}
                     <div className="pt-2 flex items-center justify-between border-t border-ink-soft/10">
-                      <span className="text-xs font-medium text-ink-soft">
-                        Posted by <strong className="text-ink">{post.authorName}</strong>
+                      <span className="text-xs font-medium text-gray-500">
+                        Posted by <strong className="text-gray-900">{post.authorName}</strong>
                       </span>
 
                       <button
                         onClick={() => handleToggleComments(post.id)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-violet-300 bg-violet-500/20 border border-violet-500/40 rounded-xl hover:bg-violet-500/30 transition-all cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-50 transition-all cursor-pointer"
                       >
                         <MessageSquare className="h-3.5 w-3.5" />
                         Comments
@@ -1067,20 +1067,20 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                         animate={{ opacity: 1, height: "auto" }}
                         className="p-4 bg-white/60 border border-ink-soft/10 rounded-2xl space-y-3"
                       >
-                        <h4 className="text-xs font-extrabold text-ink">Discussion</h4>
+                        <h4 className="text-xs font-extrabold text-gray-900">Discussion</h4>
                         <div className="space-y-2 max-h-48 overflow-y-auto">
                           {(commentsMap[post.id] || []).length === 0 ? (
-                            <p className="text-[11px] text-ink-soft/50 italic">No comments yet. Start the conversation!</p>
+                            <p className="text-[11px] text-gray-500/50 italic">No comments yet. Start the conversation!</p>
                           ) : (
                             (commentsMap[post.id] || []).map((c) => (
                               <div key={c.id} className="p-2.5 bg-cream/80 rounded-xl text-xs space-y-0.5">
-                                <div className="flex items-center justify-between font-bold text-ink text-[11px]">
+                                <div className="flex items-center justify-between font-bold text-gray-900 text-[11px]">
                                   <span>{c.authorName}</span>
-                                  <span className="text-[10px] font-mono text-ink-soft/50">
+                                  <span className="text-[10px] font-mono text-gray-500/50">
                                     {new Date(c.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                                   </span>
                                 </div>
-                                <p className="text-ink-soft">{c.content}</p>
+                                <p className="text-gray-500">{c.content}</p>
                               </div>
                             ))
                           )}
@@ -1092,7 +1092,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                             value={newCommentInput}
                             onChange={(e) => setNewCommentInput(e.target.value)}
                             placeholder="Write a comment..."
-                            className="w-full px-3 py-2 text-xs bg-cream border border-ink-soft/15 rounded-xl focus:outline-none focus:border-teal-500 text-ink"
+                            className="w-full px-3 py-2 text-xs bg-cream border border-ink-soft/15 rounded-xl focus:outline-none focus:border-teal-500 text-gray-900"
                             onKeyDown={(e) => e.key === "Enter" && handleAddComment(post.id)}
                           />
                           <button
@@ -1119,15 +1119,15 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
             className="space-y-6"
           >
             {/* Search & Filter Header */}
-            <div className="bg-slate-900/80 border border-slate-700/60 rounded-2xl p-4 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4 backdrop-blur-xl">
-              <div className="flex items-center gap-3 flex-1 bg-slate-950/80 px-3.5 py-2.5 rounded-xl border border-slate-700/60 focus-within:border-cyan-400 focus-within:shadow-[0_0_15px_rgba(0,240,255,0.3)] transition-all">
-                <Search className="h-5 w-5 text-cyan-400 shrink-0" />
+            <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3 flex-1 bg-gray-50 px-3.5 py-2.5 rounded-xl border border-gray-200 focus-within:border-blue-500 focus-within:shadow-sm transition-all">
+                <Search className="h-5 w-5 text-blue-600 shrink-0" />
                 <input
                   type="text"
                   value={assignmentSearch}
                   onChange={(e) => setAssignmentSearch(e.target.value)}
                   placeholder="Search assignments by title..."
-                  className="w-full text-xs font-semibold bg-transparent !border-none !outline-none focus:!bg-transparent focus:!outline-none focus:!border-none focus:!ring-0 text-white placeholder-slate-400"
+                  className="w-full text-xs font-semibold bg-transparent !border-none !outline-none focus:!bg-transparent focus:!outline-none focus:!border-none focus:!ring-0 text-gray-900 placeholder-gray-400"
                   style={{ border: "none", outline: "none", boxShadow: "none" }}
                 />
               </div>
@@ -1139,8 +1139,8 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                     onClick={() => setAssignmentFilter(st)}
                     className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
                       assignmentFilter === st
-                        ? "bg-cyan-400 text-slate-950 font-black shadow-[0_0_12px_rgba(0,240,255,0.4)]"
-                        : "bg-slate-900/80 border border-slate-700/60 text-slate-300 hover:bg-slate-800 hover:text-white hover:border-slate-500"
+                        ? "bg-blue-600 text-white font-black shadow-sm"
+                        : "bg-gray-50 border border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-900 hover:border-gray-300"
                     }`}
                   >
                     {st}
@@ -1150,9 +1150,9 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
             </div>
 
             {filteredAssignments.length === 0 ? (
-              <div className="bg-cream border border-ink-soft/10 rounded-3xl p-12 text-center text-ink-soft/60 space-y-2">
-                <FileText className="h-10 w-10 mx-auto text-ink-soft/30" />
-                <p className="text-sm font-bold text-ink">No assignments found.</p>
+              <div className="bg-cream border border-ink-soft/10 rounded-3xl p-12 text-center text-gray-500/60 space-y-2">
+                <FileText className="h-10 w-10 mx-auto text-gray-500/30" />
+                <p className="text-sm font-bold text-gray-900">No assignments found.</p>
                 <p className="text-xs">Your teacher has not posted any assignments in this view yet.</p>
               </div>
             ) : (
@@ -1176,51 +1176,51 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                             <span
                               className={`px-2.5 py-0.5 text-[10px] font-extrabold rounded-full border ${
                                 isGraded
-                                  ? "bg-emerald-950/80 text-emerald-300 border-emerald-500/40"
+                                  ? "bg-green-50 text-green-600 border-green-200"
                                   : isSubmitted
-                                  ? "bg-teal-950/80 text-teal-300 border-teal-500/40"
-                                  : "bg-amber-950/80 text-amber-300 border border-amber-500/40"
+                                  ? "bg-teal-50 text-teal-600 border-teal-200"
+                                  : "bg-amber-50 text-amber-600 border border-amber-200"
                               }`}
                             >
                               {isGraded ? "Graded" : isSubmitted ? "Submitted" : "Pending"}
                             </span>
 
-                            <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-indigo-950/80 text-indigo-300 rounded-full border border-indigo-500/40 flex items-center gap-1">
+                            <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-indigo-50 text-indigo-600 rounded-full border border-indigo-200 flex items-center gap-1">
                               <GraduationCap className="h-3 w-3" />
                               Teacher: {assignment.authorName || teachers.find((t) => t.id === assignment.authorId)?.name || "Faculty"}
                             </span>
 
                             {assignment.subject && (
-                              <span className="px-2.5 py-0.5 text-[10px] font-bold bg-violet-950/80 text-violet-300 rounded-full border border-violet-500/40">
+                              <span className="px-2.5 py-0.5 text-[10px] font-bold bg-blue-50 text-blue-600 rounded-full border border-blue-200">
                                 {assignment.subject}
                               </span>
                             )}
                           </div>
 
                           {assignment.dueDate && (
-                            <span className="text-[11px] font-mono font-bold text-ink-soft">
+                            <span className="text-[11px] font-mono font-bold text-gray-500">
                               Due: {assignment.dueDate}
                             </span>
                           )}
                         </div>
 
-                        <h3 className="text-base font-black text-ink">{assignment.title}</h3>
-                        <p className="text-xs text-ink/80 leading-relaxed font-sans line-clamp-3">
+                        <h3 className="text-base font-black text-gray-900">{assignment.title}</h3>
+                        <p className="text-xs text-gray-900/80 leading-relaxed font-sans line-clamp-3">
                           {assignment.content}
                         </p>
                       </div>
 
                       {/* Grade feedback display if graded */}
                       {isGraded && (
-                        <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-xs space-y-1">
-                          <div className="flex items-center justify-between font-extrabold text-emerald-800">
+                        <div className="p-3 bg-green-50 border border-green-200 rounded-2xl text-xs space-y-1">
+                          <div className="flex items-center justify-between font-extrabold text-green-700">
                             <span className="flex items-center gap-1">
-                              <Award className="h-4 w-4 text-emerald-600" /> Grade Received:
+                              <Award className="h-4 w-4 text-green-600" /> Grade Received:
                             </span>
                             <span className="text-sm font-mono">{sub.score} / {assignment.maxPoints || 100}</span>
                           </div>
                           {sub.feedback && (
-                            <p className="text-[11px] text-emerald-700/90 italic">
+                            <p className="text-[11px] text-green-600 italic">
                               "{sub.feedback}"
                             </p>
                           )}
@@ -1234,9 +1234,9 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                         onClick={() => handleOpenSubmissionModal(assignment)}
                         className={`w-full py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-2 ${
                           isGraded
-                            ? "bg-emerald-500/15 text-emerald-700 border border-emerald-300 hover:bg-emerald-500/25"
+                            ? "bg-green-50 text-green-700 border border-green-200 hover:bg-green-100"
                             : isSubmitted
-                            ? "bg-teal-500/15 text-teal-700 border border-teal-300 hover:bg-teal-500/25"
+                            ? "bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100"
                             : "bg-teal-500 text-white hover:bg-teal-600 shadow-md shadow-teal-500/20"
                         }`}
                       >
@@ -1260,18 +1260,18 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
           >
             <div className="bg-cream border border-ink-soft/10 rounded-3xl p-6 shadow-xl space-y-2">
               <div className="flex items-center gap-2">
-                <GraduationCap className="h-6 w-6 text-violet-500" />
-                <h2 className="text-xl font-black text-ink font-display">Faculty Directory</h2>
+                <GraduationCap className="h-6 w-6 text-blue-500" />
+                <h2 className="text-xl font-black text-gray-900 font-display">Faculty Directory</h2>
               </div>
-              <p className="text-xs text-ink-soft">
+              <p className="text-xs text-gray-500">
                 Connect with your teachers, check subjects, and view verified profile credentials.
               </p>
             </div>
 
             {teachers.length === 0 ? (
               <div className="text-center py-12 bg-white border border-ink-soft/10 rounded-3xl p-6">
-                <GraduationCap className="h-10 w-10 text-ink-soft/40 mx-auto mb-2" />
-                <p className="text-sm font-bold text-ink">No faculty accounts found.</p>
+                <GraduationCap className="h-10 w-10 text-gray-500/40 mx-auto mb-2" />
+                <p className="text-sm font-bold text-gray-900">No faculty accounts found.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1286,8 +1286,8 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                         <div className="flex items-center gap-3">
                           <UserAvatar name={t.name} avatarUrl={t.avatarUrl} role="teacher" size="lg" />
                           <div>
-                            <h3 className="font-bold text-sm text-ink">{t.name}</h3>
-                            <p className="text-[11px] text-ink-soft font-mono">@{t.id}</p>
+                            <h3 className="font-bold text-sm text-gray-900">{t.name}</h3>
+                            <p className="text-[11px] text-gray-500 font-mono">@{t.id}</p>
                           </div>
                         </div>
 
@@ -1304,11 +1304,11 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
 
                       <div className="space-y-1.5 text-xs">
                         {t.subject && (
-                          <div className="flex items-start gap-2 text-ink-soft">
-                            <BookOpen className="h-3.5 w-3.5 text-violet-500 shrink-0 mt-0.5" />
+                          <div className="flex items-start gap-2 text-gray-500">
+                            <BookOpen className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" />
                             <div className="flex flex-wrap gap-1">
                               {t.subject.split(',').map((sub, sIdx) => (
-                                <span key={sIdx} className="bg-violet-100 dark:bg-violet-900/40 text-violet-800 dark:text-violet-300 px-2 py-0.5 rounded-md text-[11px] font-bold border border-violet-200 dark:border-violet-700/50">
+                                <span key={sIdx} className="bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-600 px-2 py-0.5 rounded-md text-[11px] font-bold border border-blue-200 dark:border-blue-700/50">
                                   {sub.trim()}
                                 </span>
                               ))}
@@ -1316,8 +1316,8 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                           </div>
                         )}
                         {t.location && (
-                          <div className="flex items-center gap-2 text-ink-soft">
-                            <MapPin className="h-3.5 w-3.5 text-cyan-500 shrink-0" />
+                          <div className="flex items-center gap-2 text-gray-500">
+                            <MapPin className="h-3.5 w-3.5 text-blue-600 shrink-0" />
                             <span>{t.location}</span>
                           </div>
                         )}
@@ -1333,12 +1333,12 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                           <Mail className="h-3.5 w-3.5" /> Email
                         </a>
                       ) : (
-                        <span className="text-[10px] text-ink-soft/50 italic">No email</span>
+                        <span className="text-[10px] text-gray-500/50 italic">No email</span>
                       )}
 
                       <button
                         onClick={() => setViewingTeacher(t)}
-                        className="px-3 py-1.5 text-xs font-extrabold text-violet-300 bg-violet-500/20 hover:bg-violet-500/30 border border-violet-500/40 rounded-xl transition-all cursor-pointer flex items-center gap-1"
+                        className="px-3 py-1.5 text-xs font-extrabold text-blue-600 bg-blue-50 hover:bg-blue-50 border border-blue-200 rounded-xl transition-all cursor-pointer flex items-center gap-1"
                       >
                         <GraduationCap className="h-3.5 w-3.5" /> View Profile
                       </button>
@@ -1384,35 +1384,35 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                     <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-teal-50 text-teal-600 rounded-full border border-teal-200">
                       Assignment Submission
                     </span>
-                    <h2 className="text-lg font-black text-ink mt-1">
+                    <h2 className="text-lg font-black text-gray-900 mt-1">
                       {selectedAssignmentForSubmission.title}
                     </h2>
                   </div>
                   <button
                     onClick={() => setSelectedAssignmentForSubmission(null)}
-                    className="p-1.5 text-ink-soft hover:text-ink rounded-full hover:bg-black/5 cursor-pointer"
+                    className="p-1.5 text-gray-500 hover:text-gray-900 rounded-full hover:bg-black/5 cursor-pointer"
                   >
                     <X className="h-5 w-5" />
                   </button>
                 </div>
 
                 <div className="p-3.5 bg-white/60 border border-ink-soft/10 rounded-2xl text-xs space-y-1">
-                  <h4 className="font-bold text-ink">Instructions:</h4>
-                  <p className="text-ink-soft/90 leading-relaxed font-sans">
+                  <h4 className="font-bold text-gray-900">Instructions:</h4>
+                  <p className="text-gray-500/90 leading-relaxed font-sans">
                     {selectedAssignmentForSubmission.content}
                   </p>
                 </div>
 
                 {submissionSuccess && (
-                  <div className="p-3 bg-teal-950/80 border border-teal-500/40 text-teal-300 text-xs font-bold rounded-xl flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-teal-400" />
+                  <div className="p-3 bg-teal-50 border border-teal-200 text-teal-600 text-xs font-bold rounded-xl flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-teal-600" />
                     <span>{submissionSuccess}</span>
                   </div>
                 )}
 
                 <form onSubmit={handleSubmitWork} className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-ink-soft block">
+                    <label className="text-xs font-bold text-gray-500 block">
                       Your Solution / Work Description:
                     </label>
                     <textarea
@@ -1421,16 +1421,16 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                       placeholder="Type your response or answers here..."
                       rows={5}
                       required
-                      className="w-full p-3 text-xs bg-white/70 border border-ink-soft/15 rounded-2xl focus:outline-none focus:border-teal-500 text-ink resize-none"
+                      className="w-full p-3 text-xs bg-white/70 border border-ink-soft/15 rounded-2xl focus:outline-none focus:border-teal-500 text-gray-900 resize-none"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-ink-soft block">
+                    <label className="text-xs font-bold text-gray-500 block">
                       Attach File / Photo (optional):
                     </label>
                     <div className="flex items-center gap-3">
-                      <label className="px-4 py-2.5 text-xs font-extrabold text-teal-300 bg-teal-950/80 border border-teal-500/40 hover:bg-teal-900/80 rounded-xl cursor-pointer transition-all flex items-center gap-1.5">
+                      <label className="px-4 py-2.5 text-xs font-extrabold text-teal-600 bg-teal-50 border border-teal-200 hover:bg-teal-100 rounded-xl cursor-pointer transition-all flex items-center gap-1.5">
                         <Paperclip className="h-4 w-4" />
                         Choose File
                         <input
@@ -1440,7 +1440,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                           accept="image/*,.pdf,.doc,.docx,.txt"
                         />
                       </label>
-                      <span className="text-xs font-mono text-ink-soft truncate">
+                      <span className="text-xs font-mono text-gray-500 truncate">
                         {attachmentName || "No file attached"}
                       </span>
                     </div>
@@ -1450,7 +1450,7 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
                     <button
                       type="button"
                       onClick={() => setSelectedAssignmentForSubmission(null)}
-                      className="px-4 py-2.5 text-xs font-bold text-ink-soft bg-white border border-ink-soft/15 rounded-xl hover:bg-black/5 cursor-pointer"
+                      className="px-4 py-2.5 text-xs font-bold text-gray-500 bg-white border border-ink-soft/15 rounded-xl hover:bg-black/5 cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -1471,14 +1471,14 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
 
         {/* VIEW STUDENT PROFILE SECTION */}
         {viewingStudent && (
-          <div className="pt-8 mt-10 border-t border-slate-700/60">
+          <div className="pt-8 mt-10 border-t border-gray-200">
             <StudentProfile student={viewingStudent} onClose={() => setViewingStudent(null)} />
           </div>
         )}
 
         {/* VIEW TEACHER PROFILE SECTION */}
         {viewingTeacher && (
-          <div className="pt-8 mt-10 border-t border-slate-700/60">
+          <div className="pt-8 mt-10 border-t border-gray-200">
             <TeacherProfile
               teacher={viewingTeacher}
               currentUser={dbUser}
