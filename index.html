@@ -4,10 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Attendance Hub</title>
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("attendance_system_theme");
+          var theme = stored === "default" || stored === "dark" ? stored : "dark";
+          var root = document.documentElement;
+          root.classList.toggle("theme-darker", theme === "dark");
+          root.classList.toggle("theme-default", theme === "default");
+          root.classList.toggle("dark", theme === "dark");
+        } catch (e) {
+          // localStorage unavailable (e.g. privacy mode) - fall back to dark
+          document.documentElement.classList.add("theme-darker", "dark");
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-
