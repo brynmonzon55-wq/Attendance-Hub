@@ -36,6 +36,7 @@ import { User } from "../types";
 import type { AppTheme } from "../App";
 import { saveUser, changeOwnPassword, deleteOwnAccount, forceReconnect } from "../lib/db";
 import UserAvatar from "./UserAvatar";
+import ThemeSelector from "./ThemeSelector";
 
 interface SettingsTabProps {
   currentUser: User;
@@ -566,67 +567,22 @@ export default function SettingsTab({
         </motion.div>
       </div>
 
-      {/* 3. THEME & APPEARANCE PREFERENCES */}
+      {/* 3. THEME & ENVIRONMENT PREFERENCES */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
         className="bg-slate-900/80 border border-slate-700/60 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4 backdrop-blur-xl"
       >
-        <div className="flex items-center gap-2 border-b border-slate-700/60 pb-3">
-          <Layers className="h-5 w-5 text-cyan-400" />
-          <h2 className="text-base font-black text-white font-display">Appearance & Neon Visual Modes</h2>
+        <div className="flex items-center justify-between border-b border-slate-700/60 pb-3">
+          <div className="flex items-center gap-2">
+            <Layers className="h-5 w-5 text-cyan-400" />
+            <h2 className="text-base font-black text-white font-display">Environment & Theme Aesthetics</h2>
+          </div>
+          <span className="text-xs text-slate-400 font-medium hidden sm:inline">5 Animated Environments</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Cyber Neon (Default) */}
-          <button
-            type="button"
-            onClick={() => onThemeChange("default")}
-            className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between ${
-              theme === "default"
-                ? "bg-slate-900/95 border-cyan-400 text-white shadow-[0_0_20px_rgba(0,240,255,0.35)] ring-2 ring-cyan-400/40"
-                : "bg-slate-950/70 border-slate-800/80 text-slate-300 hover:border-slate-600 hover:text-white"
-            }`}
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="p-2.5 bg-cyan-500/20 text-cyan-300 rounded-xl border border-cyan-400/30 shrink-0">
-                <Zap className="h-5 w-5 drop-shadow-[0_0_8px_rgba(0,240,255,0.8)]" />
-              </div>
-              <div>
-                <h3 className="font-extrabold text-xs text-white flex items-center gap-1.5">
-                  Cyber Neon <span className="text-[10px] uppercase tracking-wider text-cyan-400 font-mono font-bold bg-cyan-950/80 px-2 py-0.5 rounded-full border border-cyan-500/30">Default</span>
-                </h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">Vibrant cyan, magenta & purple glow on deep navy canvas</p>
-              </div>
-            </div>
-            {theme === "default" && <CheckCircle2 className="h-5 w-5 text-cyan-400 shrink-0 ml-2 drop-shadow-[0_0_10px_rgba(0,240,255,0.8)]" />}
-          </button>
-
-          {/* Obsidian Neon (Darker Version) */}
-          <button
-            type="button"
-            onClick={() => onThemeChange("dark")}
-            className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between ${
-              theme === "dark"
-                ? "bg-black/90 border-fuchsia-400 text-white shadow-[0_0_20px_rgba(217,70,239,0.35)] ring-2 ring-fuchsia-400/40"
-                : "bg-slate-950/70 border-slate-800/80 text-slate-300 hover:border-slate-600 hover:text-white"
-            }`}
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="p-2.5 bg-fuchsia-500/20 text-fuchsia-300 rounded-xl border border-fuchsia-400/30 shrink-0">
-                <Moon className="h-5 w-5 drop-shadow-[0_0_8px_rgba(217,70,239,0.8)]" />
-              </div>
-              <div>
-                <h3 className="font-extrabold text-xs text-white flex items-center gap-1.5">
-                  Obsidian Neon <span className="text-[10px] uppercase tracking-wider text-fuchsia-400 font-mono font-bold bg-fuchsia-950/80 px-2 py-0.5 rounded-full border border-fuchsia-500/30">Darker</span>
-                </h3>
-                <p className="text-[11px] text-slate-400 mt-0.5">Ultra-dark pitch-black backdrop with razor-sharp neon contrast</p>
-              </div>
-            </div>
-            {theme === "dark" && <CheckCircle2 className="h-5 w-5 text-fuchsia-400 shrink-0 ml-2 drop-shadow-[0_0_10px_rgba(217,70,239,0.8)]" />}
-          </button>
-        </div>
+        <ThemeSelector currentTheme={theme} onSelectTheme={onThemeChange} variant="cards" />
       </motion.div>
 
       {/* 4. CONNECTION & ACCOUNT SYSTEM CONTROL */}

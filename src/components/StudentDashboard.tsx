@@ -34,7 +34,7 @@ import {
   School
 } from "lucide-react";
 import { User, AttendanceRecord, AttendanceStatus, StudentStats, ClassPost, PostComment, AssignmentSubmission } from "../types";
-import type { AppTheme } from "../App";
+import type { AppTheme, AppThemeMode } from "../App";
 import AnimatedThemeBackground from "./AnimatedThemeBackground";
 import SettingsTab from "./SettingsTab";
 import UserAvatar from "./UserAvatar";
@@ -64,9 +64,18 @@ interface StudentDashboardProps {
   onLogout: () => void;
   theme: AppTheme;
   onThemeChange: (theme: AppTheme) => void;
+  themeMode?: AppThemeMode;
+  onThemeModeChange?: (mode: AppThemeMode) => void;
 }
 
-export default function StudentDashboard({ user, onLogout, theme, onThemeChange }: StudentDashboardProps) {
+export default function StudentDashboard({
+  user,
+  onLogout,
+  theme,
+  onThemeChange,
+  themeMode = "night",
+  onThemeModeChange,
+}: StudentDashboardProps) {
   // DB & State
   const [dbUser, setDbUser] = useState<User>(user);
   const [history, setHistory] = useState<AttendanceRecord[]>([]);
@@ -440,31 +449,42 @@ export default function StudentDashboard({ user, onLogout, theme, onThemeChange 
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end">
-            {/* Theme Toggle Button */}
+          <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end flex-wrap">
+            {/* Theme Cycle Button */}
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => onThemeChange(theme === "dark" ? "default" : "dark")}
-              className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold transition-all cursor-pointer ${
-                theme === "dark"
-                  ? "bg-black/80 text-fuchsia-300 border-fuchsia-500/50 hover:bg-slate-900 shadow-[0_0_15px_rgba(217,70,239,0.3)]"
-                  : "bg-slate-900/90 text-cyan-300 border-cyan-500/50 hover:bg-slate-800 shadow-[0_0_15px_rgba(0,240,255,0.3)]"
-              }`}
-              title="Switch Theme Mode"
+              onClick={() => {
+                const themes: AppTheme[] = ["default", "spring", "summer", "autumn", "winter"];
+                const next = themes[(themes.indexOf(theme) + 1) % themes.length];
+                onThemeChange(next);
+              }}
+              className="p-2 sm:p-2.5 rounded-xl border border-white/20 bg-slate-900/90 hover:bg-slate-800 text-white flex items-center gap-2 text-xs font-bold transition-all cursor-pointer shadow-lg"
+              title="Click to cycle themes"
             >
-              {theme === "dark" ? (
-                <>
-                  <Moon className="h-4 w-4 shrink-0 text-fuchsia-400 drop-shadow-[0_0_6px_rgba(217,70,239,0.8)]" />
-                  <span className="hidden sm:inline font-mono">Obsidian Neon</span>
-                </>
-              ) : (
-                <>
-                  <Zap className="h-4 w-4 shrink-0 text-cyan-400 drop-shadow-[0_0_6px_rgba(0,240,255,0.8)]" />
-                  <span className="hidden sm:inline font-mono">Cyber Neon</span>
-                </>
-              )}
+              <Zap className="h-4 w-4 text-cyan-400 shrink-0" />
+              <span className="capitalize font-mono font-bold text-xs">{theme === "default" ? "Cyberpunk" : theme}</span>
             </motion.button>
+
+            {/* Quick Night / Day Mode Toggle */}
+            {onThemeModeChange && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => onThemeModeChange(themeMode === "night" ? "day" : "night")}
+                className="p-2 sm:p-2.5 rounded-xl border border-white/20 bg-slate-900/90 hover:bg-slate-800 text-white flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer shadow-lg"
+                title={`Switch to ${themeMode === "night" ? "Day" : "Night"} Mode`}
+              >
+                {themeMode === "night" ? (
+                  <Moon className="h-4 w-4 text-cyan-400 shrink-0" />
+                ) : (
+                  <Sun className="h-4 w-4 text-amber-400 shrink-0" />
+                )}
+                <span className="capitalize font-mono font-bold text-xs">
+                  {themeMode === "night" ? "Night" : "Day"}
+                </span>
+              </motion.button>
+            )}
 
             {/* Logout Button */}
             <button
