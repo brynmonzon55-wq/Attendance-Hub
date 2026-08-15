@@ -52,20 +52,20 @@ function AnimatedThemeBackgroundComponent({ theme }: AnimatedThemeBackgroundProp
           0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
           50% { transform: translate3d(-35px, 25px, 0) scale(1.06); }
         }
-        @keyframes ambientPulse {
-          0%, 100% { opacity: ${isDarker ? "0.45" : "0.65"}; transform: translate3d(-50%, -50%, 0) scale(0.96); }
-          50% { opacity: ${isDarker ? "0.75" : "0.85"}; transform: translate3d(-50%, -50%, 0) scale(1.04); }
+       @keyframes ambientPulse {
+          0%, 100% { opacity: ${isDarker ? "0.52" : "0.68"}; transform: translate3d(-50%, -50%, 0) scale(0.98); }
+          50% { opacity: ${isDarker ? "0.62" : "0.76"}; transform: translate3d(-50%, -50%, 0) scale(1.02); }
         }
-        @keyframes fastParticleFloat {
+       @keyframes fastParticleFloat {
           0%, 100% {
-            transform: translate3d(0, 0, 0) scale(0.85);
-            opacity: ${isDarker ? "0.3" : "0.25"};
-          }
-          50% {
-            transform: translate3d(var(--px), var(--py), 0) scale(1.25);
-            opacity: ${isDarker ? "0.85" : "0.75"};
-          }
+          transform: translate3d(0, 0, 0) scale(0.92);
+          opacity: ${isDarker ? "0.4" : "0.32"};
         }
+       50% {
+          transform: translate3d(var(--px), var(--py), 0) scale(1.08);
+          opacity: ${isDarker ? "0.6" : "0.5"};
+        }
+       }
       `}</style>
 
       {/* Radiant Glowing Ambient Blobs */}
