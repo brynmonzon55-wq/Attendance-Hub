@@ -18,10 +18,12 @@ import {
   GraduationCap,
   UserCheck,
   X,
-  Search
+  Search,
+  MessageSquare
 } from "lucide-react";
 import { User, ClassRoom } from "../types";
 import { getClassesForTeacher, getUsers } from "../lib/db";
+import { openDirectMessage } from "./ClassMessenger";
 import UserAvatar from "./UserAvatar";
 
 interface TeacherProfileProps {
@@ -170,6 +172,15 @@ export default function TeacherProfile({
 
         {/* Action Buttons */}
         <div className="flex flex-wrap md:flex-col gap-2 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-800">
+          {!isMe && (
+            <button
+              onClick={() => openDirectMessage(teacher.id)}
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-extrabold text-white bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 rounded-xl transition-all cursor-pointer shadow-md shadow-violet-500/20"
+            >
+              <MessageSquare className="h-3.5 w-3.5" /> Send Message
+            </button>
+          )}
+
           {teacher.email && (
             <a
               href={`mailto:${teacher.email}`}

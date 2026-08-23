@@ -23,7 +23,7 @@ import {
   X,
   Eye,
   UserCheck,
-  Zap,
+  Palette,
   TrendingUp,
   Moon,
   Sun,
@@ -42,6 +42,7 @@ import StudentProfile from "./StudentProfile";
 import TeacherProfile from "./TeacherProfile";
 import DailyCheckinsTab from "./DailyCheckinsTab";
 import Classroom from "./Classroom";
+import ClassMessenger, { openDirectMessage } from "./ClassMessenger";
 import {
   getUsers,
   getAttendanceRecords,
@@ -57,6 +58,7 @@ import {
   addComment,
   getSubmissionForStudent,
   submitAssignment,
+  getUnreadDirectMessagesCount,
 } from "../lib/db";
 
 interface StudentDashboardProps {
@@ -87,7 +89,8 @@ export default function StudentDashboard({
     percentage: 100,
   });
 
-  const [activeTab, setActiveTab] = useState<"classes" | "attendance" | "checkins" | "announcements" | "assignments" | "faculty" | "settings">("classes");
+  const [activeTab, setActiveTab] = useState<"classes" | "attendance" | "checkins" | "announcements" | "assignments" | "faculty" | "messenger" | "settings">("classes");
+  const [unreadMessengerCount, setUnreadMessengerCount] = useState<number>(0);
   const [allStudents, setAllStudents] = useState<User[]>([]);
   const [allAttendanceRecords, setAllAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [viewingStudent, setViewingStudent] = useState<User | null>(null);
@@ -205,6 +208,9 @@ export default function StudentDashboard({
       subMap[post.id] = getSubmissionForStudent(post.id, user.id);
     });
     setSubmissionsMap(subMap);
+
+    // Unread direct messages
+    setUnreadMessengerCount(getUnreadDirectMessagesCount(user.id));
   };
 
   useEffect(() => {
@@ -212,8 +218,17 @@ export default function StudentDashboard({
     const handleDbUpdate = () => {
       loadData();
     };
+    const handleOpenMessenger = () => {
+      setActiveTab("messenger");
+    };
+
     window.addEventListener("db_updated", handleDbUpdate);
-    return () => window.removeEventListener("db_updated", handleDbUpdate);
+    window.addEventListener("open_messenger", handleOpenMessenger);
+
+    return () => {
+      window.removeEventListener("db_updated", handleDbUpdate);
+      window.removeEventListener("open_messenger", handleOpenMessenger);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.id]);
 
@@ -455,14 +470,14 @@ export default function StudentDashboard({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => {
-                const themes: AppTheme[] = ["default", "spring", "summer", "autumn", "winter"];
+                const themes: AppTheme[] = ["default", "sakura", "spring", "summer", "autumn", "winter"];
                 const next = themes[(themes.indexOf(theme) + 1) % themes.length];
                 onThemeChange(next);
               }}
               className="p-2 sm:p-2.5 rounded-xl border border-white/20 bg-slate-900/90 hover:bg-slate-800 text-white flex items-center gap-2 text-xs font-bold transition-all cursor-pointer shadow-lg"
               title="Click to cycle themes"
             >
-              <Zap className="h-4 w-4 text-cyan-400 shrink-0" />
+              <Palette className="h-4 w-4 text-cyan-400 shrink-0" />
               <span className="capitalize font-mono font-bold text-xs">{theme === "default" ? "Cyberpunk" : theme}</span>
             </motion.button>
 
@@ -612,6 +627,28 @@ export default function StudentDashboard({
           </button>
 
           <button
+            onClick={() => setActiveTab("messenger")}
+            className={`relative flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 py-2.5 sm:px-4 text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto ${
+              activeTab === "messenger" ? "text-violet-600 dark:text-violet-400" : "text-ink-soft hover:text-ink"
+            }`}
+          >
+            {activeTab === "messenger" && (
+              <motion.div
+                layoutId="studentActiveTabPill"
+                className="absolute inset-0 bg-violet-500/15 border border-violet-500/30 rounded-xl"
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+            )}
+            <MessageSquare className="h-4 w-4 relative z-10 shrink-0" />
+            <span className="relative z-10 truncate">Class Messenger</span>
+            {unreadMessengerCount > 0 && (
+              <span className="relative z-10 ml-0.5 px-1.5 py-0.2 text-[10px] font-extrabold bg-violet-500 text-white rounded-full shrink-0 animate-pulse">
+                {unreadMessengerCount}
+              </span>
+            )}
+          </button>
+
+          <button
             onClick={() => setActiveTab("settings")}
             className={`relative flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 px-3 py-2.5 sm:px-4 text-xs font-bold rounded-xl transition-colors cursor-pointer w-full sm:w-auto ${
               activeTab === "settings" ? "text-teal-600" : "text-ink-soft hover:text-ink"
@@ -630,7 +667,7 @@ export default function StudentDashboard({
         </div>
 
         {/* Teacher / Class Selector Bar */}
-        {activeTab !== "settings" && (
+        {activeTab !== "settings" && activeTab !== "messenger" && (
           <motion.div
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1356,12 +1393,22 @@ export default function StudentDashboard({
                         <span className="text-[10px] text-ink-soft/50 italic">No email</span>
                       )}
 
-                      <button
-                        onClick={() => setViewingTeacher(t)}
-                        className="px-3 py-1.5 text-xs font-extrabold text-violet-300 bg-violet-500/20 hover:bg-violet-500/30 border border-violet-500/40 rounded-xl transition-all cursor-pointer flex items-center gap-1"
-                      >
-                        <GraduationCap className="h-3.5 w-3.5" /> View Profile
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => {
+                            openDirectMessage(t.id);
+                          }}
+                          className="px-2.5 py-1.5 text-xs font-bold text-violet-300 bg-violet-500/15 hover:bg-violet-500/25 border border-violet-500/30 rounded-xl transition-all cursor-pointer flex items-center gap-1"
+                        >
+                          <MessageSquare className="h-3 w-3" /> DM
+                        </button>
+                        <button
+                          onClick={() => setViewingTeacher(t)}
+                          className="px-3 py-1.5 text-xs font-extrabold text-teal-300 bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/40 rounded-xl transition-all cursor-pointer flex items-center gap-1"
+                        >
+                          <GraduationCap className="h-3.5 w-3.5" /> Profile
+                        </button>
+                      </div>
                     </div>
                   </motion.div>
                 ))}
@@ -1370,7 +1417,37 @@ export default function StudentDashboard({
           </motion.div>
         )}
 
-        {/* TAB 4: SETTINGS */}
+        {/* TAB: CLASS MESSENGER */}
+        {activeTab === "messenger" && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
+            <div className="bg-cream/90 backdrop-blur-xl border border-ink-soft/10 rounded-3xl p-4 sm:p-6 shadow-xl space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-ink-soft/10 pb-4">
+                <div>
+                  <h2 className="text-lg sm:text-xl font-black text-ink flex items-center gap-2 font-display">
+                    <MessageSquare className="h-5 w-5 text-violet-500" />
+                    Class Messenger
+                  </h2>
+                  <p className="text-xs text-ink-soft mt-0.5 font-sans">
+                    Real-time direct messaging and private classroom communications with instructors and classmates.
+                  </p>
+                </div>
+              </div>
+
+              <ClassMessenger
+                currentUser={dbUser}
+                mode="embedded"
+                theme={theme}
+                themeMode={themeMode}
+              />
+            </div>
+          </motion.div>
+        )}
+
+        {/* TAB: SETTINGS */}
         {activeTab === "settings" && (
           <motion.div
             initial={{ opacity: 0, y: 15 }}

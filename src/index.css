@@ -91,6 +91,72 @@ html.theme-default.mode-day {
 }
 
 /* ========================================================================= */
+/* THEME 1.5: SAKURA (HANAMI & YOZAKURA — CHERRY BLOSSOM SEASON) */
+/* ========================================================================= */
+html.theme-sakura {
+  --theme-gradient-from: #ffb3c6;
+  --theme-gradient-via: #ff8fab;
+  --theme-gradient-to: #f5b942;
+  --theme-glow-color: rgba(255, 143, 171, 0.55);
+
+  --color-cyan-300: #ffd6e0;
+  --color-cyan-400: #ff8fab; /* Somei Yoshino Blossom Pink */
+  --color-cyan-500: #e0447a;
+  --color-fuchsia-300: #ffb3c6;
+  --color-fuchsia-400: #ff4d79; /* Cherry Stamen Crimson */
+  --color-fuchsia-500: #c81d5c;
+  --color-purple-300: #ffe8b8;
+  --color-purple-400: #f5b942; /* Yozakura Lantern Gold */
+  --color-purple-500: #c9840f;
+
+  --color-teal-50: rgba(255, 143, 171, 0.15);
+  --color-teal-100: rgba(255, 143, 171, 0.28);
+  --color-teal-200: rgba(255, 143, 171, 0.4);
+  --color-teal-400: #ff8fab;
+  --color-teal-500: #e0447a;
+  --color-teal-600: #ffb3c6;
+  --color-teal-700: #ffe3ea;
+}
+
+/* Sakura Night Mode (Yozakura: Lantern-lit night blossoms & moonlit petals) */
+html.theme-sakura,
+html.theme-sakura.mode-night {
+  background-color: #0d0610;
+  background-image:
+    radial-gradient(circle at 15% 15%, rgba(255, 143, 171, 0.10), transparent 45%),
+    radial-gradient(circle at 85% 25%, rgba(245, 185, 66, 0.09), transparent 45%),
+    radial-gradient(circle at 50% 85%, rgba(200, 29, 92, 0.08), transparent 50%),
+    linear-gradient(135deg, #0d0610, #170a1c, #0d0610);
+}
+
+/* Sakura Day Mode (Hanami: Somei-Yoshino blossom blizzard in spring sunlight) */
+html.theme-sakura.mode-day {
+  background-color: #2b0f1e;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(255, 143, 171, 0.45), transparent 50%),
+    radial-gradient(circle at 80% 25%, rgba(245, 185, 66, 0.35), transparent 50%),
+    radial-gradient(circle at 50% 85%, rgba(255, 220, 235, 0.30), transparent 55%),
+    linear-gradient(135deg, #2a0f1e, #3d1730, #2b1420);
+}
+
+html.theme-sakura .neon-glow-cyan {
+  box-shadow: 0 0 20px rgba(255, 143, 171, 0.4), inset 0 0 12px rgba(255, 143, 171, 0.15);
+}
+html.theme-sakura .neon-border-cyan {
+  border: 1px solid rgba(255, 143, 171, 0.5) !important;
+}
+html.theme-sakura .neon-text-cyan {
+  color: #ff8fab !important;
+  text-shadow: 0 0 12px rgba(255, 143, 171, 0.6);
+}
+html.theme-sakura input:focus,
+html.theme-sakura select:focus,
+html.theme-sakura textarea:focus {
+  border-color: #ff8fab;
+  box-shadow: 0 0 15px rgba(255, 143, 171, 0.4);
+}
+
+/* ========================================================================= */
 /* THEME 2: SPRING (SAKURA & EMERALD) */
 /* ========================================================================= */
 html.theme-spring {

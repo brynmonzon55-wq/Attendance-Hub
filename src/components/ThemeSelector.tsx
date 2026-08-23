@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "motion/react";
-import { Zap, Flower2, Sun, Leaf, Snowflake, CheckCircle2, Moon, Sparkles } from "lucide-react";
+import { Cpu, Cherry, Flower2, Sun, Leaf, Snowflake, CheckCircle2, Moon } from "lucide-react";
 import type { AppTheme, AppThemeMode } from "../App";
 
 export interface ThemeOption {
@@ -24,7 +24,7 @@ export const THEME_OPTIONS: ThemeOption[] = [
     name: "Cyberpunk",
     nightSubtitle: "Midnight cyber void & electric neon glows",
     daySubtitle: "High-tech neo-tokyo electric daylight",
-    icon: Zap,
+    icon: Cpu,
     iconColor: "text-cyan-400",
     badgeBg: "bg-cyan-950/80 border-cyan-500/40",
     badgeText: "text-cyan-300",
@@ -34,10 +34,24 @@ export const THEME_OPTIONS: ThemeOption[] = [
     accentBg: "bg-cyan-500/20",
   },
   {
+    id: "sakura",
+    name: "Sakura",
+    nightSubtitle: "Yozakura: Lantern-lit night cherry blossoms & moonlit petals",
+    daySubtitle: "Hanami: Pure Somei-Yoshino cherry blossom blizzard in spring breeze",
+    icon: Cherry,
+    iconColor: "text-pink-300",
+    badgeBg: "bg-pink-950/80 border-pink-300/40",
+    badgeText: "text-pink-200",
+    activeBorder: "border-pink-300",
+    activeGlow: "shadow-[0_0_22px_rgba(253,164,175,0.45)] ring-2 ring-pink-300/50",
+    previewGradient: "from-white via-pink-300 to-rose-300",
+    accentBg: "bg-pink-400/20",
+  },
+  {
     id: "spring",
     name: "Spring",
-    nightSubtitle: "Moonlit sakura breeze & bioluminescent petals",
-    daySubtitle: "Cherry blossoms fluttering in spring sunbeams",
+    nightSubtitle: "Moonlit flora meadow & bioluminescent blossoms",
+    daySubtitle: "Fresh meadow blossoms fluttering in spring sunbeams",
     icon: Flower2,
     iconColor: "text-pink-400",
     badgeBg: "bg-pink-950/80 border-pink-500/40",

@@ -1,4 +1,4 @@
-import { User, UserRole, AttendanceRecord, AttendanceStatus, StudentStats, SecurityLog, ClassRoom, ClassPost, PostComment, AssignmentSubmission } from "../types";
+import { User, UserRole, AttendanceRecord, AttendanceStatus, StudentStats, SecurityLog, ClassRoom, ClassPost, PostComment, AssignmentSubmission, DirectMessage, MessengerConversation } from "../types";
 import { db, auth, idToAuthEmail, createUserWithoutSigningIn, googleProvider } from "./firebase";
 import { doc, setDoc, deleteDoc, collection, onSnapshot, getDoc } from "firebase/firestore";
 import {
@@ -406,6 +406,7 @@ const CLASSES_KEY = "attendance_system_classes";
 const POSTS_KEY = "attendance_system_class_posts";
 const COMMENTS_KEY = "attendance_system_post_comments";
 const SUBMISSIONS_KEY = "attendance_system_assignment_submissions";
+const MESSAGES_KEY = "attendance_system_direct_messages";
 
 // Helper to format date as YYYY-MM-DD
 export function formatDate(date: Date): string {
@@ -454,6 +455,9 @@ export function initDB(): void {
   }
   if (!localStorage.getItem(SUBMISSIONS_KEY)) {
     localStorage.setItem(SUBMISSIONS_KEY, JSON.stringify([]));
+  }
+  if (!localStorage.getItem(MESSAGES_KEY)) {
+    localStorage.setItem(MESSAGES_KEY, JSON.stringify([]));
   }
 }
 
@@ -621,6 +625,19 @@ export function attachRealtimeListeners(): void {
     notifyDbUpdated();
   }, (err) => {
     handleFirestoreError(err, OperationType.GET, "assignment_submissions");
+    isListenersAttached = false;
+  });
+
+  // Sync "direct_messages" collection from Firestore
+  onSnapshot(collection(db, "direct_messages"), (snapshot) => {
+    const firestoreMessages: DirectMessage[] = [];
+    snapshot.forEach((doc) => {
+      firestoreMessages.push(doc.data() as DirectMessage);
+    });
+    localStorage.setItem(MESSAGES_KEY, JSON.stringify(firestoreMessages));
+    notifyDbUpdated();
+  }, (err) => {
+    handleFirestoreError(err, OperationType.GET, "direct_messages");
     isListenersAttached = false;
   });
 }
@@ -1157,7 +1174,7 @@ export function deletePost(postId: string): void {
   notifyDbUpdated();
 }
 
-// --- Comments ---
+// --- Comments (Class Comments & Private Comments) ---
 
 export function getComments(): PostComment[] {
   initDB();
@@ -1165,9 +1182,44 @@ export function getComments(): PostComment[] {
   return data ? JSON.parse(data) : [];
 }
 
-export function getCommentsForPost(postId: string): PostComment[] {
-  return getComments()
+/**
+ * Returns all comments for a post that the user is permitted to see.
+ * - Public class comments are visible to everyone.
+ * - Private comments are only visible if the viewer is the author, target student, or teacher of the class.
+ */
+export function getCommentsForPost(postId: string, currentUserId?: string, isTeacher?: boolean): PostComment[] {
+  const all = getComments()
     .filter((c) => c.postId === postId)
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+  if (!currentUserId && !isTeacher) {
+    return all.filter((c) => c.commentType !== "private");
+  }
+
+  return all.filter((c) => {
+    if (c.commentType !== "private") return true;
+    if (isTeacher) return true;
+    if (!currentUserId) return false;
+    const uid = currentUserId.toLowerCase();
+    return c.authorId.toLowerCase() === uid || (!!c.targetStudentId && c.targetStudentId.toLowerCase() === uid);
+  });
+}
+
+export function getClassCommentsForPost(postId: string): PostComment[] {
+  return getComments()
+    .filter((c) => c.postId === postId && c.commentType !== "private")
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+}
+
+export function getPrivateCommentsForPost(postId: string, studentId: string): PostComment[] {
+  const sId = studentId.toLowerCase();
+  return getComments()
+    .filter(
+      (c) =>
+        c.postId === postId &&
+        c.commentType === "private" &&
+        (c.targetStudentId?.toLowerCase() === sId || c.authorId.toLowerCase() === sId)
+    )
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 }
 
@@ -1176,6 +1228,7 @@ export function addComment(input: Omit<PostComment, "id" | "createdAt">): PostCo
     ...input,
     id: `comment-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     createdAt: new Date().toISOString(),
+    commentType: input.commentType || "class",
   };
   const comments = getComments();
   comments.push(comment);
@@ -1183,6 +1236,7 @@ export function addComment(input: Omit<PostComment, "id" | "createdAt">): PostCo
   setDoc(doc(db, "post_comments", comment.id), cleanForFirestore(comment)).catch((err) => {
     console.error("Error writing comment to Firestore:", err);
   });
+  notifyDbUpdated();
   return comment;
 }
 
@@ -1190,6 +1244,7 @@ export function deleteComment(commentId: string): void {
   const comments = getComments().filter((c) => c.id !== commentId);
   localStorage.setItem(COMMENTS_KEY, JSON.stringify(comments));
   deleteDoc(doc(db, "post_comments", commentId)).catch((err) => console.error(err));
+  notifyDbUpdated();
 }
 
 // --- Assignment submissions ---
@@ -1258,3 +1313,147 @@ export function deleteSubmission(submissionId: string): void {
   localStorage.setItem(SUBMISSIONS_KEY, JSON.stringify(submissions));
   deleteDoc(doc(db, "assignment_submissions", submissionId)).catch((err) => console.error(err));
 }
+
+// ---------------------------------------------------------------------------
+// Messenger & Direct Messaging Engine
+// ---------------------------------------------------------------------------
+
+export function getDirectMessages(): DirectMessage[] {
+  initDB();
+  const data = localStorage.getItem(MESSAGES_KEY);
+  return data ? JSON.parse(data) : [];
+}
+
+/**
+ * Returns all direct messages exchanged between two specific users, ordered chronologically.
+ */
+export function getDirectMessagesBetween(userAId: string, userBId: string): DirectMessage[] {
+  const a = userAId.toLowerCase();
+  const b = userBId.toLowerCase();
+  return getDirectMessages()
+    .filter(
+      (m) =>
+        (m.senderId.toLowerCase() === a && m.recipientId.toLowerCase() === b) ||
+        (m.senderId.toLowerCase() === b && m.recipientId.toLowerCase() === a)
+    )
+    .sort((x, y) => new Date(x.createdAt).getTime() - new Date(y.createdAt).getTime());
+}
+
+/**
+ * Returns grouped Messenger conversations for a given user, with the most recent message and unread count.
+ */
+export function getConversationsForUser(userId: string): MessengerConversation[] {
+  const myId = userId.toLowerCase();
+  const allMessages = getDirectMessages();
+  const conversationMap = new Map<string, { partner: User; lastMsg: DirectMessage; unread: number }>();
+  const users = getUsers();
+
+  allMessages.forEach((msg) => {
+    const isSender = msg.senderId.toLowerCase() === myId;
+    const isRecipient = msg.recipientId.toLowerCase() === myId;
+    if (!isSender && !isRecipient) return;
+
+    const partnerId = isSender ? msg.recipientId : msg.senderId;
+    const partnerIdLower = partnerId.toLowerCase();
+    const partnerUser = users.find((u) => u.id.toLowerCase() === partnerIdLower);
+
+    const existing = conversationMap.get(partnerIdLower);
+    const unreadInc = (!isSender && !msg.read) ? 1 : 0;
+
+    if (!existing) {
+      conversationMap.set(partnerIdLower, {
+        partner: partnerUser || {
+          id: partnerId,
+          name: isSender ? msg.recipientName : msg.senderName,
+          role: isSender ? msg.recipientRole : msg.senderRole,
+          createdAt: "",
+        },
+        lastMsg: msg,
+        unread: unreadInc,
+      });
+    } else {
+      if (new Date(msg.createdAt).getTime() > new Date(existing.lastMsg.createdAt).getTime()) {
+        existing.lastMsg = msg;
+      }
+      existing.unread += unreadInc;
+    }
+  });
+
+  return Array.from(conversationMap.values())
+    .map(({ partner, lastMsg, unread }) => ({
+      partnerId: partner.id,
+      partnerName: partner.name,
+      partnerRole: partner.role,
+      partnerAvatarUrl: partner.avatarUrl,
+      lastMessage: lastMsg,
+      unreadCount: unread,
+    }))
+    .sort((a, b) => new Date(b.lastMessage.createdAt).getTime() - new Date(a.lastMessage.createdAt).getTime());
+}
+
+/**
+ * Sends a new direct message, storing locally and in Firestore.
+ */
+export function sendDirectMessage(
+  input: Omit<DirectMessage, "id" | "createdAt" | "read">
+): DirectMessage {
+  const msg: DirectMessage = {
+    ...input,
+    id: `dm-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    createdAt: new Date().toISOString(),
+    read: false,
+  };
+
+  const messages = getDirectMessages();
+  messages.push(msg);
+  localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
+
+  setDoc(doc(db, "direct_messages", msg.id), cleanForFirestore(msg)).catch((err) => {
+    console.error("Error writing direct message to Firestore:", err);
+  });
+
+  notifyDbUpdated();
+  return msg;
+}
+
+/**
+ * Marks all incoming messages from a specific sender as read by the recipient.
+ */
+export function markDirectMessagesAsRead(senderId: string, recipientId: string): void {
+  const sId = senderId.toLowerCase();
+  const rId = recipientId.toLowerCase();
+  let updatedCount = 0;
+
+  const messages = getDirectMessages().map((m) => {
+    if (m.senderId.toLowerCase() === sId && m.recipientId.toLowerCase() === rId && !m.read) {
+      updatedCount++;
+      const updated = { ...m, read: true };
+      setDoc(doc(db, "direct_messages", m.id), { read: true }, { merge: true }).catch((err) => {
+        console.error("Error updating message read status in Firestore:", err);
+      });
+      return updated;
+    }
+    return m;
+  });
+
+  if (updatedCount > 0) {
+    localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
+    notifyDbUpdated();
+  }
+}
+
+/**
+ * Count total unread incoming messages for a user across all chats.
+ */
+export function getUnreadDirectMessagesCount(userId: string): number {
+  const myId = userId.toLowerCase();
+  return getDirectMessages().filter((m) => m.recipientId.toLowerCase() === myId && !m.read).length;
+}
+
+export function deleteDirectMessage(messageId: string): void {
+  const messages = getDirectMessages().filter((m) => m.id !== messageId);
+  localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
+  deleteDoc(doc(db, "direct_messages", messageId)).catch((err) => console.error(err));
+  notifyDbUpdated();
+}
+

@@ -29,7 +29,7 @@ import {
   Upload,
   Moon,
   Sun,
-  Zap,
+  Palette,
   MessageSquare,
   Image as ImageIcon,
   GraduationCap,
@@ -61,6 +61,7 @@ import SettingsTab from "./SettingsTab";
 import UserAvatar from "./UserAvatar";
 import DailyCheckinsTab from "./DailyCheckinsTab";
 import Classroom from "./Classroom";
+import ClassMessenger, { openDirectMessage } from "./ClassMessenger";
 import {
   getUsers,
   saveUser,
@@ -90,6 +91,7 @@ import {
   createClass,
   addStudentToClass,
   removeStudentFromClass,
+  getUnreadDirectMessagesCount,
 } from "../lib/db";
 
 interface TeacherDashboardProps {
@@ -126,7 +128,8 @@ export default function TeacherDashboard({
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<"roster" | "teachers" | "checkins" | "announcements" | "assignments" | "reports" | "settings">("roster");
+  const [activeTab, setActiveTab] = useState<"roster" | "teachers" | "checkins" | "announcements" | "assignments" | "reports" | "messenger" | "settings">("roster");
+  const [unreadMessengerCount, setUnreadMessengerCount] = useState<number>(0);
   const [viewingStudent, setViewingStudent] = useState<User | null>(null);
   const [viewingTeacherProfile, setViewingTeacherProfile] = useState<User | null>(null);
 
@@ -236,6 +239,7 @@ export default function TeacherDashboard({
     setAssignments(getAssignments());
 
     setTeacherClasses(getClassesForTeacher(user.id));
+    setUnreadMessengerCount(getUnreadDirectMessagesCount(user.id));
   };
 
   const selectedClass = selectedClassId !== "all" ? teacherClasses.find((c) => c.id === selectedClassId) : undefined;
@@ -289,8 +293,17 @@ export default function TeacherDashboard({
   useEffect(() => {
     loadDatabase();
     const handleDbUpdate = () => loadDatabase();
+    const handleOpenMessenger = () => {
+      setActiveTab("messenger");
+    };
+
     window.addEventListener("db_updated", handleDbUpdate);
-    return () => window.removeEventListener("db_updated", handleDbUpdate);
+    window.addEventListener("open_messenger", handleOpenMessenger);
+
+    return () => {
+      window.removeEventListener("db_updated", handleDbUpdate);
+      window.removeEventListener("open_messenger", handleOpenMessenger);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.id]);
 
@@ -691,14 +704,14 @@ export default function TeacherDashboard({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => {
-                const themes: AppTheme[] = ["default", "spring", "summer", "autumn", "winter"];
+                const themes: AppTheme[] = ["default", "sakura", "spring", "summer", "autumn", "winter"];
                 const next = themes[(themes.indexOf(theme) + 1) % themes.length];
                 onThemeChange(next);
               }}
               className="p-2 sm:p-2.5 rounded-xl border border-white/20 bg-slate-900/90 hover:bg-slate-800 text-white flex items-center gap-2 text-xs font-bold transition-all cursor-pointer shadow-lg"
               title="Click to cycle themes"
             >
-              <Zap className="h-4 w-4 text-cyan-400 shrink-0" />
+              <Palette className="h-4 w-4 text-cyan-400 shrink-0" />
               <span className="capitalize font-mono font-bold text-xs">{theme === "default" ? "Cyberpunk" : theme}</span>
             </motion.button>
 
@@ -840,6 +853,13 @@ export default function TeacherDashboard({
             { id: "announcements", label: "Announcements", icon: Megaphone, count: filteredAnnouncements.length },
             { id: "assignments", label: "Assignments & Grading", icon: FileText, count: filteredAssignments.length },
             { id: "reports", label: "Reports & Logs", icon: FileSpreadsheet },
+            {
+              id: "messenger",
+              label: "Class Messenger",
+              icon: MessageSquare,
+              count: unreadMessengerCount > 0 ? unreadMessengerCount : undefined,
+              badgeColor: "bg-violet-500",
+            },
             { id: "settings", label: "Settings", icon: SettingsIcon },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -947,6 +967,14 @@ export default function TeacherDashboard({
                             className="flex-1 py-1.5 text-xs font-bold text-violet-300 bg-violet-500/20 border border-violet-500/40 rounded-lg hover:bg-violet-500/30 cursor-pointer flex items-center justify-center gap-1 transition-all"
                           >
                             <Eye className="h-3.5 w-3.5" /> Profile
+                          </button>
+                          <button
+                            onClick={() => openDirectMessage(st.id)}
+                            className="px-2.5 py-1.5 text-xs font-bold text-violet-300 bg-violet-600/20 hover:bg-violet-600/40 border border-violet-500/40 rounded-lg cursor-pointer transition-all flex items-center gap-1"
+                            title={`Direct message ${st.name}`}
+                          >
+                            <MessageSquare className="h-3.5 w-3.5 text-violet-400" />
+                            <span>DM</span>
                           </button>
                           <button
                             onClick={() => {
@@ -1197,6 +1225,18 @@ export default function TeacherDashboard({
                             </div>
 
                             <div className="flex items-center gap-2">
+                              {/* DM Faculty Button */}
+                              {t.id.toLowerCase() !== dbUser.id.toLowerCase() && (
+                                <button
+                                  onClick={() => openDirectMessage(t.id)}
+                                  className="px-2.5 py-1.5 text-xs font-extrabold text-violet-300 bg-violet-600/20 hover:bg-violet-600/40 border border-violet-500/40 rounded-xl transition-all cursor-pointer flex items-center gap-1"
+                                  title={`Direct message ${t.name}`}
+                                >
+                                  <MessageSquare className="h-3.5 w-3.5 text-violet-400" />
+                                  <span>DM</span>
+                                </button>
+                              )}
+
                               {/* View Profile Button */}
                               <button
                                 onClick={() => setViewingTeacherProfile(t)}
@@ -1518,7 +1558,37 @@ export default function TeacherDashboard({
           </motion.div>
         )}
 
-        {/* TAB 6: SETTINGS */}
+        {/* TAB 6: CLASS MESSENGER */}
+        {activeTab === "messenger" && (
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
+            <div className="bg-slate-900/80 border border-slate-700/60 rounded-3xl p-4 sm:p-6 shadow-xl space-y-4 backdrop-blur-xl">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-4">
+                <div>
+                  <h2 className="text-lg sm:text-xl font-black text-white flex items-center gap-2 font-display">
+                    <MessageSquare className="h-5 w-5 text-violet-400" />
+                    Class Messenger & Direct Messages
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5 font-sans">
+                    Real-time 1-on-1 direct messaging and classroom communications with students and faculty.
+                  </p>
+                </div>
+              </div>
+
+              <ClassMessenger
+                currentUser={dbUser}
+                mode="embedded"
+                theme={theme}
+                themeMode={themeMode}
+              />
+            </div>
+          </motion.div>
+        )}
+
+        {/* TAB 7: SETTINGS */}
         {activeTab === "settings" && (
           <motion.div
             initial={{ opacity: 0, y: 15 }}

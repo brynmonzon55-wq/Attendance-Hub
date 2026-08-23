@@ -3,7 +3,8 @@ import {
   Plus, ArrowLeft, Check, Users, MessageSquare,
   Paperclip, Calendar, Trash2, Send, X, FileText, Megaphone, UserPlus, UserMinus,
   Activity, ClipboardCheck, Copy, School, BookOpen, Clock, Search,
-  AlertTriangle, ShieldAlert, CheckCircle2, ChevronRight, UserCheck
+  AlertTriangle, ShieldAlert, CheckCircle2, ChevronRight, UserCheck,
+  Lock, Globe, MessageCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { User, ClassRoom, ClassPost, PostComment, AssignmentSubmission, AttendanceRecord, AttendanceStatus } from "../types";
@@ -11,20 +12,12 @@ import {
   getClassesForTeacher, getClassesForStudent, getClassById, createClass,
   addStudentToClass, removeStudentFromClass, joinClassByCode,
   deleteClass, getPostsForClass, createPost, deletePost, getCommentsForPost,
+  getClassCommentsForPost, getPrivateCommentsForPost,
   addComment, getSubmissionsForPost, getSubmissionForStudent, submitAssignment,
   getClassmatesWithStats, getUsers, getAttendanceRecords, saveAttendanceRecord, attendanceMatchesClass, formatDate,
 } from "../lib/db";
-
-const MAX_ATTACHMENT_BYTES = 700 * 1024; // stored inline in Firestore docs
-
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
+import { openDirectMessage } from "./ClassMessenger";
+import { processFileUpload } from "../lib/fileUtils";
 
 function timeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -871,12 +864,12 @@ function ClassLog({ currentUser, cls }: { currentUser: User; cls: ClassRoom }) {
   const handleFile = async (file: File | undefined) => {
     setFileError("");
     if (!file) return;
-    if (file.size > MAX_ATTACHMENT_BYTES) {
-      setFileError("File is too large (max ~700KB). Try a smaller image or file.");
-      return;
+    try {
+      const processed = await processFileUpload(file);
+      setAttachment(processed);
+    } catch (err: any) {
+      setFileError(err?.message || "Could not process file. Try a smaller file.");
     }
-    const dataUrl = await readFileAsDataUrl(file);
-    setAttachment({ name: file.name, dataUrl });
   };
 
   const resetComposer = () => {
@@ -1085,9 +1078,13 @@ function PostCard({
   onDeleted: () => void;
 }) {
   const isAssignment = post.type === "assignment";
-  const [comments, setComments] = useState<PostComment[]>(getCommentsForPost(post.id));
+  const [comments, setComments] = useState<PostComment[]>(() => getCommentsForPost(post.id, currentUser.id, isTeacher));
+  const [commentCategory, setCommentCategory] = useState<"class" | "private">("class");
   const [submissions, setSubmissions] = useState<AssignmentSubmission[]>(isAssignment ? getSubmissionsForPost(post.id) : []);
   const [commentText, setCommentText] = useState("");
+  const [privateCommentTargetStudentId, setPrivateCommentTargetStudentId] = useState<string>(
+    isTeacher ? "" : currentUser.id
+  );
   const [submitText, setSubmitText] = useState("");
   const [showComments, setShowComments] = useState(false);
   const [showSubmissions, setShowSubmissions] = useState(false);
@@ -1097,32 +1094,77 @@ function PostCard({
 
   const mySubmission = !isTeacher && isAssignment ? getSubmissionForStudent(post.id, currentUser.id) : undefined;
 
+  const refreshComments = () => {
+    setComments(getCommentsForPost(post.id, currentUser.id, isTeacher));
+  };
+
+  useEffect(() => {
+    refreshComments();
+    const handleUpdate = () => {
+      refreshComments();
+      if (isAssignment) {
+        setSubmissions(getSubmissionsForPost(post.id));
+      }
+    };
+    window.addEventListener("db_updated", handleUpdate);
+    return () => window.removeEventListener("db_updated", handleUpdate);
+  }, [post.id, currentUser.id, isTeacher, isAssignment]);
+
+  const classComments = comments.filter((c) => c.commentType !== "private");
+  const privateComments = comments.filter((c) => {
+    if (c.commentType !== "private") return false;
+    if (isTeacher) {
+      if (!privateCommentTargetStudentId) return true;
+      return (
+        c.targetStudentId?.toLowerCase() === privateCommentTargetStudentId.toLowerCase() ||
+        c.authorId.toLowerCase() === privateCommentTargetStudentId.toLowerCase()
+      );
+    }
+    return (
+      c.authorId.toLowerCase() === currentUser.id.toLowerCase() ||
+      c.targetStudentId?.toLowerCase() === currentUser.id.toLowerCase()
+    );
+  });
+
   const handleComment = () => {
     if (!commentText.trim()) return;
+
+    const isPrivate = commentCategory === "private";
+    const targetStudentId = isPrivate
+      ? isTeacher
+        ? privateCommentTargetStudentId || (submissions[0]?.studentId || "")
+        : currentUser.id
+      : undefined;
+
     addComment({
       postId: post.id,
+      classId: post.classId,
       authorId: currentUser.id,
       authorName: currentUser.name,
       content: commentText.trim(),
+      commentType: isPrivate ? "private" : "class",
+      targetStudentId,
     });
-    setComments(getCommentsForPost(post.id));
+
     setCommentText("");
+    refreshComments();
   };
 
   const handleFile = async (file: File | undefined) => {
     setFileError("");
     if (!file) return;
-    if (file.size > MAX_ATTACHMENT_BYTES) {
-      setFileError("File too large (max ~700KB).");
-      return;
+    try {
+      const processed = await processFileUpload(file);
+      setSubmitAttachment(processed);
+    } catch (err: any) {
+      setFileError(err?.message || "File too large. Try a smaller file.");
     }
-    const dataUrl = await readFileAsDataUrl(file);
-    setSubmitAttachment({ name: file.name, dataUrl });
   };
 
   const handleSubmitWork = () => {
     submitAssignment({
       postId: post.id,
+      classId: post.classId,
       studentId: currentUser.id,
       studentName: currentUser.name,
       content: submitText.trim(),
@@ -1137,8 +1179,9 @@ function PostCard({
 
   return (
     <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">
+      {/* Post Header */}
       <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1 min-w-0">
+        <div className="space-y-1.5 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span
               className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${
@@ -1147,9 +1190,9 @@ function PostCard({
                   : "bg-violet-500/20 text-violet-300 border-violet-500/40"
               }`}
             >
-              {isAssignment ? "Assignment / Homework" : "Announcement"}
+              {isAssignment ? "Assignment / Coursework" : "Class Announcement"}
             </span>
-            <span className="text-[11px] text-slate-400 font-medium">{timeAgo(post.createdAt)}</span>
+            <span className="text-[11px] text-slate-400 font-medium">By {post.authorName} &bull; {timeAgo(post.createdAt)}</span>
           </div>
 
           {post.title && <h4 className="text-base font-extrabold text-white">{post.title}</h4>}
@@ -1162,7 +1205,7 @@ function PostCard({
           )}
 
           {post.attachmentDataUrl && (
-            <div className="pt-2">
+            <div className="pt-1">
               <a
                 href={post.attachmentDataUrl}
                 download={post.attachmentName || "attachment"}
@@ -1175,14 +1218,26 @@ function PostCard({
           )}
         </div>
 
-        {isTeacher && (
-          <button
-            onClick={() => { deletePost(post.id); onDeleted(); }}
-            className="p-2 rounded-xl bg-slate-950 hover:bg-rose-950/80 text-slate-500 hover:text-rose-400 border border-slate-800 cursor-pointer"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {!isTeacher && post.authorId && (
+            <button
+              onClick={() => openDirectMessage(post.authorId)}
+              className="p-2 rounded-xl bg-slate-950 hover:bg-violet-950/80 text-slate-400 hover:text-violet-300 border border-slate-800 transition-colors cursor-pointer"
+              title="Direct Message Teacher"
+            >
+              <MessageCircle className="h-4 w-4" />
+            </button>
+          )}
+          {isTeacher && (
+            <button
+              onClick={() => { deletePost(post.id); onDeleted(); }}
+              className="p-2 rounded-xl bg-slate-950 hover:bg-rose-950/80 text-slate-500 hover:text-rose-400 border border-slate-800 cursor-pointer"
+              title="Delete Post"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Student Submission Controls */}
@@ -1193,6 +1248,15 @@ function PostCard({
               <span className="text-emerald-300 font-bold flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Turned in on {formatDate(new Date(mySubmission.submittedAt))}
               </span>
+              <button
+                onClick={() => {
+                  setCommentCategory("private");
+                  setShowComments(true);
+                }}
+                className="text-[11px] font-bold text-cyan-300 hover:underline flex items-center gap-1"
+              >
+                <Lock className="h-3 w-3" /> Private teacher comments
+              </button>
             </div>
           ) : (
             <div>
@@ -1237,9 +1301,10 @@ function PostCard({
         <div className="pt-2">
           <button
             onClick={() => setShowSubmissions((v) => !v)}
-            className="text-xs font-bold text-fuchsia-400 hover:underline cursor-pointer"
+            className="text-xs font-bold text-fuchsia-400 hover:underline cursor-pointer flex items-center gap-1"
           >
-            {submissions.length} Turn-in Submission(s) {showSubmissions ? "▲" : "▼"}
+            <FileText className="h-3.5 w-3.5" />
+            <span>{submissions.length} Turn-in Submission(s) {showSubmissions ? "▲" : "▼"}</span>
           </button>
 
           {showSubmissions && (
@@ -1249,15 +1314,42 @@ function PostCard({
               ) : (
                 submissions.map((s) => (
                   <div key={s.id} className="p-3 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 text-xs">
-                    <div>
-                      <p className="font-bold text-white">{s.studentName}</p>
-                      {s.content && <p className="text-slate-400">{s.content}</p>}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-white truncate">{s.studentName}</p>
+                        <span className="text-[10px] text-slate-400">{formatDate(new Date(s.submittedAt))}</span>
+                      </div>
+                      {s.content && <p className="text-slate-400 mt-0.5">{s.content}</p>}
                     </div>
-                    {s.attachmentDataUrl && (
-                      <a href={s.attachmentDataUrl} download={s.attachmentName} className="text-cyan-400 hover:underline flex items-center gap-1">
-                        <Paperclip className="h-3.5 w-3.5" /> Download
-                      </a>
-                    )}
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {s.attachmentDataUrl && (
+                        <a
+                          href={s.attachmentDataUrl}
+                          download={s.attachmentName}
+                          className="text-cyan-400 hover:underline flex items-center gap-1 text-[11px] font-bold"
+                        >
+                          <Paperclip className="h-3 w-3" /> Download
+                        </a>
+                      )}
+                      <button
+                        onClick={() => {
+                          setPrivateCommentTargetStudentId(s.studentId);
+                          setCommentCategory("private");
+                          setShowComments(true);
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 text-[10px] font-bold border border-violet-500/30 flex items-center gap-1"
+                      >
+                        <Lock className="h-3 w-3" /> Private Thread
+                      </button>
+                      <button
+                        onClick={() => openDirectMessage(s.studentId)}
+                        className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-cyan-300 hover:text-cyan-200 border border-slate-800"
+                        title="Send Direct Message to Student"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
@@ -1266,39 +1358,123 @@ function PostCard({
         </div>
       )}
 
-      {/* Comments Section */}
-      <div className="pt-3 border-t border-slate-800">
-        <button
-          onClick={() => setShowComments((v) => !v)}
-          className="text-xs font-bold text-slate-400 hover:text-white flex items-center gap-1.5 cursor-pointer"
-        >
-          <MessageSquare className="h-3.5 w-3.5 text-violet-400" />
-          <span>{comments.length} Class Comment(s)</span>
-        </button>
+      {/* Google Classroom Comments Section (Class Comments vs Private Comments) */}
+      <div className="pt-3 border-t border-slate-800 space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setCommentCategory("class");
+                setShowComments(true);
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                showComments && commentCategory === "class"
+                  ? "bg-violet-600 text-white shadow-md shadow-violet-600/30"
+                  : "bg-slate-950 text-slate-400 hover:text-white border border-slate-800"
+              }`}
+            >
+              <Globe className="h-3.5 w-3.5 text-violet-400" />
+              <span>{classComments.length} Class Comments</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setCommentCategory("private");
+                setShowComments(true);
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                showComments && commentCategory === "private"
+                  ? "bg-fuchsia-600 text-white shadow-md shadow-fuchsia-600/30"
+                  : "bg-slate-950 text-slate-400 hover:text-white border border-slate-800"
+              }`}
+            >
+              <Lock className="h-3.5 w-3.5 text-fuchsia-400" />
+              <span>{privateComments.length} Private Comments</span>
+            </button>
+          </div>
+
+          <button
+            onClick={() => setShowComments((v) => !v)}
+            className="text-[11px] font-bold text-slate-400 hover:text-white cursor-pointer"
+          >
+            {showComments ? "Hide Comments ▲" : "Show Comments ▼"}
+          </button>
+        </div>
 
         {showComments && (
-          <div className="mt-3 space-y-3">
-            {comments.map((c) => (
-              <div key={c.id} className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-violet-300">{c.authorName}</span>
-                  <span className="text-[10px] text-slate-500">{timeAgo(c.createdAt)}</span>
-                </div>
-                <p className="text-slate-300">{c.content}</p>
-              </div>
-            ))}
+          <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 space-y-3">
+            {/* Context Badge for Comment Type */}
+            <div className="flex items-center justify-between text-[11px] pb-1 border-b border-slate-800/60">
+              {commentCategory === "class" ? (
+                <span className="text-violet-300 font-bold flex items-center gap-1">
+                  <Globe className="h-3 w-3 text-violet-400" /> Visible to everyone in this course section
+                </span>
+              ) : (
+                <span className="text-fuchsia-300 font-bold flex items-center gap-1">
+                  <Lock className="h-3 w-3 text-fuchsia-400" /> Private 1-on-1 thread between teacher & student
+                </span>
+              )}
 
-            <div className="flex gap-2">
+              {commentCategory === "private" && isTeacher && (
+                <span className="text-slate-400">
+                  {privateCommentTargetStudentId ? `Target: ${privateCommentTargetStudentId}` : "All student private notes"}
+                </span>
+              )}
+            </div>
+
+            {/* List of comments */}
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              {(commentCategory === "class" ? classComments : privateComments).length === 0 ? (
+                <p className="text-[11px] text-slate-500 py-2 text-center">
+                  {commentCategory === "class"
+                    ? "No public class comments yet. Ask a question or share a thought!"
+                    : "No private comments yet. Share direct notes with the teacher."}
+                </p>
+              ) : (
+                (commentCategory === "class" ? classComments : privateComments).map((c) => (
+                  <div
+                    key={c.id}
+                    className={`p-2.5 rounded-xl border text-xs space-y-1 ${
+                      c.commentType === "private"
+                        ? "bg-fuchsia-950/20 border-fuchsia-900/40 text-slate-200"
+                        : "bg-slate-900/90 border-slate-800 text-slate-200"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-violet-300 flex items-center gap-1.5">
+                        {c.commentType === "private" && <Lock className="h-2.5 w-2.5 text-fuchsia-400" />}
+                        {c.authorName}
+                      </span>
+                      <span className="text-[10px] text-slate-500">{timeAgo(c.createdAt)}</span>
+                    </div>
+                    <p className="text-slate-300 leading-relaxed">{c.content}</p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Comment Composer */}
+            <div className="flex gap-2 pt-1">
               <input
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleComment()}
-                placeholder="Add a class comment..."
-                className="flex-1 px-3.5 py-2 text-xs font-medium rounded-xl bg-slate-950 border border-slate-800 text-white focus:outline-none focus:border-violet-500"
+                placeholder={
+                  commentCategory === "class"
+                    ? "Add a class comment..."
+                    : isTeacher
+                    ? "Add private comment to student..."
+                    : "Add private comment to teacher..."
+                }
+                className="flex-1 px-3.5 py-2 text-xs font-medium rounded-xl bg-slate-900 border border-slate-800 text-white focus:outline-none focus:border-violet-500"
               />
               <button
                 onClick={handleComment}
-                className="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs cursor-pointer"
+                className={`px-4 py-2 rounded-xl text-white font-bold text-xs cursor-pointer shadow-md transition-colors ${
+                  commentCategory === "private"
+                    ? "bg-fuchsia-600 hover:bg-fuchsia-500 shadow-fuchsia-600/20"
+                    : "bg-violet-600 hover:bg-violet-500 shadow-violet-600/20"
+                }`}
               >
                 Send
               </button>
@@ -1409,7 +1585,7 @@ function Classmates({ cls, isTeacher }: { cls: ClassRoom; isTeacher: boolean }) 
           {rows.map(({ student, stats }) => (
             <div
               key={student.id}
-              className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 flex items-center justify-between gap-3"
+              className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 flex items-center justify-between gap-3 hover:border-violet-500/40 transition-colors"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-10 h-10 rounded-2xl bg-violet-500/20 border border-violet-500/40 text-violet-300 font-black text-sm flex items-center justify-center shrink-0">
@@ -1423,15 +1599,26 @@ function Classmates({ cls, isTeacher }: { cls: ClassRoom; isTeacher: boolean }) 
                 </div>
               </div>
 
-              {isTeacher && (
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
-                  onClick={() => { removeStudentFromClass(cls.id, student.id); setRows(getClassmatesWithStats(cls.id)); }}
-                  className="p-2 rounded-xl bg-slate-900 hover:bg-rose-950 text-slate-500 hover:text-rose-400 border border-slate-800 cursor-pointer"
-                  title="Remove student from section"
+                  onClick={() => openDirectMessage(student.id)}
+                  className="px-3 py-1.5 rounded-xl bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border border-violet-500/30 text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                  title={`Direct Message ${student.name}`}
                 >
-                  <UserMinus className="h-4 w-4" />
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  <span>DM</span>
                 </button>
-              )}
+
+                {isTeacher && (
+                  <button
+                    onClick={() => { removeStudentFromClass(cls.id, student.id); setRows(getClassmatesWithStats(cls.id)); }}
+                    className="p-2 rounded-xl bg-slate-900 hover:bg-rose-950 text-slate-500 hover:text-rose-400 border border-slate-800 cursor-pointer"
+                    title="Remove student from section"
+                  >
+                    <UserMinus className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>

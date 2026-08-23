@@ -15,7 +15,6 @@ import {
   Lock,
   Mail,
   MapPin,
-  Zap,
   Layers,
   Sliders,
   ChevronDown,

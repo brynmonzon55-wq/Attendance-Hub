@@ -101,6 +101,8 @@ export interface PostComment {
   authorName: string;
   content: string;
   createdAt: string;
+  commentType?: "class" | "private"; // "class" = public to whole class, "private" = 1-on-1 between teacher & target student
+  targetStudentId?: string; // for private comments on an assignment submission (student ID)
 }
 
 export interface AssignmentSubmission {
@@ -117,3 +119,35 @@ export interface AssignmentSubmission {
   feedback?: string; // Teacher feedback note
   status?: "Submitted" | "Graded";
 }
+
+// ---------------------------------------------------------------------------
+// Messenger & Direct Messaging System
+// ---------------------------------------------------------------------------
+
+export interface DirectMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderRole: UserRole;
+  senderAvatarUrl?: string;
+  recipientId: string;
+  recipientName: string;
+  recipientRole: UserRole;
+  recipientAvatarUrl?: string;
+  content: string;
+  createdAt: string;
+  read: boolean;
+  attachmentName?: string;
+  attachmentDataUrl?: string;
+  classId?: string;
+}
+
+export interface MessengerConversation {
+  partnerId: string;
+  partnerName: string;
+  partnerRole: UserRole;
+  partnerAvatarUrl?: string;
+  lastMessage: DirectMessage;
+  unreadCount: number;
+}
+

@@ -18,94 +18,87 @@ function getThemeStyles(theme: AppTheme = "default", mode: AppThemeMode = "night
   const isStudent = role === "student";
 
   switch (theme) {
+    case "sakura":
+      return {
+        containerBorder: isNight ? "border-pink-300/35 shadow-[0_0_35px_rgba(253,164,175,0.25)]" : "border-pink-200/70 shadow-[0_0_30px_rgba(253,164,175,0.3)]",
+        containerBg: "bg-slate-900/85",
+        headerGradient: isStudent
+          ? "bg-gradient-to-r from-pink-400 via-rose-300 to-pink-500 border-b border-pink-300/40 text-slate-950 font-bold"
+          : "bg-gradient-to-r from-rose-400 via-pink-300 to-rose-500 border-b border-rose-300/40 text-slate-950 font-bold",
+        headerCapGlow: "drop-shadow-[0_0_12px_rgba(255,255,255,0.9)]",
+        accentText: isStudent ? "text-pink-200" : "text-rose-200",
+        subtextGlow: "drop-shadow-[0_0_6px_rgba(253,164,175,0.5)]",
+        accentBorder: isStudent ? "focus:border-pink-300 focus:shadow-[0_0_15px_rgba(253,164,175,0.4)]" : "focus:border-rose-300 focus:shadow-[0_0_15px_rgba(251,113,133,0.4)]",
+        backButton: "bg-white/10 border border-pink-300/40 text-pink-100 hover:text-white hover:border-pink-200 shadow-[0_0_10px_rgba(253,164,175,0.2)]",
+        submitButton: "bg-gradient-to-r from-pink-100 via-pink-300 to-rose-300 hover:from-white hover:to-pink-200 text-slate-950 font-black shadow-[0_0_20px_rgba(253,164,175,0.4)]",
+        toggleText: "text-pink-300 hover:text-pink-200",
+        iconColor: "text-pink-300",
+      };
+
     case "spring":
       return {
-        containerBorder: isNight ? "border-pink-500/40 shadow-[0_0_40px_rgba(244,114,182,0.2)]" : "border-pink-400/60 shadow-[0_0_35px_rgba(244,114,182,0.3)]",
-        containerBg: isNight ? "bg-[#06100c]/95" : "bg-slate-900/95",
-        headerGradient: isNight
-          ? (isStudent
-              ? "bg-gradient-to-r from-pink-950/90 via-slate-900/90 to-emerald-950/90 border-b border-pink-500/30"
-              : "bg-gradient-to-r from-rose-950/90 via-slate-900/90 to-pink-950/90 border-b border-rose-500/30")
-          : (isStudent
-              ? "bg-gradient-to-r from-pink-600 via-rose-500 to-emerald-600 border-b border-pink-400/50"
-              : "bg-gradient-to-r from-rose-600 via-pink-600 to-fuchsia-600 border-b border-rose-400/50"),
-        headerCapGlow: isNight ? "drop-shadow-[0_0_18px_rgba(244,114,182,0.7)]" : "drop-shadow-[0_0_18px_rgba(244,114,182,0.9)]",
+        containerBorder: isNight ? "border-pink-500/40 shadow-[0_0_40px_rgba(244,114,182,0.25)]" : "border-pink-400/60 shadow-[0_0_35px_rgba(244,114,182,0.3)]",
+        containerBg: "bg-slate-900/80",
+        headerGradient: isStudent
+          ? "bg-gradient-to-r from-pink-600 via-rose-500 to-emerald-600 border-b border-pink-400/50 text-white"
+          : "bg-gradient-to-r from-rose-600 via-pink-600 to-fuchsia-600 border-b border-rose-400/50 text-white",
+        headerCapGlow: "drop-shadow-[0_0_15px_rgba(244,114,182,0.8)]",
         accentText: isStudent ? "text-pink-300" : "text-rose-300",
-        subtextGlow: "drop-shadow-[0_0_8px_rgba(244,114,182,0.6)]",
-        accentBorder: isStudent ? "focus:border-pink-400 focus:shadow-[0_0_15px_rgba(244,114,182,0.35)]" : "focus:border-rose-400 focus:shadow-[0_0_15px_rgba(251,113,133,0.35)]",
-        backButton: isNight
-          ? "bg-slate-950/70 border-pink-500/40 text-pink-200 hover:border-pink-300 shadow-[0_0_12px_rgba(244,114,182,0.25)]"
-          : "bg-slate-950/60 border-pink-400/50 text-pink-100 hover:border-pink-300",
-        submitButton: "bg-gradient-to-r from-pink-500 via-rose-400 to-emerald-400 hover:from-pink-400 hover:to-emerald-300 text-slate-950 shadow-[0_0_22px_rgba(244,114,182,0.45)]",
+        subtextGlow: "drop-shadow-[0_0_8px_rgba(244,114,182,0.5)]",
+        accentBorder: isStudent ? "focus:border-pink-400 focus:shadow-[0_0_15px_rgba(244,114,182,0.4)]" : "focus:border-rose-400 focus:shadow-[0_0_15px_rgba(251,113,133,0.4)]",
+        backButton: "bg-white/10 border border-pink-500/40 text-pink-200 hover:text-white hover:border-pink-300 shadow-[0_0_12px_rgba(244,114,182,0.25)]",
+        submitButton: "bg-gradient-to-r from-pink-500 via-rose-400 to-emerald-400 hover:from-pink-400 hover:to-emerald-300 text-slate-950 font-extrabold shadow-[0_0_22px_rgba(244,114,182,0.45)]",
         toggleText: "text-pink-400 hover:text-pink-300",
         iconColor: "text-pink-400",
       };
 
     case "summer":
       return {
-        containerBorder: isNight ? "border-amber-500/40 shadow-[0_0_40px_rgba(251,191,36,0.2)]" : "border-amber-400/60 shadow-[0_0_35px_rgba(251,191,36,0.3)]",
-        containerBg: isNight ? "bg-[#040b17]/95" : "bg-slate-900/95",
-        headerGradient: isNight
-          ? (isStudent
-              ? "bg-gradient-to-r from-amber-950/90 via-slate-900/90 to-sky-950/90 border-b border-amber-500/30"
-              : "bg-gradient-to-r from-orange-950/90 via-slate-900/90 to-amber-950/90 border-b border-orange-500/30")
-          : (isStudent
-              ? "bg-gradient-to-r from-amber-500 via-orange-500 to-sky-600 border-b border-amber-400/50"
-              : "bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-600 border-b border-orange-400/50"),
-        headerCapGlow: isNight ? "drop-shadow-[0_0_18px_rgba(251,191,36,0.7)]" : "drop-shadow-[0_0_18px_rgba(251,191,36,0.9)]",
+        containerBorder: isNight ? "border-amber-500/40 shadow-[0_0_40px_rgba(251,191,36,0.25)]" : "border-amber-400/60 shadow-[0_0_35px_rgba(251,191,36,0.3)]",
+        containerBg: "bg-slate-900/80",
+        headerGradient: isStudent
+          ? "bg-gradient-to-r from-amber-500 via-orange-500 to-sky-600 border-b border-amber-400/50 text-white"
+          : "bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-600 border-b border-orange-400/50 text-white",
+        headerCapGlow: "drop-shadow-[0_0_15px_rgba(251,191,36,0.8)]",
         accentText: isStudent ? "text-amber-300" : "text-orange-300",
-        subtextGlow: "drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]",
-        accentBorder: isStudent ? "focus:border-amber-400 focus:shadow-[0_0_15px_rgba(251,191,36,0.35)]" : "focus:border-orange-400 focus:shadow-[0_0_15px_rgba(249,115,22,0.35)]",
-        backButton: isNight
-          ? "bg-slate-950/70 border-amber-500/40 text-amber-200 hover:border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.25)]"
-          : "bg-slate-950/60 border-amber-400/50 text-amber-100 hover:border-amber-300",
-        submitButton: "bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 hover:from-amber-300 hover:to-yellow-300 text-slate-950 shadow-[0_0_22px_rgba(251,191,36,0.45)]",
+        subtextGlow: "drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]",
+        accentBorder: isStudent ? "focus:border-amber-400 focus:shadow-[0_0_15px_rgba(251,191,36,0.4)]" : "focus:border-orange-400 focus:shadow-[0_0_15px_rgba(249,115,22,0.4)]",
+        backButton: "bg-white/10 border border-amber-500/40 text-amber-200 hover:text-white hover:border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.25)]",
+        submitButton: "bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 hover:from-amber-300 hover:to-yellow-300 text-slate-950 font-extrabold shadow-[0_0_22px_rgba(251,191,36,0.45)]",
         toggleText: "text-amber-400 hover:text-amber-300",
         iconColor: "text-amber-400",
       };
 
     case "autumn":
       return {
-        containerBorder: isNight ? "border-orange-500/40 shadow-[0_0_40px_rgba(249,115,22,0.25)]" : "border-orange-400/60 shadow-[0_0_35px_rgba(249,115,22,0.35)]",
-        containerBg: isNight ? "bg-[#0e0502]/95" : "bg-slate-900/95",
-        headerGradient: isNight
-          ? (isStudent
-              ? "bg-gradient-to-r from-orange-950/90 via-slate-900/90 to-red-950/90 border-b border-orange-500/30"
-              : "bg-gradient-to-r from-red-950/90 via-slate-900/90 to-amber-950/90 border-b border-red-500/30")
-          : (isStudent
-              ? "bg-gradient-to-r from-red-600 via-orange-500 to-amber-600 border-b border-orange-400/50"
-              : "bg-gradient-to-r from-red-600 via-rose-500 to-orange-600 border-b border-red-400/50"),
-        headerCapGlow: isNight ? "drop-shadow-[0_0_18px_rgba(249,115,22,0.7)]" : "drop-shadow-[0_0_18px_rgba(249,115,22,0.9)]",
+        containerBorder: isNight ? "border-orange-500/40 shadow-[0_0_40px_rgba(249,115,22,0.25)]" : "border-orange-400/60 shadow-[0_0_35px_rgba(249,115,22,0.3)]",
+        containerBg: "bg-slate-900/80",
+        headerGradient: isStudent
+          ? "bg-gradient-to-r from-red-600 via-orange-500 to-amber-600 border-b border-orange-400/50 text-white"
+          : "bg-gradient-to-r from-red-600 via-rose-500 to-orange-600 border-b border-red-400/50 text-white",
+        headerCapGlow: "drop-shadow-[0_0_15px_rgba(249,115,22,0.8)]",
         accentText: isStudent ? "text-orange-300" : "text-red-300",
-        subtextGlow: "drop-shadow-[0_0_8px_rgba(249,115,22,0.6)]",
-        accentBorder: isStudent ? "focus:border-orange-400 focus:shadow-[0_0_15px_rgba(249,115,22,0.35)]" : "focus:border-red-400 focus:shadow-[0_0_15px_rgba(239,68,68,0.35)]",
-        backButton: isNight
-          ? "bg-slate-950/70 border-orange-500/40 text-orange-200 hover:border-orange-300 shadow-[0_0_12px_rgba(249,115,22,0.25)]"
-          : "bg-slate-950/60 border-orange-400/50 text-orange-100 hover:border-orange-300",
-        submitButton: "bg-gradient-to-r from-orange-500 via-amber-400 to-red-400 hover:from-orange-400 hover:to-amber-300 text-slate-950 shadow-[0_0_22px_rgba(249,115,22,0.45)]",
+        subtextGlow: "drop-shadow-[0_0_8px_rgba(249,115,22,0.5)]",
+        accentBorder: isStudent ? "focus:border-orange-400 focus:shadow-[0_0_15px_rgba(249,115,22,0.4)]" : "focus:border-red-400 focus:shadow-[0_0_15px_rgba(239,68,68,0.4)]",
+        backButton: "bg-white/10 border border-orange-500/40 text-orange-200 hover:text-white hover:border-orange-300 shadow-[0_0_12px_rgba(249,115,22,0.25)]",
+        submitButton: "bg-gradient-to-r from-orange-500 via-amber-400 to-red-400 hover:from-orange-400 hover:to-amber-300 text-slate-950 font-extrabold shadow-[0_0_22px_rgba(249,115,22,0.45)]",
         toggleText: "text-orange-400 hover:text-orange-300",
         iconColor: "text-orange-400",
       };
 
     case "winter":
       return {
-        containerBorder: isNight ? "border-sky-500/40 shadow-[0_0_40px_rgba(56,189,248,0.2)]" : "border-sky-400/60 shadow-[0_0_35px_rgba(56,189,248,0.3)]",
-        containerBg: isNight ? "bg-[#030814]/95" : "bg-slate-900/95",
-        headerGradient: isNight
-          ? (isStudent
-              ? "bg-gradient-to-r from-sky-950/90 via-slate-900/90 to-indigo-950/90 border-b border-sky-500/30"
-              : "bg-gradient-to-r from-indigo-950/90 via-slate-900/90 to-cyan-950/90 border-b border-indigo-500/30")
-          : (isStudent
-              ? "bg-gradient-to-r from-sky-600 via-cyan-600 to-indigo-600 border-b border-sky-400/50"
-              : "bg-gradient-to-r from-indigo-600 via-sky-600 to-blue-600 border-b border-indigo-400/50"),
-        headerCapGlow: isNight ? "drop-shadow-[0_0_18px_rgba(56,189,248,0.7)]" : "drop-shadow-[0_0_18px_rgba(56,189,248,0.9)]",
+        containerBorder: isNight ? "border-sky-500/40 shadow-[0_0_40px_rgba(56,189,248,0.25)]" : "border-sky-400/60 shadow-[0_0_35px_rgba(56,189,248,0.3)]",
+        containerBg: "bg-slate-900/80",
+        headerGradient: isStudent
+          ? "bg-gradient-to-r from-sky-600 via-cyan-600 to-indigo-600 border-b border-sky-400/50 text-white"
+          : "bg-gradient-to-r from-indigo-600 via-sky-600 to-blue-600 border-b border-indigo-400/50 text-white",
+        headerCapGlow: "drop-shadow-[0_0_15px_rgba(56,189,248,0.8)]",
         accentText: isStudent ? "text-sky-200" : "text-indigo-200",
-        subtextGlow: "drop-shadow-[0_0_8px_rgba(56,189,248,0.6)]",
-        accentBorder: isStudent ? "focus:border-sky-400 focus:shadow-[0_0_15px_rgba(56,189,248,0.35)]" : "focus:border-indigo-400 focus:shadow-[0_0_15px_rgba(129,140,248,0.35)]",
-        backButton: isNight
-          ? "bg-slate-950/70 border-sky-500/40 text-sky-200 hover:border-sky-300 shadow-[0_0_12px_rgba(56,189,248,0.25)]"
-          : "bg-slate-950/60 border-sky-400/50 text-sky-100 hover:border-sky-300",
-        submitButton: "bg-gradient-to-r from-sky-300 via-cyan-300 to-indigo-300 hover:from-sky-200 hover:to-cyan-200 text-slate-950 shadow-[0_0_22px_rgba(56,189,248,0.45)]",
+        subtextGlow: "drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]",
+        accentBorder: isStudent ? "focus:border-sky-400 focus:shadow-[0_0_15px_rgba(56,189,248,0.4)]" : "focus:border-indigo-400 focus:shadow-[0_0_15px_rgba(129,140,248,0.4)]",
+        backButton: "bg-white/10 border border-sky-500/40 text-sky-200 hover:text-white hover:border-sky-300 shadow-[0_0_12px_rgba(56,189,248,0.25)]",
+        submitButton: "bg-gradient-to-r from-sky-300 via-cyan-300 to-indigo-300 hover:from-sky-200 hover:to-cyan-200 text-slate-950 font-extrabold shadow-[0_0_22px_rgba(56,189,248,0.45)]",
         toggleText: "text-sky-300 hover:text-sky-200",
         iconColor: "text-sky-300",
       };
@@ -114,28 +107,22 @@ function getThemeStyles(theme: AppTheme = "default", mode: AppThemeMode = "night
     default:
       return {
         containerBorder: isNight
-          ? (isStudent ? "border-cyan-500/40 shadow-[0_0_40px_rgba(0,240,255,0.2)]" : "border-fuchsia-500/40 shadow-[0_0_40px_rgba(217,70,239,0.2)]")
+          ? (isStudent ? "border-cyan-500/40 shadow-[0_0_40px_rgba(0,240,255,0.25)]" : "border-fuchsia-500/40 shadow-[0_0_40px_rgba(217,70,239,0.25)]")
           : (isStudent ? "border-cyan-400/60 shadow-[0_0_35px_rgba(0,240,255,0.3)]" : "border-fuchsia-400/60 shadow-[0_0_35px_rgba(217,70,239,0.3)]"),
-        containerBg: isNight ? "bg-[#030611]/95" : "bg-slate-900/95",
-        headerGradient: isNight
-          ? (isStudent
-              ? "bg-gradient-to-r from-cyan-950/90 via-slate-900/90 to-teal-950/90 border-b border-cyan-500/30"
-              : "bg-gradient-to-r from-fuchsia-950/90 via-slate-900/90 to-purple-950/90 border-b border-fuchsia-500/30")
-          : (isStudent
-              ? "bg-gradient-to-r from-cyan-600 via-teal-600 to-emerald-600 border-b border-cyan-400/50"
-              : "bg-gradient-to-r from-fuchsia-600 via-pink-500 to-purple-600 border-b border-fuchsia-400/50"),
-        headerCapGlow: isNight
-          ? (isStudent ? "drop-shadow-[0_0_18px_rgba(0,240,255,0.7)]" : "drop-shadow-[0_0_18px_rgba(217,70,239,0.7)]")
-          : (isStudent ? "drop-shadow-[0_0_18px_rgba(0,240,255,0.9)]" : "drop-shadow-[0_0_18px_rgba(217,70,239,0.9)]"),
+        containerBg: "bg-slate-900/80",
+        headerGradient: isStudent
+          ? "bg-gradient-to-r from-cyan-600 via-teal-600 to-emerald-600 border-b border-cyan-400/50 text-white"
+          : "bg-gradient-to-r from-fuchsia-600 via-pink-500 to-purple-600 border-b border-fuchsia-400/50 text-white",
+        headerCapGlow: isStudent ? "drop-shadow-[0_0_15px_rgba(0,240,255,0.8)]" : "drop-shadow-[0_0_15px_rgba(217,70,239,0.8)]",
         accentText: isStudent ? "text-cyan-200" : "text-fuchsia-200",
-        subtextGlow: isStudent ? "drop-shadow-[0_0_8px_rgba(0,240,255,0.7)]" : "drop-shadow-[0_0_8px_rgba(217,70,239,0.7)]",
-        accentBorder: isStudent ? "focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,240,255,0.35)]" : "focus:border-fuchsia-400 focus:shadow-[0_0_15px_rgba(217,70,239,0.35)]",
-        backButton: isNight
-          ? (isStudent ? "bg-slate-950/70 border-cyan-500/40 text-cyan-200 hover:border-cyan-300 shadow-[0_0_12px_rgba(0,240,255,0.25)]" : "bg-slate-950/70 border-fuchsia-500/40 text-fuchsia-200 hover:border-fuchsia-300 shadow-[0_0_12px_rgba(217,70,239,0.25)]")
-          : (isStudent ? "bg-slate-950/60 border-cyan-400/50 text-cyan-100 hover:border-cyan-300" : "bg-slate-950/60 border-fuchsia-400/50 text-fuchsia-100 hover:border-fuchsia-300"),
+        subtextGlow: isStudent ? "drop-shadow-[0_0_8px_rgba(0,240,255,0.6)]" : "drop-shadow-[0_0_8px_rgba(217,70,239,0.6)]",
+        accentBorder: isStudent ? "focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(0,240,255,0.4)]" : "focus:border-fuchsia-400 focus:shadow-[0_0_15px_rgba(217,70,239,0.4)]",
+        backButton: isStudent
+          ? "bg-white/10 border border-cyan-500/40 text-cyan-200 hover:text-white hover:border-cyan-300 shadow-[0_0_12px_rgba(0,240,255,0.25)]"
+          : "bg-white/10 border border-fuchsia-500/40 text-fuchsia-200 hover:text-white hover:border-fuchsia-300 shadow-[0_0_12px_rgba(217,70,239,0.25)]",
         submitButton: isStudent
-          ? "bg-gradient-to-r from-cyan-400 to-teal-400 hover:from-cyan-300 hover:to-teal-300 text-slate-950 shadow-[0_0_22px_rgba(0,240,255,0.4)]"
-          : "bg-gradient-to-r from-fuchsia-400 via-pink-400 to-fuchsia-300 hover:from-fuchsia-300 hover:to-pink-200 text-slate-950 shadow-[0_0_22px_rgba(217,70,239,0.45)]",
+          ? "bg-gradient-to-r from-cyan-400 via-teal-400 to-cyan-500 hover:from-cyan-300 hover:to-teal-300 text-slate-950 font-extrabold shadow-[0_0_22px_rgba(0,240,255,0.45)]"
+          : "bg-gradient-to-r from-fuchsia-400 via-pink-400 to-purple-400 hover:from-fuchsia-300 hover:to-pink-300 text-slate-950 font-extrabold shadow-[0_0_22px_rgba(217,70,239,0.45)]",
         toggleText: isStudent ? "text-cyan-400 hover:text-cyan-300" : "text-fuchsia-400 hover:text-fuchsia-300",
         iconColor: isStudent ? "text-cyan-400" : "text-fuchsia-400",
       };
