@@ -18,6 +18,7 @@ import {
 } from "../lib/db";
 import { openDirectMessage } from "./ClassMessenger";
 import { processFileUpload } from "../lib/fileUtils";
+import { linkifyText } from "../lib/linkify";
 
 function timeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -1196,7 +1197,7 @@ function PostCard({
           </div>
 
           {post.title && <h4 className="text-base font-extrabold text-white">{post.title}</h4>}
-          <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">{post.content}</p>
+          <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">{linkifyText(post.content)}</p>
 
           {post.dueDate && (
             <p className="text-xs font-bold text-amber-400 flex items-center gap-1 mt-1">
@@ -1319,7 +1320,7 @@ function PostCard({
                         <p className="font-bold text-white truncate">{s.studentName}</p>
                         <span className="text-[10px] text-slate-400">{formatDate(new Date(s.submittedAt))}</span>
                       </div>
-                      {s.content && <p className="text-slate-400 mt-0.5">{s.content}</p>}
+                      {s.content && <p className="text-slate-400 mt-0.5">{linkifyText(s.content)}</p>}
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
@@ -1447,7 +1448,7 @@ function PostCard({
                       </span>
                       <span className="text-[10px] text-slate-500">{timeAgo(c.createdAt)}</span>
                     </div>
-                    <p className="text-slate-300 leading-relaxed">{c.content}</p>
+                    <p className="text-slate-300 leading-relaxed">{linkifyText(c.content)}</p>
                   </div>
                 ))
               )}

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { User, DirectMessage, MessengerConversation, UserRole } from "../types";
+import { linkifyText } from "../lib/linkify";
 import type { AppTheme, AppThemeMode } from "../App";
 import {
   getUsers,
@@ -687,7 +688,11 @@ export default function ClassMessenger({
                                 : "bg-slate-800/90 text-slate-100 border border-slate-700/80 rounded-bl-none"
                             }`}
                           >
-                            {m.content && <p className="leading-relaxed whitespace-pre-wrap">{m.content}</p>}
+                            {m.content && (
+                              <p className="leading-relaxed whitespace-pre-wrap">
+                                {linkifyText(m.content, { inheritColor: isMe })}
+                              </p>
+                            )}
 
                             {m.attachmentDataUrl && (
                               <div className="pt-1">

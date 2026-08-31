@@ -54,6 +54,7 @@ import {
   ClassRoom
 } from "../types";
 import type { AppTheme, AppThemeMode } from "../App";
+import { linkifyText } from "../lib/linkify";
 import StudentProfile from "./StudentProfile";
 import TeacherProfile from "./TeacherProfile";
 import AnimatedThemeBackground from "./AnimatedThemeBackground";
@@ -1374,7 +1375,10 @@ export default function TeacherDashboard({
                     </div>
 
                     <p className="text-xs text-ink/90 font-sans leading-relaxed whitespace-pre-wrap">
-                      {post.content}
+                      {linkifyText(post.content, {
+                        linkClassName:
+                          "font-semibold text-indigo-600 hover:text-indigo-700 underline decoration-indigo-400/50 underline-offset-2 break-all",
+                      })}
                     </p>
 
                     {post.attachmentDataUrl && (
@@ -1929,7 +1933,12 @@ export default function TeacherDashboard({
                         </div>
 
                         <p className="text-ink-soft bg-cream/80 p-3 rounded-xl whitespace-pre-wrap font-sans">
-                          {sub.content || "No text provided"}
+                          {sub.content
+                            ? linkifyText(sub.content, {
+                                linkClassName:
+                                  "font-semibold text-indigo-600 hover:text-indigo-700 underline decoration-indigo-400/50 underline-offset-2 break-all",
+                              })
+                            : "No text provided"}
                         </p>
 
                         {sub.attachmentDataUrl && (

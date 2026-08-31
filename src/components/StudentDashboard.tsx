@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { User, AttendanceRecord, AttendanceStatus, StudentStats, ClassPost, PostComment, AssignmentSubmission } from "../types";
 import type { AppTheme, AppThemeMode } from "../App";
+import { linkifyText } from "../lib/linkify";
 import AnimatedThemeBackground from "./AnimatedThemeBackground";
 import SettingsTab from "./SettingsTab";
 import UserAvatar from "./UserAvatar";
@@ -1058,7 +1059,10 @@ export default function StudentDashboard({
                     </div>
 
                     <p className="text-xs leading-relaxed text-ink/90 whitespace-pre-wrap font-sans">
-                      {post.content}
+                      {linkifyText(post.content, {
+                        linkClassName:
+                          "font-semibold text-indigo-600 hover:text-indigo-700 underline decoration-indigo-400/50 underline-offset-2 break-all",
+                      })}
                     </p>
 
                     {/* Attachment preview if any */}
