@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { User, UserRole } from "./types";
-import { initDB, logoutUser, attachRealtimeListeners } from "./lib/db";
+import { initDB, logoutUser, attachRealtimeListeners, attachSecurityLogsListener, attachDirectMessagesListener } from "./lib/db";
 import { auth, db } from "./lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
@@ -133,6 +133,19 @@ export default function App() {
             setCurrentUser(profile);
             setSelectedRole(profile.role);
             setCurrentView("dashboard");
+
+            // These two listeners are gated on rules that depend on the
+            // caller's role/id (security_logs: isApprovedTeacher();
+            // direct_messages: sender/recipient match) - they can only be
+            // opened now that the profile above has resolved, not up front
+            // in attachRealtimeListeners(). See
+            // Attendance-Hub-permission-errors-fix-plan.md, fixes 1 & 2.
+            if (profile.role === "teacher" && profile.isApproved === true) {
+              attachSecurityLogsListener();
+            }
+            if (profile.id) {
+              attachDirectMessagesListener(profile.id);
+            }
           }
         } catch (err) {
           console.error("Error restoring session:", err);

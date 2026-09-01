@@ -1,6 +1,6 @@
 import { User, UserRole, AttendanceRecord, AttendanceStatus, StudentStats, SecurityLog, ClassRoom, ClassPost, PostComment, AssignmentSubmission, DirectMessage, MessengerConversation } from "../types";
 import { db, auth, idToAuthEmail, createUserWithoutSigningIn, googleProvider } from "./firebase";
-import { doc, setDoc, deleteDoc, collection, onSnapshot, getDoc } from "firebase/firestore";
+import { doc, setDoc, deleteDoc, collection, onSnapshot, getDoc, query, where } from "firebase/firestore";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -379,10 +379,25 @@ export async function verifyCurrentPassword(password: string): Promise<boolean> 
  * by the manual "Refresh connection" action in Settings, as a fallback in
  * case the live sync ever silently drops (e.g. a network blip) without
  * requiring a full page reload.
+ *
+ * `profile`, when provided, also reattaches the two listeners that are
+ * gated on knowing the caller's role/id (security_logs, direct_messages -
+ * see attachSecurityLogsListener/attachDirectMessagesListener below). Pass
+ * the current user's profile so a manual refresh doesn't leave those two
+ * stuck in whatever state they were last in.
  */
-export function forceReconnect(): void {
+export function forceReconnect(profile?: User | null): void {
   isListenersAttached = false;
   attachRealtimeListeners();
+
+  if (profile?.role === "teacher" && profile.isApproved === true) {
+    isSecurityLogsListenerAttached = false;
+    attachSecurityLogsListener();
+  }
+  if (profile?.id) {
+    isDirectMessagesListenerAttached = false;
+    attachDirectMessagesListener(profile.id);
+  }
 }
 
 /**
@@ -572,19 +587,12 @@ export function attachRealtimeListeners(): void {
     isListenersAttached = false;
   });
 
-  // Sync "security_logs" collection from Firestore
-  onSnapshot(collection(db, "security_logs"), (snapshot) => {
-    const firestoreLogs: SecurityLog[] = [];
-    snapshot.forEach((doc) => {
-      firestoreLogs.push(doc.data() as SecurityLog);
-    });
-
-    localStorage.setItem(SECURITY_LOGS_KEY, JSON.stringify(firestoreLogs));
-    notifyDbUpdated();
-  }, (err) => {
-    handleFirestoreError(err, OperationType.GET, "security_logs");
-    isListenersAttached = false;
-  });
+  // NOTE: "security_logs" is intentionally NOT synced here. The Firestore
+  // rule for it is `allow read: if isApprovedTeacher();`, which every
+  // signed-in user (including students) would fail if this were an
+  // unfiltered listener opened for everyone. See
+  // attachSecurityLogsListener() below - it's opened separately, only for
+  // callers already known to be an approved teacher.
 
   // Sync "classes" collection from Firestore
   onSnapshot(collection(db, "classes"), (snapshot) => {
@@ -641,18 +649,101 @@ export function attachRealtimeListeners(): void {
     isListenersAttached = false;
   });
 
-  // Sync "direct_messages" collection from Firestore
-  onSnapshot(collection(db, "direct_messages"), (snapshot) => {
-    const firestoreMessages: DirectMessage[] = [];
+  // NOTE: "direct_messages" is intentionally NOT synced here. The Firestore
+  // read rule depends on resource.data.senderId/recipientId matching the
+  // caller, so an unfiltered collection listen is rejected outright. See
+  // attachDirectMessagesListener() below - it uses two where()-scoped
+  // queries instead, and needs the caller's resolved profile id first.
+}
+
+let isSecurityLogsListenerAttached = false;
+
+/**
+ * Subscribes to live Firestore updates for the security_logs audit trail.
+ *
+ * The Firestore rule for this collection is
+ * `allow read: if isApprovedTeacher();` - only approved teachers may read
+ * it. Unlike the collections in attachRealtimeListeners() above, this
+ * listener must NOT be opened for every signed-in user; callers are
+ * responsible for only invoking this once they know
+ * `profile.role === "teacher" && profile.isApproved === true` (see
+ * src/App.tsx, right after the user's profile doc has been fetched).
+ * Students and unapproved teachers should simply never call this -
+ * getSecurityLogs() will just return whatever's already cached (typically
+ * an empty list for them), which matches what the UI already shows them
+ * (the audit log only renders inside the teacher-only audit tab).
+ */
+export function attachSecurityLogsListener(): void {
+  if (isSecurityLogsListenerAttached) return;
+  isSecurityLogsListenerAttached = true;
+
+  onSnapshot(collection(db, "security_logs"), (snapshot) => {
+    const firestoreLogs: SecurityLog[] = [];
     snapshot.forEach((doc) => {
-      firestoreMessages.push(doc.data() as DirectMessage);
+      firestoreLogs.push(doc.data() as SecurityLog);
     });
-    localStorage.setItem(MESSAGES_KEY, JSON.stringify(firestoreMessages));
+
+    localStorage.setItem(SECURITY_LOGS_KEY, JSON.stringify(firestoreLogs));
     notifyDbUpdated();
   }, (err) => {
-    handleFirestoreError(err, OperationType.GET, "direct_messages");
-    isListenersAttached = false;
+    handleFirestoreError(err, OperationType.GET, "security_logs");
+    isSecurityLogsListenerAttached = false;
   });
+}
+
+let isDirectMessagesListenerAttached = false;
+
+/**
+ * Subscribes to live Firestore updates for direct_messages, scoped to the
+ * signed-in user's own conversations.
+ *
+ * The Firestore read rule depends on `resource.data.senderId` /
+ * `resource.data.recipientId` matching the caller, so Firestore rejects an
+ * unfiltered `onSnapshot(collection(db, "direct_messages"))` outright - it
+ * can't prove every possible document in an unbounded listen satisfies a
+ * rule that inspects per-document content. Instead we run two
+ * where()-scoped queries ("messages I sent" + "messages I received") and
+ * merge both into the same local cache, de-duplicated by message id.
+ *
+ * `myId` must be the signed-in user's app-level `User.id` (their login ID
+ * string), NOT the Firebase Auth `uid` - `DirectMessage.senderId` /
+ * `.recipientId` are always stored as `User.id` (see sendDirectMessage()
+ * below). Callers must wait until the user's Firestore profile doc has
+ * resolved before calling this (see src/App.tsx).
+ */
+export function attachDirectMessagesListener(myId: string): void {
+  if (isDirectMessagesListenerAttached) return;
+  isDirectMessagesListenerAttached = true;
+
+  const mergeMessages = (incoming: DirectMessage[]) => {
+    const existing: DirectMessage[] = JSON.parse(localStorage.getItem(MESSAGES_KEY) || "[]");
+    const byId = new Map(existing.map((m) => [m.id, m]));
+    incoming.forEach((m) => byId.set(m.id, m));
+    localStorage.setItem(MESSAGES_KEY, JSON.stringify(Array.from(byId.values())));
+    notifyDbUpdated();
+  };
+
+  onSnapshot(
+    query(collection(db, "direct_messages"), where("senderId", "==", myId)),
+    (snapshot) => {
+      mergeMessages(snapshot.docs.map((d) => d.data() as DirectMessage));
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.GET, "direct_messages(sender)");
+      isDirectMessagesListenerAttached = false;
+    }
+  );
+
+  onSnapshot(
+    query(collection(db, "direct_messages"), where("recipientId", "==", myId)),
+    (snapshot) => {
+      mergeMessages(snapshot.docs.map((d) => d.data() as DirectMessage));
+    },
+    (err) => {
+      handleFirestoreError(err, OperationType.GET, "direct_messages(recipient)");
+      isDirectMessagesListenerAttached = false;
+    }
+  );
 }
 
 // Users DB methods
@@ -1412,6 +1503,14 @@ export function sendDirectMessage(
 ): DirectMessage {
   const msg: DirectMessage = {
     ...input,
+    // Normalize to lowercase at write time so senderId/recipientId always
+    // match myProfile().id.toLowerCase() and the exact-match where() query
+    // in attachDirectMessagesListener(), regardless of the case a user's id
+    // happened to be entered/stored in. See fix-plan step 5 (casing
+    // caveat) - this only covers messages sent after this change; existing
+    // Firestore docs with mixed-case ids may still need a one-off audit.
+    senderId: input.senderId.toLowerCase(),
+    recipientId: input.recipientId.toLowerCase(),
     id: `dm-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     createdAt: new Date().toISOString(),
     read: false,

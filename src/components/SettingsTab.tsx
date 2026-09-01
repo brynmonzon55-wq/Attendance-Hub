@@ -218,7 +218,7 @@ export default function SettingsTab({
   const handleSyncData = () => {
     setIsSyncing(true);
     setSyncMsg(null);
-    forceReconnect();
+    forceReconnect(currentUser);
     setTimeout(() => {
       setIsSyncing(false);
       setSyncMsg("Data re-synchronized with Cloud Firestore!");
