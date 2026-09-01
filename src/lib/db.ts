@@ -1503,14 +1503,6 @@ export function sendDirectMessage(
 ): DirectMessage {
   const msg: DirectMessage = {
     ...input,
-    // Normalize to lowercase at write time so senderId/recipientId always
-    // match myProfile().id.toLowerCase() and the exact-match where() query
-    // in attachDirectMessagesListener(), regardless of the case a user's id
-    // happened to be entered/stored in. See fix-plan step 5 (casing
-    // caveat) - this only covers messages sent after this change; existing
-    // Firestore docs with mixed-case ids may still need a one-off audit.
-    senderId: input.senderId.toLowerCase(),
-    recipientId: input.recipientId.toLowerCase(),
     id: `dm-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     createdAt: new Date().toISOString(),
     read: false,

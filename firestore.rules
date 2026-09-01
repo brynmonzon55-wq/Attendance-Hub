@@ -160,16 +160,11 @@ service cloud.firestore {
     // create it; the only edit allowed afterwards is the recipient
     // flipping "read".
     // ---------------------------------------------------------------------
-    // .lower() comparisons throughout: senderId/recipientId are normalized
-    // to lowercase at write time (see sendDirectMessage() in db.ts), but
-    // .lower() here keeps any pre-existing mixed-case docs readable/
-    // updatable by their rightful participants instead of silently
-    // locking them out.
     match /direct_messages/{messageId} {
       allow read: if signedIn()
-        && (resource.data.senderId.lower() == myProfile().id.lower() || resource.data.recipientId.lower() == myProfile().id.lower());
-      allow create: if signedIn() && request.resource.data.senderId.lower() == myProfile().id.lower();
-      allow update: if signedIn() && resource.data.recipientId.lower() == myProfile().id.lower()
+        && (resource.data.senderId == myProfile().id || resource.data.recipientId == myProfile().id);
+      allow create: if signedIn() && request.resource.data.senderId == myProfile().id;
+      allow update: if signedIn() && resource.data.recipientId == myProfile().id
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
       allow delete: if false;
     }

@@ -125,8 +125,21 @@ export default function App() {
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        attachRealtimeListeners();
         try {
+          // Force the ID token to fully resolve before touching Firestore.
+          // Opening listeners/reads in the same tick onAuthStateChanged
+          // fires can race ahead of the SDK's own credential handshake -
+          // Firestore then sees request.auth as still null and denies
+          // EVERY collection, even ones gated by a plain signedIn() rule
+          // (matches the empty authInfo.providerInfo seen in the console).
+          // Once denied, an onSnapshot listener doesn't self-heal, so real
+          // data (comments, attachments, rosters...) is left stuck as an
+          // empty local cache until a manual "Refresh connection" or full
+          // reload. Awaiting this first removes that race.
+          await firebaseUser.getIdToken();
+
+          attachRealtimeListeners();
+
           const snap = await getDoc(doc(db, "users", firebaseUser.uid));
           if (snap.exists()) {
             const profile = snap.data() as User;
@@ -134,11 +147,11 @@ export default function App() {
             setSelectedRole(profile.role);
             setCurrentView("dashboard");
 
-            // These two listeners are gated on rules that depend on the
-            // caller's role/id (security_logs: isApprovedTeacher();
-            // direct_messages: sender/recipient match) - they can only be
-            // opened now that the profile above has resolved, not up front
-            // in attachRealtimeListeners(). See
+            // These two listeners are additionally gated on rules that
+            // depend on the caller's role/id (security_logs:
+            // isApprovedTeacher(); direct_messages: sender/recipient
+            // match) - they can only be opened now that the profile above
+            // has resolved. See
             // Attendance-Hub-permission-errors-fix-plan.md, fixes 1 & 2.
             if (profile.role === "teacher" && profile.isApproved === true) {
               attachSecurityLogsListener();
