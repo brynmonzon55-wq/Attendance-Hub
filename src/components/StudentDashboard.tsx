@@ -36,6 +36,7 @@ import {
 import { User, AttendanceRecord, AttendanceStatus, StudentStats, ClassPost, PostComment, AssignmentSubmission } from "../types";
 import type { AppTheme, AppThemeMode } from "../App";
 import { linkifyText } from "../lib/linkify";
+import { processFileUpload } from "../lib/fileUtils";
 import AnimatedThemeBackground from "./AnimatedThemeBackground";
 import SettingsTab from "./SettingsTab";
 import UserAvatar from "./UserAvatar";
@@ -127,6 +128,7 @@ export default function StudentDashboard({
   const [submissionText, setSubmissionText] = useState("");
   const [attachmentName, setAttachmentName] = useState("");
   const [attachmentDataUrl, setAttachmentDataUrl] = useState("");
+  const [submissionFileError, setSubmissionFileError] = useState("");
   const [isSubmittingWork, setIsSubmittingWork] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState<string | null>(null);
 
@@ -327,26 +329,39 @@ export default function StudentDashboard({
   };
 
   // Handle file attachment upload
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 3 * 1024 * 1024) {
-      alert("File size exceeds 3MB limit.");
-      return;
+    setSubmissionFileError("");
+    try {
+      // Same helper Classroom.tsx uses for post/submission attachments:
+      // compresses images and enforces an 800KB cap on non-image files.
+      // This modal previously did its own raw FileReader read with only a
+      // 3MB *pre-encoding* size check - base64 inflates a file by ~33%, so
+      // anything over ~750KB was already silently exceeding Firestore's
+      // 1MiB per-document limit. The write would fail in the background
+      // (only logged to console), while the student's local cache still
+      // showed "Assignment submitted successfully!" - so the file (and
+      // sometimes the whole submission) never actually reached the
+      // teacher. Routing through processFileUpload() fixes that at the
+      // source instead of just raising the raw-size ceiling.
+      const processed = await processFileUpload(file);
+      setAttachmentName(processed.name);
+      setAttachmentDataUrl(processed.dataUrl);
+    } catch (err: any) {
+      setSubmissionFileError(err?.message || "File too large. Try a smaller file.");
+      setAttachmentName("");
+      setAttachmentDataUrl("");
+    } finally {
+      e.target.value = "";
     }
-
-    setAttachmentName(file.name);
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      setAttachmentDataUrl(evt.target?.result as string);
-    };
-    reader.readAsDataURL(file);
   };
 
   // Open submission modal
   const handleOpenSubmissionModal = (assignment: ClassPost) => {
     setSelectedAssignmentForSubmission(assignment);
+    setSubmissionFileError("");
     const existing = submissionsMap[assignment.id];
     if (existing) {
       setSubmissionText(existing.content || "");
@@ -1587,6 +1602,9 @@ export default function StudentDashboard({
                         {attachmentName || "No file attached"}
                       </span>
                     </div>
+                    {submissionFileError && (
+                      <p className="text-[11px] font-bold text-rose-500">{submissionFileError}</p>
+                    )}
                   </div>
 
                   <div className="flex justify-end gap-2 pt-2 border-t border-ink-soft/10">
