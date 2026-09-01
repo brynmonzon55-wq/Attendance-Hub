@@ -33,7 +33,6 @@ interface TeacherProfileProps {
   onBack?: () => void;
   onVerifyToggle?: (teacher: User) => void;
   onEdit?: (teacher: User) => void;
-  onDelete?: (teacher: User) => void;
   onSelectStudent?: (student: User) => void;
 }
 
@@ -44,7 +43,6 @@ export default function TeacherProfile({
   onBack,
   onVerifyToggle,
   onEdit,
-  onDelete,
   onSelectStudent,
 }: TeacherProfileProps) {
   const [studentSearch, setStudentSearch] = useState("");
@@ -74,13 +72,14 @@ export default function TeacherProfile({
 
   const teacherStudents: User[] = useMemo(() => {
     const allStudents = getUsers().filter((u) => u.role === "student");
-    const enrolledIds = new Set(teacherClasses.flatMap((c) => c.studentIds));
+    const enrolledIds = new Set(teacherClasses.flatMap((c) => c.studentIds.map((id) => id.toLowerCase())));
 
     if (enrolledIds.size > 0) {
-      return allStudents.filter((s) => enrolledIds.has(s.id));
+      return allStudents.filter((s) => enrolledIds.has(s.id.toLowerCase()));
     }
 
-    // Fallback if no specific class section is registered: filter by subject match or show active students
+    // Legacy fallback for pre-class-system data: match by subject/department
+    // instead of a class roster.
     if (teacher.subject) {
       const teacherSubjects = teacher.subject.split(',').map((s) => s.trim().toLowerCase());
       const match = allStudents.filter(
@@ -92,7 +91,10 @@ export default function TeacherProfile({
       if (match.length > 0) return match;
     }
 
-    return allStudents;
+    // No classes and no subject match: this teacher has no students yet.
+    // (Previously this fell through to every student in the whole school -
+    // a stranger's roster showing up on an unrelated teacher's profile.)
+    return [];
   }, [teacher.id, teacher.subject, teacherClasses]);
 
   const filteredStudents = useMemo(() => {
@@ -199,43 +201,41 @@ export default function TeacherProfile({
             </a>
           )}
 
-          {/* Teacher Admin Controls */}
-          {isViewerTeacher && (
+          {/* Teacher Admin Controls.
+              - Verifying a colleague requires the viewer to be an approved
+                teacher themselves, and a teacher can never verify (or
+                un-verify) their own account.
+              - Editing another teacher's profile fields, and deleting a
+                colleague's account outright, are no longer possible from
+                here (or anywhere) - a teacher is only ever an admin of
+                their OWN account and of student accounts, never of a
+                fellow teacher's. */}
+          {isViewerTeacher && !isMe && currentUser.isApproved && onVerifyToggle && (
             <div className="flex items-center gap-2 pt-1">
-              {onVerifyToggle && (
-                <button
-                  onClick={() => onVerifyToggle(teacher)}
-                  className={`px-3 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
-                    teacher.isApproved
-                      ? "bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
-                      : "bg-teal-600 hover:bg-teal-500 text-white shadow-lg shadow-teal-600/30"
-                  }`}
-                  title={teacher.isApproved ? "Revoke Verification Status" : "Verify Teacher Account"}
-                >
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  <span>{teacher.isApproved ? "Revoke Status" : "Verify Teacher"}</span>
-                </button>
-              )}
+              <button
+                onClick={() => onVerifyToggle(teacher)}
+                className={`px-3 py-2 text-xs font-extrabold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  teacher.isApproved
+                    ? "bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700"
+                    : "bg-teal-600 hover:bg-teal-500 text-white shadow-lg shadow-teal-600/30"
+                }`}
+                title={teacher.isApproved ? "Revoke Verification Status" : "Verify Teacher Account"}
+              >
+                <ShieldCheck className="h-3.5 w-3.5" />
+                <span>{teacher.isApproved ? "Revoke Status" : "Verify Teacher"}</span>
+              </button>
+            </div>
+          )}
 
-              {onEdit && (
-                <button
-                  onClick={() => onEdit(teacher)}
-                  className="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 transition-all cursor-pointer"
-                  title="Edit Faculty Details"
-                >
-                  <Edit className="h-4 w-4" />
-                </button>
-              )}
-
-              {onDelete && !isMe && (
-                <button
-                  onClick={() => onDelete(teacher)}
-                  className="p-2 text-rose-400 hover:text-rose-300 bg-rose-950/40 hover:bg-rose-900/60 rounded-xl border border-rose-800/40 transition-all cursor-pointer"
-                  title="Delete Faculty Account"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              )}
+          {isMe && onEdit && (
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                onClick={() => onEdit(teacher)}
+                className="p-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 transition-all cursor-pointer"
+                title="Edit My Details"
+              >
+                <Edit className="h-4 w-4" />
+              </button>
             </div>
           )}
         </div>

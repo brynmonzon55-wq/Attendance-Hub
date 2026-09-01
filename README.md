@@ -15,7 +15,10 @@ A classroom and attendance management web app for students and teachers, built w
 ### Authentication & onboarding
 - Sign in with **Google Account**, or a **Student/Teacher ID**-based login (backed by real Firebase Authentication — passwords are hashed and managed by Firebase, never stored in Firestore).
 - New Google sign-ins go through a guided onboarding flow to pick a role, department/subject, and complete their profile.
-- New student accounts require teacher approval before gaining full access.
+- New accounts — student **or** teacher, either sign-up method — start unverified and require approval from an existing, already-verified teacher before they can create classes, add/approve other accounts, post to a class, take attendance, or grade. This is enforced both in the UI and in `firestore.rules`, so it can't be bypassed by calling Firestore directly.
+
+> **One-time setup for a fresh deployment:** since every self-registered account starts unverified, a brand-new database has nobody who can verify the first teacher. Register your first teacher account normally, then open the Firebase Console → Firestore → `users` collection, find that document, and manually set `isApproved` to `true`. From then on that teacher can verify everyone else through the normal UI.
+
 
 ### Classroom & sections
 - Teachers create class sections (e.g. "Grade 10 – Section A") with a short **join code** students use to enroll themselves.
@@ -80,4 +83,10 @@ npm run lint       # type-check (tsc --noEmit)
 npm run deploy      # build + publish to GitHub Pages
 ```
 
-Firebase config lives in `firebase-config.json` (repo root) and is imported by `src/lib/firebase.ts`. Firestore security rules are in `firestore.rules` and require an authenticated user (`request.auth != null`) on every collection — they must be deployed via the Firebase Console or CLI separately from the app itself.
+Firebase config lives in `firebase-config.json` (repo root) and is imported by `src/lib/firebase.ts`. Firestore security rules are in `firestore.rules` and enforce real per-role, per-owner access control (not just "any signed-in user") — **deploying code changes alone does not update them.** After pulling these changes, deploy the rules too:
+
+```bash
+firebase deploy --only firestore:rules
+```
+
+(or paste the contents of `firestore.rules` into Firebase Console → Firestore Database → Rules). Until you do, the database is still running under whatever rules were deployed last.

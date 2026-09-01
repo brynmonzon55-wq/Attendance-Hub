@@ -121,7 +121,7 @@ export default function TeacherDashboard({
 
   // Class Sections State
   const [teacherClasses, setTeacherClasses] = useState<ClassRoom[]>([]);
-  const [selectedClassId, setSelectedClassId] = useState<string>("all");
+  const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [showCreateSectionModal, setShowCreateSectionModal] = useState(false);
   const [newSectionName, setNewSectionName] = useState("");
   const [newSectionSubject, setNewSectionSubject] = useState("");
@@ -153,11 +153,6 @@ export default function TeacherDashboard({
   const [editTeacherName, setEditTeacherName] = useState("");
   const [editTeacherSubject, setEditTeacherSubject] = useState("");
   const [editTeacherEmail, setEditTeacherEmail] = useState("");
-
-  const [teacherToDelete, setTeacherToDelete] = useState<{ id: string; name: string } | null>(null);
-  const [deletePassword, setDeletePassword] = useState("");
-  const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
-  const [isDeletingTeacher, setIsDeletingTeacher] = useState(false);
 
   // Pending Verification / Revocation Password Action State
   const [pendingTeacherAction, setPendingTeacherAction] = useState<{
@@ -192,7 +187,7 @@ export default function TeacherDashboard({
   const [annTitle, setAnnTitle] = useState("");
   const [annSubject, setAnnSubject] = useState("");
   const [annContent, setAnnContent] = useState("");
-  const [annClassId, setAnnClassId] = useState<string>("all");
+  const [annClassId, setAnnClassId] = useState<string>("");
   const [annAttachmentName, setAnnAttachmentName] = useState("");
   const [annAttachmentDataUrl, setAnnAttachmentDataUrl] = useState("");
   const [showCreateAnnModal, setShowCreateAnnModal] = useState(false);
@@ -205,7 +200,7 @@ export default function TeacherDashboard({
   const [assTitle, setAssTitle] = useState("");
   const [assSubject, setAssSubject] = useState("");
   const [assContent, setAssContent] = useState("");
-  const [assClassId, setAssClassId] = useState<string>("all");
+  const [assClassId, setAssClassId] = useState<string>("");
   const [assDueDate, setAssDueDate] = useState("");
   const [assMaxPoints, setAssMaxPoints] = useState(100);
   const [assAttachmentName, setAssAttachmentName] = useState("");
@@ -243,21 +238,41 @@ export default function TeacherDashboard({
     setUnreadMessengerCount(getUnreadDirectMessagesCount(user.id));
   };
 
-  const selectedClass = selectedClassId !== "all" ? teacherClasses.find((c) => c.id === selectedClassId) : undefined;
+  // There is no "All Class Sections" pseudo-view anymore - a teacher is
+  // always looking at one specific, real class they own. If their selected
+  // class ever goes stale (e.g. it was just deleted) or they haven't picked
+  // one yet, fall back to their first class automatically.
+  useEffect(() => {
+    if (teacherClasses.length === 0) {
+      if (selectedClassId !== "") setSelectedClassId("");
+      return;
+    }
+    if (!teacherClasses.some((c) => c.id === selectedClassId)) {
+      setSelectedClassId(teacherClasses[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teacherClasses]);
 
-  const sectionStudents = selectedClassId === "all" || !selectedClass
-    ? students
+  const selectedClass = teacherClasses.find((c) => c.id === selectedClassId);
+
+  // Everything below only ever shows data for the ONE selected class, and
+  // only classes teacherClasses (this teacher's own classes) - never a
+  // combined view of everything, and never another teacher's students,
+  // attendance, or posts.
+  const sectionStudents = !selectedClass
+    ? []
     : students.filter((s) => selectedClass.studentIds.includes(s.id));
 
-  const filteredAttendanceRecords = selectedClassId === "all" || !selectedClass
-    ? attendanceRecords
+  const filteredAttendanceRecords = !selectedClass
+    ? []
     : attendanceRecords.filter((r) =>
         r.classId === selectedClass.id || sectionStudents.some((s) => s.id.toLowerCase() === r.studentId.toLowerCase())
       );
 
-  const filteredAnnouncements = selectedClassId === "all" || !selectedClass
-    ? announcements
+  const filteredAnnouncements = !selectedClass
+    ? []
     : announcements.filter((a) => {
+        if (a.authorId.toLowerCase() !== dbUser.id.toLowerCase()) return false;
         if (!a.classId || a.classId === "all") return true;
         if (a.classId === selectedClass.id) return true;
         if (selectedClass.subject && a.subject) {
@@ -266,9 +281,10 @@ export default function TeacherDashboard({
         return false;
       });
 
-  const filteredAssignments = selectedClassId === "all" || !selectedClass
-    ? assignments
+  const filteredAssignments = !selectedClass
+    ? []
     : assignments.filter((a) => {
+        if (a.authorId.toLowerCase() !== dbUser.id.toLowerCase()) return false;
         if (!a.classId || a.classId === "all") return true;
         if (a.classId === selectedClass.id) return true;
         if (selectedClass.subject && a.subject) {
@@ -382,42 +398,6 @@ export default function TeacherDashboard({
     });
     setTeacherToEdit(null);
     loadDatabase();
-  };
-
-  // Delete Teacher
-  const handleConfirmDeleteTeacher = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!teacherToDelete) return;
-    setDeletePasswordError(null);
-    if (!deletePassword) {
-      setDeletePasswordError("Please enter your account password.");
-      return;
-    }
-    setIsDeletingTeacher(true);
-
-    try {
-      const isValid = await verifyCurrentPassword(deletePassword);
-      if (!isValid) {
-        setDeletePasswordError("Incorrect password. Please enter your valid account password.");
-        setIsDeletingTeacher(false);
-        return;
-      }
-
-      deleteUser(teacherToDelete.id);
-      addSecurityLog({
-        usernameAttempted: dbUser.id,
-        type: "Account Deleted",
-        details: `Teacher ${dbUser.name} deleted teacher account ${teacherToDelete.name} (${teacherToDelete.id}).`
-      });
-      setTeacherToDelete(null);
-      setDeletePassword("");
-      setDeletePasswordError(null);
-      loadDatabase();
-    } catch (err: any) {
-      setDeletePasswordError(err?.message || "Password verification failed. Please try again.");
-    } finally {
-      setIsDeletingTeacher(false);
-    }
   };
 
   // Handle Approve / Verify student
@@ -543,7 +523,7 @@ export default function TeacherDashboard({
   // Post Announcement
   const handleCreateAnnouncement = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!annContent.trim()) return;
+    if (!annContent.trim() || !annClassId) return;
 
     const targetClass = teacherClasses.find((c) => c.id === annClassId);
 
@@ -571,7 +551,7 @@ export default function TeacherDashboard({
   // Post Assignment
   const handleCreateAssignment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!assTitle.trim() || !assContent.trim()) return;
+    if (!assTitle.trim() || !assContent.trim() || !assClassId) return;
 
     const targetClass = teacherClasses.find((c) => c.id === assClassId);
 
@@ -747,6 +727,27 @@ export default function TeacherDashboard({
           </div>
         </motion.div>
 
+        {/* Persistent "pending verification" notice - shown on every tab, not
+            just the Teachers tab, since an unapproved teacher has limited
+            (mostly read-only) access everywhere until a colleague verifies
+            them: they can't create classes, add/approve accounts, post
+            announcements or assignments, take attendance, or grade. */}
+        {!dbUser.isApproved && (
+          <motion.div
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-amber-950/80 border border-amber-500/40 p-4 rounded-2xl flex items-center gap-3 text-amber-200 text-xs font-semibold shadow-lg"
+          >
+            <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0" />
+            <div>
+              <span className="font-extrabold text-amber-300 block text-sm">Account Pending Verification</span>
+              Your teacher account is waiting for approval by fellow faculty members. Until then you have read-only
+              access - creating classes, adding or approving accounts, posting to a class, taking attendance, and
+              grading are all disabled.
+            </div>
+          </motion.div>
+        )}
+
         {/* Switch Class Section Selector Bar */}
         <motion.div
           initial={{ opacity: 0, y: -5 }}
@@ -758,22 +759,15 @@ export default function TeacherDashboard({
               <School className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-ink-soft/60">
-                  Switch Class Section View
-                </span>
-                {selectedClassId !== "all" && (
-                  <span className="px-2 py-0.2 text-[10px] font-bold bg-violet-500 text-white rounded-full">
-                    Filtered View
-                  </span>
-                )}
-              </div>
-              <p className="text-xs sm:text-sm font-extrabold text-ink truncate mt-0.5">
-                {selectedClassId === "all" ? (
-                  <span className="text-teal-600 dark:text-teal-400">
-                    Viewing combined roster & feed for All Class Sections ({teacherClasses.length} section{teacherClasses.length === 1 ? "" : "s"})
-                  </span>
-                ) : (
+              <span className="text-[10px] font-black uppercase tracking-wider text-ink-soft/60 block">
+                Class Section
+              </span>
+              {teacherClasses.length === 0 ? (
+                <p className="text-xs sm:text-sm font-extrabold text-ink-soft mt-0.5">
+                  You don't have any class sections yet — create one to get started.
+                </p>
+              ) : (
+                <p className="text-xs sm:text-sm font-extrabold text-ink truncate mt-0.5">
                   <span className="flex items-center gap-1.5 flex-wrap">
                     <span>Viewing Section: </span>
                     <span className="text-violet-600 dark:text-violet-400 font-black">
@@ -799,43 +793,48 @@ export default function TeacherDashboard({
                       </button>
                     )}
                   </span>
-                )}
-              </p>
+                </p>
+              )}
             </div>
           </div>
 
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full md:w-auto shrink-0">
-            <label htmlFor="teacher-class-select" className="text-xs font-bold text-ink-soft hidden sm:inline shrink-0">
-              Section:
-            </label>
-            <select
-              id="teacher-class-select"
-              value={selectedClassId}
-              onChange={(e) => {
-                if (e.target.value === "__create__") {
-                  setShowCreateSectionModal(true);
-                } else {
-                  setSelectedClassId(e.target.value);
-                }
-              }}
-              className="w-full md:w-auto px-3.5 py-2 text-xs font-bold bg-white dark:bg-slate-800 border border-ink-soft/20 rounded-xl text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
-            >
-              <option value="all">All Class Sections</option>
-              {teacherClasses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} {c.subject ? `(${c.subject})` : ""} — {c.studentIds.length} Students
-                </option>
-              ))}
-              <option value="__create__">+ Create New Class Section...</option>
-            </select>
+            {teacherClasses.length > 0 && (
+              <>
+                <label htmlFor="teacher-class-select" className="text-xs font-bold text-ink-soft hidden sm:inline shrink-0">
+                  Section:
+                </label>
+                <select
+                  id="teacher-class-select"
+                  value={selectedClassId}
+                  onChange={(e) => {
+                    if (e.target.value === "__create__") {
+                      if (dbUser.isApproved) setShowCreateSectionModal(true);
+                    } else {
+                      setSelectedClassId(e.target.value);
+                    }
+                  }}
+                  className="w-full md:w-auto px-3.5 py-2 text-xs font-bold bg-white dark:bg-slate-800 border border-ink-soft/20 rounded-xl text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
+                >
+                  {teacherClasses.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} {c.subject ? `(${c.subject})` : ""} — {c.studentIds.length} Students
+                    </option>
+                  ))}
+                  {dbUser.isApproved && <option value="__create__">+ Create New Class Section...</option>}
+                </select>
+              </>
+            )}
 
-            <button
-              onClick={() => setShowCreateSectionModal(true)}
-              className="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-sm cursor-pointer shrink-0 transition-all"
-            >
-              <Plus className="h-4 w-4" />
-              <span>New Section</span>
-            </button>
+            {dbUser.isApproved && (
+              <button
+                onClick={() => setShowCreateSectionModal(true)}
+                className="px-3.5 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-sm cursor-pointer shrink-0 transition-all"
+              >
+                <Plus className="h-4 w-4" />
+                <span>{teacherClasses.length === 0 ? "Create Your First Section" : "New Section"}</span>
+              </button>
+            )}
           </div>
         </motion.div>
 
@@ -913,12 +912,21 @@ export default function TeacherDashboard({
                   />
                 </div>
 
-                <button
-                  onClick={() => setShowAddStudentModal(true)}
-                  className="px-4 py-2.5 text-xs font-extrabold text-white bg-fuchsia-500 hover:bg-fuchsia-400 rounded-xl cursor-pointer shadow-md shadow-fuchsia-500/20 flex items-center justify-center gap-2 shrink-0 transition-all"
-                >
-                  <UserPlus className="h-4 w-4" /> <span>Add Student</span>
-                </button>
+                {dbUser.isApproved ? (
+                  <button
+                    onClick={() => setShowAddStudentModal(true)}
+                    className="px-4 py-2.5 text-xs font-extrabold text-white bg-fuchsia-500 hover:bg-fuchsia-400 rounded-xl cursor-pointer shadow-md shadow-fuchsia-500/20 flex items-center justify-center gap-2 shrink-0 transition-all"
+                  >
+                    <UserPlus className="h-4 w-4" /> <span>Add Student</span>
+                  </button>
+                ) : (
+                  <span
+                    className="px-4 py-2.5 text-xs font-bold text-slate-400 bg-slate-800/80 rounded-xl flex items-center justify-center gap-2 shrink-0 border border-slate-700/60"
+                    title="Your account needs to be verified by an existing faculty member before you can add student accounts."
+                  >
+                    <ShieldAlert className="h-4 w-4" /> <span>Verification required</span>
+                  </span>
+                )}
               </div>
 
               {filteredStudents.length === 0 ? (
@@ -944,8 +952,12 @@ export default function TeacherDashboard({
                               ID: {st.id}
                             </span>
                             <button
-                              onClick={() => handleToggleApproval(st)}
-                              className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full border cursor-pointer shrink-0 ${
+                              onClick={() => dbUser.isApproved && handleToggleApproval(st)}
+                              disabled={!dbUser.isApproved}
+                              title={!dbUser.isApproved ? "Your account needs to be verified before you can approve students." : undefined}
+                              className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full border shrink-0 ${
+                                dbUser.isApproved ? "cursor-pointer" : "cursor-not-allowed opacity-60"
+                              } ${
                                 st.isApproved
                                   ? "bg-teal-500/20 text-teal-300 border-teal-500/40"
                                   : "bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse"
@@ -1010,17 +1022,6 @@ export default function TeacherDashboard({
             animate={{ opacity: 1, y: 0 }}
             className="space-y-6"
           >
-            {/* Banner if Current Teacher is Pending Verification */}
-            {!dbUser.isApproved && (
-              <div className="bg-amber-950/80 border border-amber-500/40 p-4 rounded-2xl flex items-center gap-3 text-amber-200 text-xs font-semibold shadow-lg">
-                <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0" />
-                <div>
-                  <span className="font-extrabold text-amber-300 block text-sm">Account Pending Verification</span>
-                  Your teacher account is waiting for approval by fellow faculty members. Once verified, your status badge will update across the portal.
-                </div>
-              </div>
-            )}
-
             {/* Metric Overview Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               <div
@@ -1116,14 +1117,25 @@ export default function TeacherDashboard({
                   ))}
                 </div>
 
-                {/* Add Teacher Button */}
-                <button
-                  onClick={() => setShowAddTeacherModal(true)}
-                  className="px-4 py-2.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2 cursor-pointer transition-all shrink-0"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  <span>Add Teacher Account</span>
-                </button>
+                {/* Add Teacher Button - only an already-verified teacher can
+                    vouch for a new account (matches the Firestore rules). */}
+                {dbUser.isApproved ? (
+                  <button
+                    onClick={() => setShowAddTeacherModal(true)}
+                    className="px-4 py-2.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-extrabold text-xs rounded-2xl shadow-lg shadow-violet-600/25 flex items-center justify-center gap-2 cursor-pointer transition-all shrink-0"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    <span>Add Teacher Account</span>
+                  </button>
+                ) : (
+                  <span
+                    className="px-4 py-2.5 bg-slate-800/80 text-slate-400 font-bold text-xs rounded-2xl flex items-center justify-center gap-2 shrink-0 border border-slate-700/60"
+                    title="Your account needs to be verified by an existing faculty member before you can add other accounts."
+                  >
+                    <ShieldAlert className="h-4 w-4" />
+                    <span>Verification required to add accounts</span>
+                  </span>
+                )}
               </div>
 
               {/* Teacher Cards Grid */}
@@ -1248,8 +1260,11 @@ export default function TeacherDashboard({
                                 <span>View Profile</span>
                               </button>
 
-                              {/* Quick Approve / Verify Button if pending */}
-                              {!t.isApproved && (
+                              {/* Quick Approve / Verify Button if pending.
+                                  A teacher can never verify themselves, and
+                                  only an already-approved teacher may vouch
+                                  for a colleague. */}
+                              {!t.isApproved && !isMe && dbUser.isApproved && (
                                 <button
                                   onClick={() => {
                                     setPendingTeacherAction({
@@ -1266,30 +1281,34 @@ export default function TeacherDashboard({
                                 </button>
                               )}
 
-                              {/* Edit Details */}
-                              <button
-                                onClick={() => {
-                                  setTeacherToEdit(t);
-                                  setEditTeacherName(t.name);
-                                  setEditTeacherSubject(t.subject || "");
-                                  setEditTeacherEmail(t.email || "");
-                                }}
-                                className="p-1.5 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 rounded-xl border border-slate-800 transition-all cursor-pointer"
-                                title="Edit Details"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </button>
-
-                              {/* Delete Account (Only if not self) */}
-                              {!isMe && (
+                              {/* Edit Details - only ever your own profile.
+                                  Fellow teachers are peers, not accounts you
+                                  can administer: edit your own info from
+                                  here or from Settings, but a colleague's
+                                  name/subject/contact info is theirs alone
+                                  to change. */}
+                              {isMe && (
                                 <button
-                                  onClick={() => setTeacherToDelete({ id: t.id, name: t.name })}
-                                  className="p-1.5 text-rose-400 hover:text-rose-300 bg-rose-950/40 hover:bg-rose-900/60 rounded-xl border border-rose-800/40 transition-all cursor-pointer"
-                                  title="Delete Teacher Account"
+                                  onClick={() => {
+                                    setTeacherToEdit(t);
+                                    setEditTeacherName(t.name);
+                                    setEditTeacherSubject(t.subject || "");
+                                    setEditTeacherEmail(t.email || "");
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 rounded-xl border border-slate-800 transition-all cursor-pointer"
+                                  title="Edit My Details"
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  <Edit className="h-4 w-4" />
                                 </button>
                               )}
+
+                              {/* Note: deleting a teacher account has been
+                                  intentionally removed from this list. One
+                                  teacher should never be able to delete a
+                                  colleague's account - that capability
+                                  doesn't exist anywhere in this app anymore.
+                                  Teachers can remove their own account from
+                                  Settings. */}
                             </div>
                           </div>
                         </div>
@@ -1327,16 +1346,25 @@ export default function TeacherDashboard({
                 <Megaphone className="h-5 w-5 text-violet-500" />
                 Course Announcements
               </h2>
-              <button
-                onClick={() => {
-                  setAnnClassId(selectedClassId);
-                  if (selectedClass?.subject) setAnnSubject(selectedClass.subject);
-                  setShowCreateAnnModal(true);
-                }}
-                className="px-4 py-2 text-xs font-extrabold text-white bg-violet-500 hover:bg-violet-600 rounded-xl cursor-pointer shadow-md shadow-violet-500/20 flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" /> Post Announcement
-              </button>
+              {dbUser.isApproved && selectedClass ? (
+                <button
+                  onClick={() => {
+                    setAnnClassId(selectedClassId);
+                    if (selectedClass?.subject) setAnnSubject(selectedClass.subject);
+                    setShowCreateAnnModal(true);
+                  }}
+                  className="px-4 py-2 text-xs font-extrabold text-white bg-violet-500 hover:bg-violet-600 rounded-xl cursor-pointer shadow-md shadow-violet-500/20 flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" /> Post Announcement
+                </button>
+              ) : (
+                <span
+                  className="px-4 py-2 text-xs font-bold text-ink-soft/60 bg-ink-soft/10 rounded-xl flex items-center gap-2"
+                  title={!dbUser.isApproved ? "Your account needs to be verified before you can post." : "Create a class section first."}
+                >
+                  <Plus className="h-4 w-4" /> Post Announcement
+                </span>
+              )}
             </div>
 
             {filteredAnnouncements.length === 0 ? (
@@ -1439,16 +1467,25 @@ export default function TeacherDashboard({
                 <FileText className="h-5 w-5 text-violet-400" />
                 Assignments & Student Submissions
               </h2>
-              <button
-                onClick={() => {
-                  setAssClassId(selectedClassId);
-                  if (selectedClass?.subject) setAssSubject(selectedClass.subject);
-                  setShowCreateAssModal(true);
-                }}
-                className="px-4 py-2 text-xs font-extrabold text-white bg-violet-600 hover:bg-violet-500 rounded-xl cursor-pointer shadow-md shadow-violet-600/30 flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" /> Create Assignment
-              </button>
+              {dbUser.isApproved && selectedClass ? (
+                <button
+                  onClick={() => {
+                    setAssClassId(selectedClassId);
+                    if (selectedClass?.subject) setAssSubject(selectedClass.subject);
+                    setShowCreateAssModal(true);
+                  }}
+                  className="px-4 py-2 text-xs font-extrabold text-white bg-violet-600 hover:bg-violet-500 rounded-xl cursor-pointer shadow-md shadow-violet-600/30 flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" /> Create Assignment
+                </button>
+              ) : (
+                <span
+                  className="px-4 py-2 text-xs font-bold text-ink-soft/60 bg-ink-soft/10 rounded-xl flex items-center gap-2"
+                  title={!dbUser.isApproved ? "Your account needs to be verified before you can post." : "Create a class section first."}
+                >
+                  <Plus className="h-4 w-4" /> Create Assignment
+                </span>
+              )}
             </div>
 
             {filteredAssignments.length === 0 ? (
@@ -1635,14 +1672,11 @@ export default function TeacherDashboard({
                       onChange={(e) => {
                         const val = e.target.value;
                         setAnnClassId(val);
-                        if (val !== "all") {
-                          const cls = teacherClasses.find((c) => c.id === val);
-                          if (cls?.subject) setAnnSubject(cls.subject);
-                        }
+                        const cls = teacherClasses.find((c) => c.id === val);
+                        if (cls?.subject) setAnnSubject(cls.subject);
                       }}
                       className="w-full p-2.5 text-xs font-semibold bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                     >
-                      <option value="all">🌐 All Class Sections (Broadcast to all students)</option>
                       {teacherClasses.map((c) => (
                         <option key={c.id} value={c.id}>
                           📚 Section: {c.name} {c.subject ? `(${c.subject})` : ""}
@@ -1769,14 +1803,11 @@ export default function TeacherDashboard({
                       onChange={(e) => {
                         const val = e.target.value;
                         setAssClassId(val);
-                        if (val !== "all") {
-                          const cls = teacherClasses.find((c) => c.id === val);
-                          if (cls?.subject) setAssSubject(cls.subject);
-                        }
+                        const cls = teacherClasses.find((c) => c.id === val);
+                        if (cls?.subject) setAssSubject(cls.subject);
                       }}
                       className="w-full p-2.5 text-xs font-semibold bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                     >
-                      <option value="all">🌐 All Class Sections (Broadcast to all students)</option>
                       {teacherClasses.map((c) => (
                         <option key={c.id} value={c.id}>
                           📚 Section: {c.name} {c.subject ? `(${c.subject})` : ""}
@@ -2236,93 +2267,9 @@ export default function TeacherDashboard({
           )}
         </AnimatePresence>
 
-        {/* DELETE TEACHER MODAL */}
-        <AnimatePresence>
-          {teacherToDelete && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
-            >
-              <div className="bg-slate-900 border border-rose-500/40 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-white">
-                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                  <div className="flex items-center gap-2 text-rose-400">
-                    <Trash2 className="h-5 w-5" />
-                    <h3 className="font-extrabold text-base">Delete Teacher Account</h3>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setTeacherToDelete(null);
-                      setDeletePassword("");
-                      setDeletePasswordError(null);
-                    }}
-                  >
-                    <X className="h-5 w-5 text-slate-400 hover:text-white" />
-                  </button>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    Are you sure you want to permanently delete the teacher account for{" "}
-                    <strong className="text-white">{teacherToDelete.name}</strong> ({teacherToDelete.id})? This action cannot be undone.
-                  </p>
-                  <p className="text-[11px] text-slate-400">
-                    For security verification, please enter your password to authorize account deletion.
-                  </p>
-                </div>
-
-                {deletePasswordError && (
-                  <div className="p-3 bg-rose-950/80 border border-rose-500/50 rounded-xl text-rose-200 text-xs font-semibold flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
-                    <span>{deletePasswordError}</span>
-                  </div>
-                )}
-
-                <form onSubmit={handleConfirmDeleteTeacher} className="space-y-4 pt-1">
-                  <div>
-                    <label className="text-xs font-bold text-slate-300 block mb-1">
-                      Your Account Password <span className="text-rose-400">*</span>
-                    </label>
-                    <input
-                      type="password"
-                      value={deletePassword}
-                      onChange={(e) => {
-                        setDeletePassword(e.target.value);
-                        setDeletePasswordError(null);
-                      }}
-                      placeholder="Enter your password..."
-                      required
-                      autoFocus
-                      className="w-full p-2.5 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-rose-400 focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTeacherToDelete(null);
-                        setDeletePassword("");
-                        setDeletePasswordError(null);
-                      }}
-                      className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-800 rounded-xl border border-slate-700 cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isDeletingTeacher}
-                      className="px-5 py-2 text-xs font-extrabold text-white bg-rose-600 hover:bg-rose-500 rounded-xl shadow-lg shadow-rose-600/30 cursor-pointer disabled:opacity-50"
-                    >
-                      {isDeletingTeacher ? "Verifying & Deleting..." : "Yes, Delete Account"}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Deleting a teacher account from here has been removed - see the
+            note by the Teachers list above for why. Teachers remove their
+            own account from Settings instead. */}
 
         {/* CONFIRM TEACHER VERIFY / REVOKE ACTION WITH PASSWORD MODAL */}
         <AnimatePresence>
@@ -2798,7 +2745,6 @@ export default function TeacherDashboard({
                 setEditTeacherSubject(t.subject || "");
                 setEditTeacherEmail(t.email || "");
               }}
-              onDelete={(t) => setTeacherToDelete({ id: t.id, name: t.name })}
               onSelectStudent={(s) => setViewingStudent(s)}
             />
           </div>

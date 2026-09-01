@@ -60,6 +60,7 @@ import {
   getSubmissionForStudent,
   submitAssignment,
   getUnreadDirectMessagesCount,
+  getClassesForStudent,
 } from "../lib/db";
 
 interface StudentDashboardProps {
@@ -99,7 +100,7 @@ export default function StudentDashboard({
 
   // Teacher Filter & Selector state
   const [teachers, setTeachers] = useState<User[]>([]);
-  const [selectedTeacherId, setSelectedTeacherId] = useState<string>("all");
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
 
   // Daily attendance state
   const [selectedStatus, setSelectedStatus] = useState<AttendanceStatus>("Present");
@@ -145,7 +146,18 @@ export default function StudentDashboard({
 
   const loadData = () => {
     const allUsers = getUsers();
-    setAllStudents(allUsers.filter((u) => u.role === "student"));
+
+    // "Classmates" = students who share at least one class with me. Used to
+    // scope the Daily Check-ins tab so a brand-new student can't browse
+    // every other student in the entire school right after signing up -
+    // only people actually in one of their classes.
+    const myClasses = getClassesForStudent(user.id);
+    const classmateIds = new Set(
+      myClasses.flatMap((c) => c.studentIds.map((id) => id.toLowerCase()))
+    );
+    classmateIds.add(user.id.toLowerCase());
+    setAllStudents(allUsers.filter((u) => u.role === "student" && classmateIds.has(u.id.toLowerCase())));
+
     const freshUser = allUsers.find((u) => u.id.toLowerCase() === user.id.toLowerCase());
     if (freshUser) {
       setDbUser(freshUser);
@@ -153,7 +165,7 @@ export default function StudentDashboard({
 
     // Attendance
     const allRecords = getAttendanceRecords();
-    setAllAttendanceRecords(allRecords);
+    setAllAttendanceRecords(allRecords.filter((r) => classmateIds.has(r.studentId.toLowerCase())));
     const studentRecords = allRecords
       .filter((r) => r.studentId.toLowerCase() === user.id.toLowerCase())
       .sort((a, b) => b.date.localeCompare(a.date));
@@ -172,15 +184,29 @@ export default function StudentDashboard({
     const calculatedStats = calculateStudentStats(user.id);
     setStats(calculatedStats);
 
-    // Announcements & Assignments
-    const ann = getAnnouncements();
+    // Announcements, Assignments & Faculty directory.
+    // Scoped to classes I'm actually enrolled in - not the entire school's
+    // announcements/assignments/teacher directory. A post is mine to see if
+    // it targets one of my actual classes, or it's a no-class/legacy post
+    // from one of my actual teachers.
+    const myTeacherIds = new Set(myClasses.map((c) => c.teacherId.toLowerCase()));
+    const myClassIds = new Set(myClasses.map((c) => c.id));
+
+    const isMyPost = (p: ClassPost) => {
+      const authorId = (p.authorId || "").toLowerCase();
+      if (!myTeacherIds.has(authorId)) return false;
+      if (!p.classId || p.classId === "all") return true;
+      return myClassIds.has(p.classId);
+    };
+
+    const ann = getAnnouncements().filter(isMyPost);
     setAnnouncements(ann);
 
-    const ass = getAssignments();
+    const ass = getAssignments().filter(isMyPost);
     setAssignments(ass);
 
-    // Load Teachers
-    const teacherUsers = allUsers.filter((u) => u.role === "teacher");
+    // Load Teachers - only the teachers of classes I'm actually in.
+    const teacherUsers = allUsers.filter((u) => u.role === "teacher" && myTeacherIds.has(u.id.toLowerCase()));
     const teacherMap = new Map<string, User>();
     teacherUsers.forEach((t) => {
       const key = (t.id || t.uid || "").toLowerCase();
@@ -233,12 +259,29 @@ export default function StudentDashboard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user.id]);
 
+  // There is no "All Teachers & Classes" pseudo-view anymore - the Faculty
+  // tab always shows one specific teacher you actually have a class with.
+  // If nothing is selected yet, or the selection goes stale (e.g. that
+  // class ended), fall back to the first teacher on the list.
+  useEffect(() => {
+    if (teachers.length === 0) {
+      if (selectedTeacherId !== "") setSelectedTeacherId("");
+      return;
+    }
+    const stillValid = teachers.some(
+      (t) => (t.id || "").toLowerCase() === selectedTeacherId.toLowerCase() || (t.uid || "").toLowerCase() === selectedTeacherId.toLowerCase()
+    );
+    if (!stillValid) {
+      setSelectedTeacherId(teachers[0].id || teachers[0].uid || "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teachers]);
+
   // Attendance submit
   const handleRecordAttendance = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const customSubjectTag =
-      selectedTeacherId !== "all" && selectedTeacher ? selectedTeacher.subject || selectedTeacher.name : undefined;
+    const customSubjectTag = selectedTeacher ? selectedTeacher.subject || selectedTeacher.name : undefined;
 
     const record = recordTodayAttendance(
       user.id,
@@ -369,7 +412,7 @@ export default function StudentDashboard({
   );
 
   const isPostFromSelectedTeacher = (p: ClassPost) => {
-    if (selectedTeacherId === "all" || !selectedTeacher) return true;
+    if (!selectedTeacher) return false;
     const authorMatch =
       p.authorId?.toLowerCase() === selectedTeacherId.toLowerCase() ||
       (selectedTeacher.uid && p.authorId?.toLowerCase() === selectedTeacher.uid.toLowerCase()) ||
@@ -415,7 +458,7 @@ export default function StudentDashboard({
 
   // Filtered Attendance & Stats for selected teacher
   const displayHistory = history.filter((r) => {
-    if (selectedTeacherId === "all" || !selectedTeacher) return true;
+    if (!selectedTeacher) return false;
     const teacherSubjects = selectedTeacher.subject
       ? selectedTeacher.subject.split(',').map((s) => s.trim().toLowerCase())
       : [];
@@ -430,16 +473,15 @@ export default function StudentDashboard({
   const totalDays = displayHistory.length;
   const percentage = totalDays > 0 ? Math.round(((presentCount + lateCount) / totalDays) * 100) : 100;
 
-  const displayStats: StudentStats =
-    selectedTeacherId === "all"
-      ? stats
-      : {
-          presentCount,
-          absentCount,
-          lateCount,
-          totalDays,
-          percentage,
-        };
+  const displayStats: StudentStats = selectedTeacher
+    ? {
+        presentCount,
+        absentCount,
+        lateCount,
+        totalDays,
+        percentage,
+      }
+    : stats;
 
   return (
     <div className="relative min-h-screen pb-16 pt-4 sm:pt-6 px-2.5 sm:px-6 max-w-7xl mx-auto w-full min-w-0 overflow-x-hidden">
@@ -679,17 +721,14 @@ export default function StudentDashboard({
                 <UserCheck className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-ink-soft/60">
-                    Switch Teacher / Class View
-                  </span>
-                  {selectedTeacherId !== "all" && (
-                    <span className="px-2 py-0.2 text-[10px] font-bold bg-violet-500 text-white rounded-full">
-                      Filtered View
-                    </span>
-                  )}
-                </div>
-                {selectedTeacherId !== "all" && selectedTeacher && (
+                <span className="text-[10px] font-black uppercase tracking-wider text-ink-soft/60 block">
+                  Teacher / Class
+                </span>
+                {teachers.length === 0 ? (
+                  <p className="text-xs sm:text-sm font-extrabold text-ink-soft mt-0.5">
+                    You're not enrolled in any classes yet — join one with a class code from your teacher.
+                  </p>
+                ) : (
                   <p className="text-xs sm:text-sm font-extrabold text-ink truncate mt-0.5">
                     <span className="flex items-center gap-1.5 flex-wrap">
                       <span>Viewing Feed of: </span>
@@ -708,22 +747,25 @@ export default function StudentDashboard({
             </div>
 
             <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full md:w-auto shrink-0">
-              <label htmlFor="teacher-select" className="text-xs font-bold text-ink-soft hidden sm:inline shrink-0">
-                Teacher:
-              </label>
-              <select
-                id="teacher-select"
-                value={selectedTeacherId}
-                onChange={(e) => setSelectedTeacherId(e.target.value)}
-                className="w-full md:w-auto px-3.5 py-2 text-xs font-bold bg-white dark:bg-slate-800 border border-ink-soft/20 rounded-xl text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
-              >
-                <option value="all">All Teachers & Classes</option>
-                {teachers.map((t, idx) => (
-                  <option key={`${t.id || t.uid || 'teacher'}-${idx}`} value={t.id || t.uid}>
-                    {t.name} {t.subject ? `(${t.subject})` : ""}
-                  </option>
-                ))}
-              </select>
+              {teachers.length > 0 && (
+                <>
+                  <label htmlFor="teacher-select" className="text-xs font-bold text-ink-soft hidden sm:inline shrink-0">
+                    Teacher:
+                  </label>
+                  <select
+                    id="teacher-select"
+                    value={selectedTeacherId}
+                    onChange={(e) => setSelectedTeacherId(e.target.value)}
+                    className="w-full md:w-auto px-3.5 py-2 text-xs font-bold bg-white dark:bg-slate-800 border border-ink-soft/20 rounded-xl text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
+                  >
+                    {teachers.map((t, idx) => (
+                      <option key={`${t.id || t.uid || 'teacher'}-${idx}`} value={t.id || t.uid}>
+                        {t.name} {t.subject ? `(${t.subject})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
 
               {selectedTeacher && (
                 <button

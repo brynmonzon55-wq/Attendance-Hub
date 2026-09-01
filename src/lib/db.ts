@@ -60,7 +60,12 @@ export async function registerUser(
     name: name.trim(),
     role,
     createdAt: formatDate(new Date()),
-    isApproved: role === "teacher", // Teachers self-registered start as approved
+    // Every self-registered account - student OR teacher - starts
+    // unverified. A teacher signing themselves up no longer gets instant,
+    // unrestricted teacher powers; they need to be verified by an existing
+    // approved teacher first, same as a new student does. (Firestore rules
+    // enforce this too - a self-created account can't set isApproved:true.)
+    isApproved: false,
     ...(extra?.email ? { email: extra.email.trim() } : {}),
     ...(extra?.department ? { department: extra.department.trim() } : {}),
     ...(extra?.location ? { location: extra.location.trim() } : {}),
@@ -76,13 +81,16 @@ export async function loginUser(id: string, password: string, expectedRole: User
   const cred = await signInWithEmailAndPassword(auth, email, password);
   const snap = await getDoc(doc(db, "users", cred.user.uid));
   if (!snap.exists()) {
+    // Orphan-recovery case: a Firebase Auth account exists but its
+    // Firestore profile is missing. This is still effectively a brand new
+    // account being created by its own owner, so it starts unverified too.
     const profile: User = {
       id: id.trim(),
       uid: cred.user.uid,
       name: id.trim(),
       role: expectedRole,
       createdAt: formatDate(new Date()),
-      isApproved: true,
+      isApproved: false,
       ...(expectedRole === "teacher" ? { subject: "General Education" } : {}),
     };
     await setDoc(doc(db, "users", cred.user.uid), profile);
@@ -136,7 +144,12 @@ export async function loginWithGoogle(expectedRole: UserRole): Promise<User> {
       return profile;
     }
 
-    // First time Google Sign-In registration: use Google account name and photo
+    // First time Google Sign-In registration: use Google account name and
+    // photo. This is still a self-registration (nobody vouched for this
+    // account), so - same as the ID/password sign-up form - it starts
+    // unverified rather than instantly approved. Signing in with Google is
+    // proof of a Google identity, not proof this person should have
+    // teacher-level (or even verified-student-level) access.
     const cleanId = user.email ? user.email.split("@")[0] : `google_${uid.slice(0, 8)}`;
     const profile: User = {
       id: cleanId,
@@ -144,7 +157,7 @@ export async function loginWithGoogle(expectedRole: UserRole): Promise<User> {
       name: user.displayName || user.email?.split("@")[0] || cleanId,
       role: expectedRole,
       createdAt: formatDate(new Date()),
-      isApproved: true,
+      isApproved: false,
       avatarUrl: user.photoURL || undefined,
       email: user.email || undefined,
       ...(expectedRole === "teacher" ? { subject: "General Education" } : {}),
