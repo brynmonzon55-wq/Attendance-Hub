@@ -109,7 +109,7 @@ export default function WebsiteHeader({
           </div>
           <div className="flex flex-col">
             <span className="font-extrabold text-base sm:text-lg font-display tracking-tight text-white group-hover:text-cyan-200 transition-colors">
-              Attendance<span className="text-cyan-400 font-black">Hub</span>
+              Acadex
             </span>
             <span className="text-[10px] text-slate-400 font-mono hidden md:block tracking-wide">
               Classroom & Attendance Management

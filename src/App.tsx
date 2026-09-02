@@ -357,7 +357,7 @@ export default function App() {
       <footer className="py-6 border-t border-white/[0.08] text-center text-xs text-slate-400 font-medium font-sans relative z-10 backdrop-blur-md bg-slate-950/40 shrink-0 pb-[calc(18px+env(safe-area-inset-bottom))]">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-white font-display">Attendance<span className="text-cyan-400">Hub</span></span>
+            <span className="font-bold text-white font-display">Acadex</span>
             <span className="text-slate-500">&bull;</span>
             <span>Classroom & Attendance Management</span>
           </div>
