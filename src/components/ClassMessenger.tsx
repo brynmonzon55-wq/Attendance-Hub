@@ -34,6 +34,8 @@ import {
   getUnreadDirectMessagesCount,
   deleteDirectMessage,
   formatTime,
+  getUserPresence,
+  isUserOnline,
 } from "../lib/db";
 import UserAvatar from "./UserAvatar";
 
@@ -246,6 +248,15 @@ export default function ClassMessenger({
       window.removeEventListener("open_messenger", handleOpenMessenger);
     };
   }, [currentUser.id, activePartnerId]);
+
+  // Periodic tick to automatically refresh online/offline status every 30s
+  const [, setPresenceTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPresenceTick((t) => t + 1);
+    }, 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   // When active partner changes, load messages & mark read
   useEffect(() => {
@@ -499,41 +510,61 @@ export default function ClassMessenger({
                   {filteredUsers.length === 0 ? (
                     <div className="p-4 text-center text-slate-500 text-xs">No contacts found</div>
                   ) : (
-                    filteredUsers.map((u) => (
-                      <button
-                        key={u.id}
-                        onClick={() => {
-                          setActivePartnerId(u.id);
-                          setShowUserPicker(false);
-                          setSearchQuery("");
-                        }}
-                        className="w-full p-2 rounded-xl hover:bg-slate-900 text-left flex items-center gap-2.5 transition-colors group cursor-pointer"
-                      >
-                        <div className="relative">
-                          <UserAvatar name={u.name} avatarUrl={u.avatarUrl} role={u.role} size="sm" />
-                          <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-400 border border-slate-950" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between">
-                            <span className={`text-xs font-bold text-white group-hover:${styles.iconColor} truncate`}>
-                              {u.name}
-                            </span>
+                    filteredUsers.map((u) => {
+                      const presence = getUserPresence(u);
+                      return (
+                        <button
+                          key={u.id}
+                          onClick={() => {
+                            setActivePartnerId(u.id);
+                            setShowUserPicker(false);
+                            setSearchQuery("");
+                          }}
+                          className="w-full p-2 rounded-xl hover:bg-slate-900 text-left flex items-center gap-2.5 transition-colors group cursor-pointer"
+                        >
+                          <div className="relative shrink-0">
+                            <UserAvatar name={u.name} avatarUrl={u.avatarUrl} role={u.role} size="sm" />
                             <span
-                              className={`text-[9px] px-1.5 py-0.2 rounded font-extrabold ${
-                                u.role === "teacher"
-                                  ? styles.badgeColor
-                                  : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+                              className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-slate-950 transition-colors ${
+                                presence.isOnline
+                                  ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
+                                  : "bg-slate-500"
                               }`}
-                            >
-                              {u.role}
-                            </span>
+                              title={presence.isOnline ? "Online" : "Offline"}
+                            />
                           </div>
-                          <p className="text-[10px] text-slate-400 truncate">
-                            {u.subject || u.department || `ID: ${u.id}`}
-                          </p>
-                        </div>
-                      </button>
-                    ))
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className={`text-xs font-bold text-white group-hover:${styles.iconColor} truncate`}>
+                                {u.name}
+                              </span>
+                              <span
+                                className={`text-[9px] px-1.5 py-0.2 rounded font-extrabold ${
+                                  u.role === "teacher"
+                                    ? styles.badgeColor
+                                    : "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
+                                }`}
+                              >
+                                {u.role}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-slate-400 truncate flex items-center gap-1.5">
+                              <span>{u.subject || u.department || `ID: ${u.id}`}</span>
+                              <span className="text-slate-600">&bull;</span>
+                              <span
+                                className={
+                                  presence.isOnline
+                                    ? "text-emerald-400 font-bold"
+                                    : "text-slate-500"
+                                }
+                              >
+                                {presence.isOnline ? "Online" : presence.timeAgoText}
+                              </span>
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })
                   )}
                 </div>
               ) : (
@@ -556,6 +587,13 @@ export default function ClassMessenger({
                   ) : (
                     conversations.map((conv) => {
                       const isActive = activePartnerId?.toLowerCase() === conv.partnerId.toLowerCase();
+                      const partnerUser = allUsers.find(
+                        (u) =>
+                          u.id.toLowerCase() === conv.partnerId.toLowerCase() ||
+                          (u.uid && u.uid.toLowerCase() === conv.partnerId.toLowerCase())
+                      );
+                      const partnerPresence = getUserPresence(partnerUser || conv.partnerId);
+
                       return (
                         <button
                           key={conv.partnerId}
@@ -573,7 +611,14 @@ export default function ClassMessenger({
                             <div className={`w-9 h-9 rounded-full ${styles.activeBadgeBg} font-black text-xs flex items-center justify-center`}>
                               {conv.partnerName.charAt(0)}
                             </div>
-                            <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-400 border border-slate-950" />
+                            <span
+                              className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-slate-950 transition-colors ${
+                                partnerPresence.isOnline
+                                  ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
+                                  : "bg-slate-500"
+                              }`}
+                              title={partnerPresence.isOnline ? "Online" : "Offline"}
+                            />
                           </div>
 
                           <div className="min-w-0 flex-1 space-y-0.5">
@@ -609,7 +654,9 @@ export default function ClassMessenger({
 
           {/* Right Pane / Active Chat Conversation */}
           <div className="flex-1 flex flex-col bg-slate-900/50 min-w-0">
-            {activePartner ? (
+            {activePartner ? (() => {
+              const activePresence = getUserPresence(activePartner);
+              return (
               <>
                 {/* Active Partner Top Bar */}
                 <div className="px-4 py-2.5 bg-slate-950/50 border-b border-slate-800 flex items-center justify-between gap-2 shrink-0">
@@ -624,7 +671,14 @@ export default function ClassMessenger({
                       <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${styles.accentGradient} text-white font-black text-xs flex items-center justify-center`}>
                         {activePartner.name.charAt(0)}
                       </div>
-                      <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-400 border border-slate-950" />
+                      <span
+                        className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border border-slate-950 transition-colors ${
+                          activePresence.isOnline
+                            ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
+                            : "bg-slate-500"
+                        }`}
+                        title={activePresence.isOnline ? "Online" : "Offline"}
+                      />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
@@ -639,9 +693,21 @@ export default function ClassMessenger({
                           {activePartner.role}
                         </span>
                       </div>
-                      <p className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
-                        <Circle className="h-1.5 w-1.5 fill-emerald-400" /> Active now &bull;{" "}
-                        <span className="text-slate-400">ID: {activePartner.id}</span>
+                      <p
+                        className={`text-[10px] font-semibold flex items-center gap-1.5 ${
+                          activePresence.isOnline ? "text-emerald-400" : "text-slate-400"
+                        }`}
+                      >
+                        <Circle
+                          className={`h-1.5 w-1.5 ${
+                            activePresence.isOnline
+                              ? "fill-emerald-400 text-emerald-400"
+                              : "fill-slate-500 text-slate-500"
+                          }`}
+                        />
+                        <span>{activePresence.isOnline ? "Active now" : activePresence.timeAgoText}</span>
+                        <span className="text-slate-600">&bull;</span>
+                        <span className="text-slate-500">ID: {activePartner.id}</span>
                       </p>
                     </div>
                   </div>
@@ -664,7 +730,7 @@ export default function ClassMessenger({
                       </div>
                       <h4 className="text-xs font-bold text-white">Start the conversation</h4>
                       <p className="text-[11px] text-slate-400">
-                        Send a message to {activePartner.name} ({activePartner.role}). Ask questions about assignments, course material, or class updates.
+                        Send a message to {activePartner.name} ({activePartner.role}). {activePresence.isOnline ? "They are currently online." : `They are currently offline (${activePresence.timeAgoText.toLowerCase()}).`}
                       </p>
                     </div>
                   ) : (
@@ -806,7 +872,8 @@ export default function ClassMessenger({
                   </div>
                 </div>
               </>
-            ) : (
+              );
+            })() : (
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-3">
                 <div className={`w-14 h-14 rounded-3xl bg-slate-950 border border-slate-800 ${styles.iconColor} flex items-center justify-center shadow-inner`}>
                   <MessageSquare className="h-7 w-7" />

@@ -1,4 +1,4 @@
-# 🌸 AttendanceHub
+# 🌸 Acadex
 
 A classroom and attendance management web app for students and teachers, built with **React + Vite + Firebase**, deployed to GitHub Pages.
 

@@ -1,6 +1,13 @@
 import { useState, useEffect } from "react";
 import { User, UserRole } from "./types";
-import { initDB, logoutUser, attachRealtimeListeners, attachSecurityLogsListener, attachDirectMessagesListener } from "./lib/db";
+import {
+  initDB,
+  logoutUser,
+  attachRealtimeListeners,
+  attachSecurityLogsListener,
+  attachDirectMessagesListener,
+  updateUserActivity
+} from "./lib/db";
 import { auth, db } from "./lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
@@ -170,16 +177,51 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // Active Presence heartbeat for logged-in user
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    // Immediately mark as active
+    updateUserActivity(currentUser.id);
+
+    // Heartbeat every 45 seconds
+    const interval = setInterval(() => {
+      updateUserActivity(currentUser.id);
+    }, 45000);
+
+    // Debounced activity handler for user interaction
+    let lastRecorded = Date.now();
+    const handleUserInteraction = () => {
+      const now = Date.now();
+      if (now - lastRecorded > 30000) {
+        lastRecorded = now;
+        updateUserActivity(currentUser.id);
+      }
+    };
+
+    window.addEventListener("click", handleUserInteraction, { passive: true });
+    window.addEventListener("keydown", handleUserInteraction, { passive: true });
+    window.addEventListener("focus", handleUserInteraction, { passive: true });
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("click", handleUserInteraction);
+      window.removeEventListener("keydown", handleUserInteraction);
+      window.removeEventListener("focus", handleUserInteraction);
+    };
+  }, [currentUser?.id]);
+
   const handleRequestLogout = () => {
     setShowLogoutModal(true);
   };
 
   const handleConfirmLogout = () => {
     setShowLogoutModal(false);
+    const userToLogOut = currentUser;
     setCurrentUser(null);
     setSelectedRole(null);
     setCurrentView("landing");
-    logoutUser().catch((err) => console.error("Error signing out:", err));
+    logoutUser(userToLogOut).catch((err) => console.error("Error signing out:", err));
   };
 
   const handleCancelLogout = () => {
@@ -208,7 +250,7 @@ export default function App() {
   if (checkingSession) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-sm text-cyan-400 font-bold font-display animate-pulse">Loading Attendance Hub...</div>
+        <div className="text-sm text-cyan-400 font-bold font-display animate-pulse">Loading Acadex...</div>
       </div>
     );
   }
@@ -320,7 +362,7 @@ export default function App() {
             <span>Classroom & Attendance Management</span>
           </div>
           <div>
-            &copy; {new Date().getFullYear()} Attendance Hub &bull; Made by Bryn Monzon
+            &copy; {new Date().getFullYear()} Acadex &bull; Made by Bryn Monzon
           </div>
         </div>
       </footer>

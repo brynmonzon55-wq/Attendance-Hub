@@ -128,8 +128,8 @@ export default function DailyCheckinsTab({
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-black text-ink font-display">Daily Attendance Sheet</h2>
               {isToday && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-teal-50 text-teal-600 border border-teal-200">
-                  <span className="h-2 w-2 rounded-full bg-teal-500 animate-pulse" /> Live Today
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-teal-500/15 text-teal-300 border border-teal-500/30">
+                  <span className="h-2 w-2 rounded-full bg-teal-400 animate-pulse" /> Live Today
                 </span>
               )}
             </div>
@@ -163,7 +163,7 @@ export default function DailyCheckinsTab({
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <div
           onClick={() => setStatusFilter("All")}
-          className={`bg-white border rounded-2xl p-4 shadow-sm cursor-pointer transition-all hover:-translate-y-0.5 ${
+          className={`bg-cream border rounded-2xl p-4 shadow-xl cursor-pointer transition-all hover:-translate-y-0.5 ${
             statusFilter === "All" ? "border-violet-500 ring-2 ring-violet-500/20" : "border-ink-soft/10"
           }`}
         >
@@ -176,7 +176,7 @@ export default function DailyCheckinsTab({
 
         <div
           onClick={() => setStatusFilter("Checked In")}
-          className={`bg-white border rounded-2xl p-4 shadow-sm cursor-pointer transition-all hover:-translate-y-0.5 ${
+          className={`bg-cream border rounded-2xl p-4 shadow-xl cursor-pointer transition-all hover:-translate-y-0.5 ${
             statusFilter === "Checked In" ? "border-cyan-500 ring-2 ring-cyan-500/20" : "border-ink-soft/10"
           }`}
         >
@@ -191,7 +191,7 @@ export default function DailyCheckinsTab({
 
         <div
           onClick={() => setStatusFilter("Present")}
-          className={`bg-white border rounded-2xl p-4 shadow-sm cursor-pointer transition-all hover:-translate-y-0.5 ${
+          className={`bg-cream border rounded-2xl p-4 shadow-xl cursor-pointer transition-all hover:-translate-y-0.5 ${
             statusFilter === "Present" ? "border-teal-500 ring-2 ring-teal-500/20" : "border-ink-soft/10"
           }`}
         >
@@ -204,7 +204,7 @@ export default function DailyCheckinsTab({
 
         <div
           onClick={() => setStatusFilter("Late")}
-          className={`bg-white border rounded-2xl p-4 shadow-sm cursor-pointer transition-all hover:-translate-y-0.5 ${
+          className={`bg-cream border rounded-2xl p-4 shadow-xl cursor-pointer transition-all hover:-translate-y-0.5 ${
             statusFilter === "Late" ? "border-coral-500 ring-2 ring-coral-500/20" : "border-ink-soft/10"
           }`}
         >
@@ -217,7 +217,7 @@ export default function DailyCheckinsTab({
 
         <div
           onClick={() => setStatusFilter("Not Checked In")}
-          className={`bg-white border rounded-2xl p-4 shadow-sm cursor-pointer transition-all hover:-translate-y-0.5 col-span-2 sm:col-span-1 ${
+          className={`bg-cream border rounded-2xl p-4 shadow-xl cursor-pointer transition-all hover:-translate-y-0.5 col-span-2 sm:col-span-1 ${
             statusFilter === "Not Checked In" ? "border-slate-500 ring-2 ring-slate-500/20" : "border-ink-soft/10"
           }`}
         >
@@ -230,7 +230,7 @@ export default function DailyCheckinsTab({
       </div>
 
       {/* Search & Filter Controls */}
-      <div className="bg-white border border-ink-soft/10 rounded-2xl p-3 sm:p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="bg-cream border border-ink-soft/10 rounded-2xl p-3 sm:p-4 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-3">
         {/* Search Input */}
         <div className="relative flex-1">
           <Search className="h-4 w-4 text-ink-soft/50 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -271,7 +271,7 @@ export default function DailyCheckinsTab({
 
       {/* Student Cards List */}
       {filteredStudents.length === 0 ? (
-        <div className="bg-white border border-ink-soft/10 rounded-3xl p-12 text-center shadow-sm">
+        <div className="bg-cream border border-ink-soft/10 rounded-3xl p-12 text-center shadow-xl">
           <UserCheck className="h-12 w-12 text-ink-soft/30 mx-auto mb-3" />
           <h3 className="text-base font-bold text-ink">No student check-ins found</h3>
           <p className="text-xs text-ink-soft/60 mt-1 max-w-sm mx-auto">
@@ -290,7 +290,7 @@ export default function DailyCheckinsTab({
                 initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
                 onClick={() => setInfoModalStudent(student)}
-                className="bg-white border border-ink-soft/10 hover:border-violet-300 rounded-3xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+                className="bg-cream border border-ink-soft/10 hover:border-violet-400 rounded-3xl p-4 sm:p-5 shadow-xl hover:shadow-2xl transition-all cursor-pointer group flex flex-col justify-between"
               >
                 <div>
                   {/* Top row: Avatar + Name + Status Pill */}
@@ -392,7 +392,7 @@ export default function DailyCheckinsTab({
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="bg-white border border-violet-100 rounded-3xl p-5 sm:p-6 shadow-2xl max-w-lg w-full relative my-8"
+              className="bg-cream border border-ink-soft/15 rounded-3xl p-5 sm:p-6 shadow-2xl max-w-lg w-full relative my-8"
             >
               {/* Close Button */}
               <button

@@ -7,6 +7,7 @@ import {
   XCircle,
   Search,
   UserPlus,
+  UserMinus,
   Trash2,
   Calendar,
   AlertCircle,
@@ -40,7 +41,8 @@ import {
   BookOpen,
   RefreshCw,
   School,
-  Copy
+  Copy,
+  Download
 } from "lucide-react";
 import {
   User,
@@ -55,8 +57,10 @@ import {
 } from "../types";
 import type { AppTheme, AppThemeMode } from "../App";
 import { linkifyText } from "../lib/linkify";
+import { processFileUpload } from "../lib/fileUtils";
 import StudentProfile from "./StudentProfile";
 import TeacherProfile from "./TeacherProfile";
+import PostCommentsSection from "./PostCommentsSection";
 import AnimatedThemeBackground from "./AnimatedThemeBackground";
 import SettingsTab from "./SettingsTab";
 import UserAvatar from "./UserAvatar";
@@ -66,7 +70,6 @@ import ClassMessenger, { openDirectMessage } from "./ClassMessenger";
 import {
   getUsers,
   saveUser,
-  deleteUser,
   getAttendanceRecords,
   saveAttendanceRecord,
   deleteAttendanceRecord,
@@ -180,7 +183,7 @@ export default function TeacherDashboard({
   const [editStudentName, setEditStudentName] = useState("");
   const [editStudentEmail, setEditStudentEmail] = useState("");
 
-  const [studentToDelete, setStudentToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [studentToRemove, setStudentToRemove] = useState<{ id: string; name: string } | null>(null);
 
   // Announcements Form State
   const [announcements, setAnnouncements] = useState<ClassPost[]>([]);
@@ -191,9 +194,6 @@ export default function TeacherDashboard({
   const [annAttachmentName, setAnnAttachmentName] = useState("");
   const [annAttachmentDataUrl, setAnnAttachmentDataUrl] = useState("");
   const [showCreateAnnModal, setShowCreateAnnModal] = useState(false);
-  const [expandedCommentsPostId, setExpandedCommentsPostId] = useState<string | null>(null);
-  const [commentsMap, setCommentsMap] = useState<Record<string, PostComment[]>>({});
-  const [newCommentInput, setNewCommentInput] = useState("");
 
   // Assignments & Grading State
   const [assignments, setAssignments] = useState<ClassPost[]>([]);
@@ -466,11 +466,17 @@ export default function TeacherDashboard({
     loadDatabase();
   };
 
-  // Delete Student
-  const handleConfirmDeleteStudent = () => {
-    if (!studentToDelete) return;
-    deleteUser(studentToDelete.id);
-    setStudentToDelete(null);
+  // Remove Student from class section
+  const handleConfirmRemoveStudent = () => {
+    if (!studentToRemove) return;
+    if (selectedClass) {
+      removeStudentFromClass(selectedClass.id, studentToRemove.id);
+    } else {
+      teacherClasses.forEach((cls) => {
+        removeStudentFromClass(cls.id, studentToRemove.id);
+      });
+    }
+    setStudentToRemove(null);
     loadDatabase();
   };
 
@@ -494,30 +500,36 @@ export default function TeacherDashboard({
     loadDatabase();
   };
 
-  const handleAnnFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAnnFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      alert("File size exceeds 5MB limit.");
-      return;
+    try {
+      const processed = await processFileUpload(file);
+      setAnnAttachmentName(processed.name);
+      setAnnAttachmentDataUrl(processed.dataUrl);
+    } catch (err: any) {
+      alert(err?.message || "Could not attach file.");
+      setAnnAttachmentName("");
+      setAnnAttachmentDataUrl("");
+    } finally {
+      e.target.value = "";
     }
-    setAnnAttachmentName(file.name);
-    const reader = new FileReader();
-    reader.onload = (evt) => setAnnAttachmentDataUrl(evt.target?.result as string);
-    reader.readAsDataURL(file);
   };
 
-  const handleAssFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAssFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 3 * 1024 * 1024) {
-      alert("File size exceeds 3MB limit.");
-      return;
+    try {
+      const processed = await processFileUpload(file);
+      setAssAttachmentName(processed.name);
+      setAssAttachmentDataUrl(processed.dataUrl);
+    } catch (err: any) {
+      alert(err?.message || "Could not attach file.");
+      setAssAttachmentName("");
+      setAssAttachmentDataUrl("");
+    } finally {
+      e.target.value = "";
     }
-    setAssAttachmentName(file.name);
-    const reader = new FileReader();
-    reader.onload = (evt) => setAssAttachmentDataUrl(evt.target?.result as string);
-    reader.readAsDataURL(file);
   };
 
   // Post Announcement
@@ -625,29 +637,6 @@ export default function TeacherDashboard({
     reader.readAsDataURL(file);
   };
 
-  // Toggle comments
-  const handleToggleComments = (postId: string) => {
-    if (expandedCommentsPostId === postId) {
-      setExpandedCommentsPostId(null);
-    } else {
-      setExpandedCommentsPostId(postId);
-      setCommentsMap((prev) => ({ ...prev, [postId]: getCommentsForPost(postId) }));
-    }
-  };
-
-  // Post comment
-  const handleAddComment = (postId: string) => {
-    if (!newCommentInput.trim()) return;
-    addComment({
-      postId,
-      authorId: user.id,
-      authorName: dbUser.name,
-      content: newCommentInput.trim(),
-    });
-    setNewCommentInput("");
-    setCommentsMap((prev) => ({ ...prev, [postId]: getCommentsForPost(postId) }));
-  };
-
   // Filtered Students
   const filteredStudents = sectionStudents.filter(
     (s) =>
@@ -668,7 +657,7 @@ export default function TeacherDashboard({
             <UserAvatar name={dbUser.name} avatarUrl={dbUser.avatarUrl} role="teacher" size="lg" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold bg-violet-50 text-violet-600 rounded-full border border-violet-200 shrink-0">
+                <span className="px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold bg-violet-500/15 text-violet-300 rounded-full border border-violet-500/30 shrink-0">
                   Teacher Portal
                 </span>
                 <span className="text-xs font-mono text-ink-soft/70 truncate">ID: {user.id}</span>
@@ -814,7 +803,7 @@ export default function TeacherDashboard({
                       setSelectedClassId(e.target.value);
                     }
                   }}
-                  className="w-full md:w-auto px-3.5 py-2 text-xs font-bold bg-white dark:bg-slate-800 border border-ink-soft/20 rounded-xl text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
+                  className="w-full md:w-auto px-3.5 py-2 text-xs font-bold bg-slate-900 border border-ink-soft/20 rounded-xl text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
                 >
                   {teacherClasses.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -1000,10 +989,11 @@ export default function TeacherDashboard({
                             <Edit className="h-3.5 w-3.5" />
                           </button>
                           <button
-                            onClick={() => setStudentToDelete({ id: st.id, name: st.name })}
-                            className="p-1.5 text-rose-400 hover:text-rose-300 bg-rose-500/20 rounded-lg border border-rose-500/30 cursor-pointer transition-colors"
+                            onClick={() => setStudentToRemove({ id: st.id, name: st.name })}
+                            className="p-1.5 text-amber-300 hover:text-amber-200 bg-amber-500/20 rounded-lg border border-amber-500/30 cursor-pointer transition-colors"
+                            title={`Remove ${st.name} from ${selectedClass?.name || "class section"}`}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <UserMinus className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </motion.div>
@@ -1448,6 +1438,14 @@ export default function TeacherDashboard({
                         </div>
                       )
                     )}
+
+                    {/* Class & Private Comments Section */}
+                    <PostCommentsSection
+                      post={post}
+                      currentUser={dbUser}
+                      isTeacher={true}
+                      studentsList={sectionStudents}
+                    />
                   </div>
                 ))}
               </div>
@@ -1525,6 +1523,47 @@ export default function TeacherDashboard({
                         <p className="text-xs text-ink/80 font-sans line-clamp-3">
                           {assignment.content}
                         </p>
+
+                        {/* Attachment preview if any */}
+                        {assignment.attachmentDataUrl && (
+                          assignment.attachmentDataUrl.startsWith("data:image/") || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(assignment.attachmentName || "") ? (
+                            <div className="mt-2 overflow-hidden rounded-2xl border border-ink-soft/15 bg-slate-950/40">
+                              <img
+                                src={assignment.attachmentDataUrl}
+                                alt={assignment.attachmentName || "Attached photo"}
+                                className="max-h-48 w-full object-cover rounded-t-2xl hover:opacity-95 transition-opacity cursor-pointer"
+                                onClick={() => window.open(assignment.attachmentDataUrl, "_blank")}
+                              />
+                              <div className="p-2.5 bg-slate-900/90 border-t border-ink-soft/15 flex items-center justify-between text-xs font-bold text-ink">
+                                <span className="flex items-center gap-1.5 truncate">
+                                  <ImageIcon className="h-3.5 w-3.5 text-violet-400 shrink-0" />
+                                  <span className="truncate">{assignment.attachmentName || "Reference Photo"}</span>
+                                </span>
+                                <a
+                                  href={assignment.attachmentDataUrl}
+                                  download={assignment.attachmentName || "photo.png"}
+                                  className="px-2.5 py-1 text-[11px] font-bold text-violet-300 bg-violet-500/20 border border-violet-500/40 hover:bg-violet-500/30 rounded-lg transition-all cursor-pointer flex items-center gap-1"
+                                >
+                                  <Download className="h-3 w-3" /> Download
+                                </a>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-2.5 bg-slate-950/40 border border-ink-soft/15 rounded-2xl flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 text-xs font-bold text-ink truncate">
+                                <Paperclip className="h-3.5 w-3.5 text-violet-400 shrink-0" />
+                                <span className="truncate">{assignment.attachmentName || "Attachment"}</span>
+                              </div>
+                              <a
+                                href={assignment.attachmentDataUrl}
+                                download={assignment.attachmentName || "attachment"}
+                                className="px-2.5 py-1 text-[11px] font-bold text-violet-300 bg-violet-500/20 border border-violet-500/40 rounded-lg hover:bg-violet-500/30 transition-all cursor-pointer shrink-0 flex items-center gap-1"
+                              >
+                                <Download className="h-3 w-3" /> Download
+                              </a>
+                            </div>
+                          )
+                        )}
                       </div>
 
                       <div className="p-3 bg-slate-900/80 border border-slate-700/70 rounded-2xl flex items-center justify-between text-xs font-bold text-slate-200">
@@ -1550,6 +1589,14 @@ export default function TeacherDashboard({
                           </button>
                         </div>
                       </div>
+
+                      {/* Class & Private Comments Section */}
+                      <PostCommentsSection
+                        post={assignment}
+                        currentUser={dbUser}
+                        isTeacher={true}
+                        studentsList={sectionStudents}
+                      />
                     </div>
                   );
                 })}
@@ -1675,7 +1722,7 @@ export default function TeacherDashboard({
                         const cls = teacherClasses.find((c) => c.id === val);
                         if (cls?.subject) setAnnSubject(cls.subject);
                       }}
-                      className="w-full p-2.5 text-xs font-semibold bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                      className="w-full p-2.5 text-xs font-semibold bg-slate-900 border border-ink-soft/20 rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                     >
                       {teacherClasses.map((c) => (
                         <option key={c.id} value={c.id}>
@@ -1691,14 +1738,14 @@ export default function TeacherDashboard({
                     onChange={(e) => setAnnTitle(e.target.value)}
                     placeholder="Announcement Title..."
                     required
-                    className="w-full p-3 text-xs font-medium bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 placeholder:text-ink-soft/50 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                    className="w-full p-3 text-xs font-medium bg-slate-900 border border-ink-soft/20 rounded-xl text-ink placeholder:text-ink-soft/50 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                   />
                   <input
                     type="text"
                     value={annSubject}
                     onChange={(e) => setAnnSubject(e.target.value)}
                     placeholder="Subject Category (e.g. Computer Science)..."
-                    className="w-full p-3 text-xs font-medium bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 placeholder:text-ink-soft/50 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                    className="w-full p-3 text-xs font-medium bg-slate-900 border border-ink-soft/20 rounded-xl text-ink placeholder:text-ink-soft/50 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                   />
                   <textarea
                     value={annContent}
@@ -1706,16 +1753,16 @@ export default function TeacherDashboard({
                     placeholder="Announcement details..."
                     rows={4}
                     required
-                    className="w-full p-3 text-xs font-medium bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 placeholder:text-ink-soft/50 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 resize-none"
+                    className="w-full p-3 text-xs font-medium bg-slate-900 border border-ink-soft/20 rounded-xl text-ink placeholder:text-ink-soft/50 focus:outline-none focus:ring-2 focus:ring-violet-500/50 resize-none"
                   />
 
                   {/* File / Photo Resource Attachment */}
                   <div className="space-y-1.5 pt-1">
-                    <label className="block text-[11px] font-bold text-ink-soft dark:text-slate-300">
+                    <label className="block text-[11px] font-bold text-ink-soft">
                       Classroom Resource / Photo Attachment
                     </label>
                     <div className="flex items-center gap-2">
-                      <label className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-violet-600 dark:text-violet-300 bg-violet-50 dark:bg-violet-900/30 border border-violet-200 dark:border-violet-700 rounded-xl hover:bg-violet-100 dark:hover:bg-violet-800/40 cursor-pointer transition-colors">
+                      <label className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-violet-300 bg-violet-950/80 border border-violet-500/40 rounded-xl hover:bg-violet-900/80 cursor-pointer transition-colors">
                         <Paperclip className="h-4 w-4" />
                         <span>{annAttachmentName ? "Change Attachment" : "Attach File or Photo"}</span>
                         <input
@@ -1732,7 +1779,7 @@ export default function TeacherDashboard({
                             setAnnAttachmentName("");
                             setAnnAttachmentDataUrl("");
                           }}
-                          className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg cursor-pointer"
+                          className="p-1.5 text-rose-500 hover:bg-rose-950/40 rounded-lg cursor-pointer"
                           title="Remove attachment"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -1740,7 +1787,7 @@ export default function TeacherDashboard({
                       )}
                     </div>
                     {annAttachmentName && (
-                      <div className="mt-1.5 p-2.5 bg-violet-500/10 border border-violet-500/20 rounded-xl flex items-center justify-between text-xs font-bold text-violet-700 dark:text-violet-300">
+                      <div className="mt-1.5 p-2.5 bg-violet-500/15 border border-violet-500/30 rounded-xl flex items-center justify-between text-xs font-bold text-violet-300">
                         <span className="truncate">📎 {annAttachmentName}</span>
                       </div>
                     )}
@@ -1759,7 +1806,7 @@ export default function TeacherDashboard({
                     <button
                       type="button"
                       onClick={() => setShowCreateAnnModal(false)}
-                      className="px-4 py-2 text-xs font-bold text-ink-soft bg-white border border-ink-soft/15 rounded-xl"
+                      className="px-4 py-2 text-xs font-bold text-slate-300 bg-slate-800/80 border border-slate-700 rounded-xl hover:bg-slate-700 cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -1806,7 +1853,7 @@ export default function TeacherDashboard({
                         const cls = teacherClasses.find((c) => c.id === val);
                         if (cls?.subject) setAssSubject(cls.subject);
                       }}
-                      className="w-full p-2.5 text-xs font-semibold bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                      className="w-full p-2.5 text-xs font-semibold bg-slate-900 border border-ink-soft/20 rounded-xl text-ink focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                     >
                       {teacherClasses.map((c) => (
                         <option key={c.id} value={c.id}>
@@ -1824,7 +1871,7 @@ export default function TeacherDashboard({
                       onChange={(e) => setAssTitle(e.target.value)}
                       placeholder="e.g. Chapter 4 Calculus Homework"
                       required
-                      className="w-full p-3 text-xs font-semibold bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 placeholder:text-ink-soft/50 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                      className="w-full p-3 text-xs font-semibold bg-slate-900 border border-ink-soft/20 rounded-xl text-ink placeholder:text-ink-soft/50 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                     />
                   </div>
 
@@ -1836,7 +1883,7 @@ export default function TeacherDashboard({
                         value={assSubject}
                         onChange={(e) => setAssSubject(e.target.value)}
                         placeholder="e.g. Mathematics"
-                        className="w-full p-2.5 text-xs bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 placeholder:text-ink-soft/50 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                        className="w-full p-2.5 text-xs bg-slate-900 border border-ink-soft/20 rounded-xl text-ink placeholder:text-ink-soft/50 focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                       />
                     </div>
                     <div>
@@ -1845,7 +1892,7 @@ export default function TeacherDashboard({
                         type="date"
                         value={assDueDate}
                         onChange={(e) => setAssDueDate(e.target.value)}
-                        className="w-full p-2.5 text-xs bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 font-mono [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                        className="w-full p-2.5 text-xs bg-slate-900 border border-ink-soft/20 rounded-xl text-ink font-mono [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                       />
                     </div>
                     <div>
@@ -1856,7 +1903,7 @@ export default function TeacherDashboard({
                         max={1000}
                         value={assMaxPoints}
                         onChange={(e) => setAssMaxPoints(Number(e.target.value))}
-                        className="w-full p-2.5 text-xs bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 font-mono font-bold focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                        className="w-full p-2.5 text-xs bg-slate-900 border border-ink-soft/20 rounded-xl text-ink font-mono font-bold focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                       />
                     </div>
                   </div>
@@ -1869,26 +1916,26 @@ export default function TeacherDashboard({
                       placeholder="Detailed instructions for students..."
                       rows={4}
                       required
-                      className="w-full p-3 text-xs bg-white/90 dark:bg-slate-800/90 border border-ink-soft/20 dark:border-slate-700 rounded-xl text-ink dark:text-slate-100 placeholder:text-ink-soft/50 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500/50 resize-none"
+                      className="w-full p-3 text-xs bg-slate-900 border border-ink-soft/20 rounded-xl text-ink placeholder:text-ink-soft/50 focus:outline-none focus:ring-2 focus:ring-violet-500/50 resize-none"
                     />
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-ink-soft block">Attach File / Reference Document (Optional)</label>
                     <div className="flex items-center gap-2">
-                      <label className="px-3 py-2 text-xs font-bold text-violet-700 bg-violet-50 border border-violet-200 rounded-xl hover:bg-violet-100 cursor-pointer flex items-center gap-1.5 transition-all">
+                      <label className="px-3 py-2 text-xs font-bold text-violet-300 bg-violet-950/80 border border-violet-500/40 rounded-xl hover:bg-violet-900/80 cursor-pointer flex items-center gap-1.5 transition-all">
                         <Paperclip className="h-4 w-4" />
                         <span>{assAttachmentName ? "Change File" : "Choose File"}</span>
                         <input type="file" onChange={handleAssFileChange} className="hidden" />
                       </label>
                       {assAttachmentName && (
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
-                          <Paperclip className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-300 bg-emerald-950/80 px-3 py-1.5 rounded-xl border border-emerald-500/40">
+                          <Paperclip className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
                           <span className="truncate max-w-[160px]">{assAttachmentName}</span>
                           <button
                             type="button"
                             onClick={() => { setAssAttachmentName(""); setAssAttachmentDataUrl(""); }}
-                            className="text-emerald-700 hover:text-coral-600 ml-1 cursor-pointer"
+                            className="text-emerald-300 hover:text-rose-400 ml-1 cursor-pointer"
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
@@ -1901,7 +1948,7 @@ export default function TeacherDashboard({
                     <button
                       type="button"
                       onClick={() => setShowCreateAssModal(false)}
-                      className="px-4 py-2 text-xs font-bold text-ink-soft bg-white border border-ink-soft/15 rounded-xl hover:bg-black/5 cursor-pointer"
+                      className="px-4 py-2 text-xs font-bold text-slate-300 bg-slate-800/80 border border-slate-700 rounded-xl hover:bg-slate-700 cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -1948,40 +1995,68 @@ export default function TeacherDashboard({
                     {assignmentSubmissions.map((sub) => (
                       <div
                         key={sub.id}
-                        className="p-4 bg-white/70 border border-ink-soft/10 rounded-2xl space-y-2 text-xs"
+                        className="p-4 bg-slate-950/40 border border-ink-soft/15 rounded-2xl space-y-2 text-xs"
                       >
                         <div className="flex items-center justify-between font-bold text-ink">
                           <span>{sub.studentName}</span>
                           <span
                             className={`px-2 py-0.5 text-[10px] rounded-full border ${
                               sub.status === "Graded"
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                : "bg-amber-50 text-amber-700 border-amber-200"
+                                ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                                : "bg-amber-500/20 text-amber-300 border-amber-500/30"
                             }`}
                           >
                             {sub.status === "Graded" ? `Graded (${sub.score})` : "Pending Grade"}
                           </span>
                         </div>
 
-                        <p className="text-ink-soft bg-cream/80 p-3 rounded-xl whitespace-pre-wrap font-sans">
+                        <p className="text-ink-soft bg-slate-900/80 border border-ink-soft/10 p-3 rounded-xl whitespace-pre-wrap font-sans">
                           {sub.content
                             ? linkifyText(sub.content, {
                                 linkClassName:
-                                  "font-semibold text-indigo-600 hover:text-indigo-700 underline decoration-indigo-400/50 underline-offset-2 break-all",
+                                  "font-semibold text-indigo-400 hover:text-indigo-300 underline decoration-indigo-400/50 underline-offset-2 break-all",
                               })
                             : "No text provided"}
                         </p>
 
                         {sub.attachmentDataUrl && (
-                          <div className="flex justify-end">
-                            <a
-                              href={sub.attachmentDataUrl}
-                              download={sub.attachmentName || "student-file"}
-                              className="px-3 py-1 text-[11px] font-extrabold text-white bg-violet-600 hover:bg-violet-500 rounded-lg shadow-sm transition-all"
-                            >
-                              Download File ({sub.attachmentName})
-                            </a>
-                          </div>
+                          sub.attachmentDataUrl.startsWith("data:image/") || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(sub.attachmentName || "") ? (
+                            <div className="mt-2 rounded-xl overflow-hidden border border-ink-soft/20 bg-slate-900">
+                              <img
+                                src={sub.attachmentDataUrl}
+                                alt={sub.attachmentName || "Student submission photo"}
+                                className="max-h-48 w-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => window.open(sub.attachmentDataUrl, "_blank")}
+                              />
+                              <div className="p-2 flex items-center justify-between text-[11px] font-bold">
+                                <span className="truncate text-ink-soft flex items-center gap-1">
+                                  <ImageIcon className="h-3.5 w-3.5 text-violet-400" />
+                                  {sub.attachmentName || "Student Attached Photo"}
+                                </span>
+                                <a
+                                  href={sub.attachmentDataUrl}
+                                  download={sub.attachmentName || "submission.png"}
+                                  className="text-violet-400 hover:text-violet-300 underline shrink-0 ml-2 flex items-center gap-1"
+                                >
+                                  <Download className="h-3 w-3" /> Download
+                                </a>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-2.5 bg-slate-900 border border-ink-soft/20 rounded-xl flex items-center justify-between">
+                              <span className="text-xs font-semibold text-ink truncate flex items-center gap-1.5">
+                                <Paperclip className="h-3.5 w-3.5 text-violet-400" />
+                                {sub.attachmentName || "Student Attached File"}
+                              </span>
+                              <a
+                                href={sub.attachmentDataUrl}
+                                download={sub.attachmentName || "student-file"}
+                                className="px-2.5 py-1 text-[11px] font-bold text-violet-300 bg-violet-500/20 border border-violet-500/40 rounded-lg hover:bg-violet-500/30 transition-all shrink-0 flex items-center gap-1"
+                              >
+                                <Download className="h-3 w-3" /> Download
+                              </a>
+                            </div>
+                          )
                         )}
 
                         <div className="pt-2 flex justify-end">
@@ -2031,7 +2106,7 @@ export default function TeacherDashboard({
                       onChange={(e) => setGradeInputScore(e.target.value)}
                       placeholder="e.g. 95 / 100"
                       required
-                      className="w-full p-2.5 text-xs bg-white/70 border border-ink-soft/15 rounded-xl text-ink font-mono font-bold"
+                      className="w-full p-2.5 text-xs bg-slate-900 border border-ink-soft/20 rounded-xl text-ink font-mono font-bold focus:outline-none focus:border-violet-400"
                     />
                   </div>
 
@@ -2044,7 +2119,7 @@ export default function TeacherDashboard({
                       onChange={(e) => setGradeInputFeedback(e.target.value)}
                       placeholder="Great job! Excellent problem analysis..."
                       rows={3}
-                      className="w-full p-2.5 text-xs bg-white/70 border border-ink-soft/15 rounded-xl text-ink resize-none"
+                      className="w-full p-2.5 text-xs bg-slate-900 border border-ink-soft/20 rounded-xl text-ink resize-none focus:outline-none focus:border-violet-400"
                     />
                   </div>
 
@@ -2052,7 +2127,7 @@ export default function TeacherDashboard({
                     <button
                       type="button"
                       onClick={() => setGradingSubmission(null)}
-                      className="px-4 py-2 text-xs font-bold text-ink-soft bg-white border border-ink-soft/15 rounded-xl"
+                      className="px-4 py-2 text-xs font-bold text-slate-300 bg-slate-800/80 border border-slate-700 rounded-xl hover:bg-slate-700 cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -2671,45 +2746,52 @@ export default function TeacherDashboard({
           )}
         </AnimatePresence>
 
-        {/* DELETE STUDENT MODAL */}
+        {/* REMOVE STUDENT FROM CLASS MODAL */}
         <AnimatePresence>
-          {studentToDelete && (
+          {studentToRemove && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
             >
-              <div className="bg-slate-900 border border-rose-500/40 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-white">
+              <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-white">
                 <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                  <div className="flex items-center gap-2 text-rose-400">
-                    <Trash2 className="h-5 w-5" />
-                    <h3 className="font-extrabold text-base">Delete Student Account</h3>
+                  <div className="flex items-center gap-2 text-amber-400">
+                    <UserMinus className="h-5 w-5" />
+                    <h3 className="font-extrabold text-base">Remove Student from Class</h3>
                   </div>
-                  <button onClick={() => setStudentToDelete(null)}>
+                  <button onClick={() => setStudentToRemove(null)} className="cursor-pointer">
                     <X className="h-5 w-5 text-slate-400 hover:text-white" />
                   </button>
                 </div>
 
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  Are you sure you want to permanently delete the student account for{" "}
-                  <strong className="text-white">{studentToDelete.name}</strong> ({studentToDelete.id})? This action cannot be undone.
-                </p>
+                <div className="space-y-2">
+                  <p className="text-xs text-slate-200 leading-relaxed">
+                    Are you sure you want to remove{" "}
+                    <strong className="text-white">{studentToRemove.name}</strong> ({studentToRemove.id}) from{" "}
+                    <strong className="text-amber-300">{selectedClass?.name || "this class"}</strong>?
+                  </p>
+                  <p className="text-[11px] text-slate-400 leading-relaxed bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                    The student&apos;s account will remain active in the system. They will simply be removed from this class section and will not lose their other enrolled classes or profile data.
+                  </p>
+                </div>
 
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
                   <button
                     type="button"
-                    onClick={() => setStudentToDelete(null)}
-                    className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-800 rounded-xl border border-slate-700"
+                    onClick={() => setStudentToRemove(null)}
+                    className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-800 rounded-xl border border-slate-700 cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
-                    onClick={handleConfirmDeleteStudent}
-                    className="px-5 py-2 text-xs font-extrabold text-white bg-rose-600 hover:bg-rose-500 rounded-xl shadow-lg shadow-rose-600/30 cursor-pointer"
+                    onClick={handleConfirmRemoveStudent}
+                    className="px-5 py-2 text-xs font-extrabold text-white bg-amber-600 hover:bg-amber-500 rounded-xl shadow-lg shadow-amber-600/30 cursor-pointer flex items-center gap-1.5"
                   >
-                    Yes, Delete Account
+                    <UserMinus className="h-4 w-4" />
+                    <span>Remove from Class</span>
                   </button>
                 </div>
               </div>

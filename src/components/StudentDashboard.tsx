@@ -31,7 +31,8 @@ import {
   GraduationCap,
   MapPin,
   Mail,
-  School
+  School,
+  Download
 } from "lucide-react";
 import { User, AttendanceRecord, AttendanceStatus, StudentStats, ClassPost, PostComment, AssignmentSubmission } from "../types";
 import type { AppTheme, AppThemeMode } from "../App";
@@ -42,6 +43,7 @@ import SettingsTab from "./SettingsTab";
 import UserAvatar from "./UserAvatar";
 import StudentProfile from "./StudentProfile";
 import TeacherProfile from "./TeacherProfile";
+import PostCommentsSection from "./PostCommentsSection";
 import DailyCheckinsTab from "./DailyCheckinsTab";
 import Classroom from "./Classroom";
 import ClassMessenger, { openDirectMessage } from "./ClassMessenger";
@@ -94,6 +96,7 @@ export default function StudentDashboard({
 
   const [activeTab, setActiveTab] = useState<"classes" | "attendance" | "checkins" | "announcements" | "assignments" | "faculty" | "messenger" | "settings">("classes");
   const [unreadMessengerCount, setUnreadMessengerCount] = useState<number>(0);
+  const [messengerPartnerId, setMessengerPartnerId] = useState<string | null>(null);
   const [allStudents, setAllStudents] = useState<User[]>([]);
   const [allAttendanceRecords, setAllAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [viewingStudent, setViewingStudent] = useState<User | null>(null);
@@ -113,9 +116,6 @@ export default function StudentDashboard({
   // Announcements state
   const [announcements, setAnnouncements] = useState<ClassPost[]>([]);
   const [announcementSearch, setAnnouncementSearch] = useState("");
-  const [expandedCommentsPostId, setExpandedCommentsPostId] = useState<string | null>(null);
-  const [commentsMap, setCommentsMap] = useState<Record<string, PostComment[]>>({});
-  const [newCommentInput, setNewCommentInput] = useState("");
 
   // Assignments state
   const [assignments, setAssignments] = useState<ClassPost[]>([]);
@@ -247,7 +247,14 @@ export default function StudentDashboard({
     const handleDbUpdate = () => {
       loadData();
     };
-    const handleOpenMessenger = () => {
+    const handleOpenMessenger = (e: any) => {
+      const partnerId = e.detail?.partnerId;
+      if (partnerId) {
+        setMessengerPartnerId(partnerId);
+      }
+      setViewingStudent(null);
+      setViewingTeacher(null);
+      setSelectedAssignmentForSubmission(null);
       setActiveTab("messenger");
     };
 
@@ -301,31 +308,6 @@ export default function StudentDashboard({
     setTimeout(() => {
       setShowCelebration(false);
     }, 3000);
-  };
-
-  // Toggle comment section
-  const handleToggleComments = (postId: string) => {
-    if (expandedCommentsPostId === postId) {
-      setExpandedCommentsPostId(null);
-    } else {
-      setExpandedCommentsPostId(postId);
-      const comments = getCommentsForPost(postId);
-      setCommentsMap((prev) => ({ ...prev, [postId]: comments }));
-    }
-  };
-
-  // Submit comment
-  const handleAddComment = (postId: string) => {
-    if (!newCommentInput.trim()) return;
-    addComment({
-      postId,
-      authorId: user.id,
-      authorName: dbUser.name,
-      content: newCommentInput.trim(),
-    });
-    setNewCommentInput("");
-    const updated = getCommentsForPost(postId);
-    setCommentsMap((prev) => ({ ...prev, [postId]: updated }));
   };
 
   // Handle file attachment upload
@@ -511,7 +493,7 @@ export default function StudentDashboard({
             <UserAvatar name={dbUser.name} avatarUrl={dbUser.avatarUrl} role="student" size="lg" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold bg-teal-50 text-teal-600 rounded-full border border-teal-200 shrink-0">
+                <span className="px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold bg-teal-500/15 text-teal-300 rounded-full border border-teal-500/30 shrink-0">
                   Student Portal
                 </span>
                 <span className="text-xs font-mono text-ink-soft/70 truncate">ID: {user.id}</span>
@@ -771,7 +753,7 @@ export default function StudentDashboard({
                     id="teacher-select"
                     value={selectedTeacherId}
                     onChange={(e) => setSelectedTeacherId(e.target.value)}
-                    className="w-full md:w-auto px-3.5 py-2 text-xs font-bold bg-white dark:bg-slate-800 border border-ink-soft/20 rounded-xl text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
+                    className="w-full md:w-auto px-3.5 py-2 text-xs font-bold bg-slate-900 border border-ink-soft/20 rounded-xl text-ink shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
                   >
                     {teachers.map((t, idx) => (
                       <option key={`${t.id || t.uid || 'teacher'}-${idx}`} value={t.id || t.uid}>
@@ -822,7 +804,7 @@ export default function StudentDashboard({
                     <Calendar className="h-5 w-5 text-teal-500 shrink-0" />
                     Daily Check-In
                   </h2>
-                  <span className="text-[10px] sm:text-[11px] font-mono font-bold bg-teal-50 text-teal-600 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border border-teal-100 shrink-0">
+                  <span className="text-[10px] sm:text-[11px] font-mono font-bold bg-teal-500/15 text-teal-300 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border border-teal-500/30 shrink-0">
                     {todayStr}
                   </span>
                 </div>
@@ -1075,7 +1057,7 @@ export default function StudentDashboard({
                 <p className="text-xs">Check back later for course updates from your teachers.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-6">
+              <div className="space-y-4">
                 {filteredAnnouncements.map((post, idx) => (
                   <motion.div
                     key={post.id}
@@ -1125,37 +1107,37 @@ export default function StudentDashboard({
                     {/* Attachment preview if any */}
                     {post.attachmentDataUrl && (
                       post.attachmentDataUrl.startsWith("data:image/") || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(post.attachmentName || "") ? (
-                        <div className="mt-3 overflow-hidden rounded-2xl border border-ink-soft/15 bg-slate-950/20 max-w-lg">
+                        <div className="mt-3 overflow-hidden rounded-2xl border border-ink-soft/15 bg-slate-950/40 max-w-lg">
                           <img
                             src={post.attachmentDataUrl}
                             alt={post.attachmentName || "Attached photo"}
                             className="max-h-72 w-full object-cover rounded-t-2xl hover:opacity-95 transition-opacity cursor-pointer"
                             onClick={() => window.open(post.attachmentDataUrl, "_blank")}
                           />
-                          <div className="p-2.5 bg-white/80 dark:bg-slate-900/80 flex items-center justify-between text-xs font-bold text-ink dark:text-slate-200">
+                          <div className="p-3 bg-slate-900/90 border-t border-ink-soft/15 flex items-center justify-between text-xs font-bold text-ink">
                             <span className="flex items-center gap-1.5 truncate">
-                              <ImageIcon className="h-4 w-4 text-teal-500 shrink-0" />
+                              <ImageIcon className="h-4 w-4 text-teal-400 shrink-0" />
                               <span className="truncate">{post.attachmentName || "Attached Photo"}</span>
                             </span>
                             <a
                               href={post.attachmentDataUrl}
                               download={post.attachmentName || "photo.png"}
-                              className="px-3 py-1 text-[11px] font-extrabold text-teal-600 bg-teal-50 border border-teal-200 rounded-xl hover:bg-teal-100 transition-all cursor-pointer"
+                              className="px-3 py-1.5 text-xs font-bold text-teal-300 bg-teal-500/20 border border-teal-500/40 hover:bg-teal-500/30 rounded-xl transition-all cursor-pointer"
                             >
                               Download Photo
                             </a>
                           </div>
                         </div>
                       ) : (
-                        <div className="p-3 bg-white/60 border border-ink-soft/15 rounded-2xl flex items-center justify-between">
+                        <div className="p-3 bg-slate-950/40 border border-ink-soft/15 rounded-2xl flex items-center justify-between">
                           <div className="flex items-center gap-2 text-xs font-bold text-ink truncate">
-                            <Paperclip className="h-4 w-4 text-teal-500 shrink-0" />
+                            <Paperclip className="h-4 w-4 text-teal-400 shrink-0" />
                             <span className="truncate">{post.attachmentName || "Attachment"}</span>
                           </div>
                           <a
                             href={post.attachmentDataUrl}
                             download={post.attachmentName || "attachment"}
-                            className="px-3 py-1 text-xs font-extrabold text-teal-600 bg-teal-50 border border-teal-200 rounded-xl hover:bg-teal-100 transition-all cursor-pointer shrink-0"
+                            className="px-3.5 py-1.5 text-xs font-bold text-teal-300 bg-teal-500/20 border border-teal-500/40 rounded-xl hover:bg-teal-500/30 transition-all cursor-pointer shrink-0"
                           >
                             Download
                           </a>
@@ -1163,65 +1145,12 @@ export default function StudentDashboard({
                       )
                     )}
 
-                    {/* Comment Thread Trigger */}
-                    <div className="pt-2 flex items-center justify-between border-t border-ink-soft/10">
-                      <span className="text-xs font-medium text-ink-soft">
-                        Posted by <strong className="text-ink">{post.authorName}</strong>
-                      </span>
-
-                      <button
-                        onClick={() => handleToggleComments(post.id)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-violet-300 bg-violet-500/20 border border-violet-500/40 rounded-xl hover:bg-violet-500/30 transition-all cursor-pointer"
-                      >
-                        <MessageSquare className="h-3.5 w-3.5" />
-                        Comments
-                      </button>
-                    </div>
-
-                    {/* Expanded Comments */}
-                    {expandedCommentsPostId === post.id && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        className="p-4 bg-white/60 border border-ink-soft/10 rounded-2xl space-y-3"
-                      >
-                        <h4 className="text-xs font-extrabold text-ink">Discussion</h4>
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                          {(commentsMap[post.id] || []).length === 0 ? (
-                            <p className="text-[11px] text-ink-soft/50 italic">No comments yet. Start the conversation!</p>
-                          ) : (
-                            (commentsMap[post.id] || []).map((c) => (
-                              <div key={c.id} className="p-2.5 bg-cream/80 rounded-xl text-xs space-y-0.5">
-                                <div className="flex items-center justify-between font-bold text-ink text-[11px]">
-                                  <span>{c.authorName}</span>
-                                  <span className="text-[10px] font-mono text-ink-soft/50">
-                                    {new Date(c.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                  </span>
-                                </div>
-                                <p className="text-ink-soft">{c.content}</p>
-                              </div>
-                            ))
-                          )}
-                        </div>
-
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={newCommentInput}
-                            onChange={(e) => setNewCommentInput(e.target.value)}
-                            placeholder="Write a comment..."
-                            className="w-full px-3 py-2 text-xs bg-cream border border-ink-soft/15 rounded-xl focus:outline-none focus:border-teal-500 text-ink"
-                            onKeyDown={(e) => e.key === "Enter" && handleAddComment(post.id)}
-                          />
-                          <button
-                            onClick={() => handleAddComment(post.id)}
-                            className="px-3.5 py-2 text-xs font-bold text-white bg-teal-500 rounded-xl hover:bg-teal-600 cursor-pointer"
-                          >
-                            <Send className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
+                    {/* Class & Private Comments Section */}
+                    <PostCommentsSection
+                      post={post}
+                      currentUser={dbUser}
+                      isTeacher={false}
+                    />
                   </motion.div>
                 ))}
               </div>
@@ -1274,7 +1203,7 @@ export default function StudentDashboard({
                 <p className="text-xs">Your teacher has not posted any assignments in this view yet.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
                 {filteredAssignments.map((assignment, idx) => {
                   const sub = submissionsMap[assignment.id];
                   const isGraded = sub?.status === "Graded";
@@ -1286,7 +1215,7 @@ export default function StudentDashboard({
                       initial={{ opacity: 0, y: 15 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: idx * 0.05 }}
-                      className="bg-cream border border-ink-soft/10 rounded-3xl p-6 shadow-xl flex flex-col justify-between space-y-4"
+                      className="bg-cream border border-ink-soft/10 rounded-3xl p-6 shadow-xl space-y-4"
                     >
                       <div className="space-y-3">
                         <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -1315,18 +1244,95 @@ export default function StudentDashboard({
                             )}
                           </div>
 
-                          {assignment.dueDate && (
-                            <span className="text-[11px] font-mono font-bold text-ink-soft">
-                              Due: {assignment.dueDate}
+                          <div className="flex flex-col items-end gap-0.5">
+                            {assignment.dueDate && (
+                              <span className="text-[11px] font-mono font-bold text-ink-soft">
+                                Due: {assignment.dueDate}
+                              </span>
+                            )}
+                            <span className="text-[11px] font-mono font-bold text-ink-soft/70">
+                              Max Points: {assignment.maxPoints || 100}
                             </span>
-                          )}
+                          </div>
                         </div>
 
                         <h3 className="text-base font-black text-ink">{assignment.title}</h3>
-                        <p className="text-xs text-ink/80 leading-relaxed font-sans line-clamp-3">
+                        <p className="text-xs text-ink/90 leading-relaxed font-sans whitespace-pre-wrap">
                           {assignment.content}
                         </p>
+
+                        {/* Teacher's Attachment preview if any */}
+                        {assignment.attachmentDataUrl && (
+                          assignment.attachmentDataUrl.startsWith("data:image/") || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(assignment.attachmentName || "") ? (
+                            <div className="mt-2 overflow-hidden rounded-2xl border border-ink-soft/15 bg-slate-950/40">
+                              <img
+                                src={assignment.attachmentDataUrl}
+                                alt={assignment.attachmentName || "Attached photo"}
+                                className="max-h-48 w-full object-cover rounded-t-2xl hover:opacity-95 transition-opacity cursor-pointer"
+                                onClick={() => window.open(assignment.attachmentDataUrl, "_blank")}
+                              />
+                              <div className="p-2.5 bg-slate-900/90 border-t border-ink-soft/15 flex items-center justify-between text-xs font-bold text-ink">
+                                <span className="flex items-center gap-1.5 truncate">
+                                  <ImageIcon className="h-3.5 w-3.5 text-violet-400 shrink-0" />
+                                  <span className="truncate">{assignment.attachmentName || "Reference Photo"}</span>
+                                </span>
+                                <a
+                                  href={assignment.attachmentDataUrl}
+                                  download={assignment.attachmentName || "assignment-resource.png"}
+                                  className="px-2.5 py-1 text-[11px] font-bold text-violet-300 bg-violet-500/20 border border-violet-500/40 hover:bg-violet-500/30 rounded-lg transition-all cursor-pointer flex items-center gap-1"
+                                >
+                                  <Download className="h-3 w-3" /> Download
+                                </a>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="p-2.5 bg-slate-950/40 border border-ink-soft/15 rounded-2xl flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 text-xs font-bold text-ink truncate">
+                                <Paperclip className="h-3.5 w-3.5 text-violet-400 shrink-0" />
+                                <span className="truncate">{assignment.attachmentName || "Reference Document"}</span>
+                              </div>
+                              <a
+                                href={assignment.attachmentDataUrl}
+                                download={assignment.attachmentName || "assignment-file"}
+                                className="px-2.5 py-1 text-[11px] font-bold text-violet-300 bg-violet-500/20 border border-violet-500/40 rounded-lg hover:bg-violet-500/30 transition-all cursor-pointer shrink-0 flex items-center gap-1"
+                              >
+                                <Download className="h-3 w-3" /> Download
+                              </a>
+                            </div>
+                          )
+                        )}
                       </div>
+
+                      {/* Student's submitted work info preview */}
+                      {isSubmitted && sub && (
+                        <div className="p-3 bg-teal-950/40 border border-teal-500/30 rounded-2xl text-xs space-y-1.5">
+                          <div className="flex items-center justify-between font-bold text-teal-300">
+                            <span className="flex items-center gap-1">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-teal-400" /> Your Submitted Work:
+                            </span>
+                            <span className="text-[10px] font-mono text-ink-soft">{sub.submittedAt ? sub.submittedAt.slice(0, 10) : ""}</span>
+                          </div>
+                          {sub.content && (
+                            <p className="text-[11px] text-ink-soft line-clamp-2 italic">
+                              "{sub.content}"
+                            </p>
+                          )}
+                          {sub.attachmentDataUrl && (
+                            <div className="pt-1 flex items-center justify-between text-[11px] border-t border-teal-500/20">
+                              <span className="font-semibold text-teal-200 truncate flex items-center gap-1">
+                                <Paperclip className="h-3 w-3 text-teal-400" /> {sub.attachmentName || "Attached Work"}
+                              </span>
+                              <a
+                                href={sub.attachmentDataUrl}
+                                download={sub.attachmentName || "my-submission"}
+                                className="font-extrabold text-teal-300 hover:text-teal-200 underline ml-2 shrink-0"
+                              >
+                                Download
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       {/* Grade feedback display if graded */}
                       {isGraded && (
@@ -1361,6 +1367,13 @@ export default function StudentDashboard({
                         <Upload className="h-4 w-4" />
                         {isGraded ? "View Submission" : isSubmitted ? "View / Re-submit Work" : "Submit Assignment"}
                       </motion.button>
+
+                      {/* Class & Private Comments Section */}
+                      <PostCommentsSection
+                        post={assignment}
+                        currentUser={dbUser}
+                        isTeacher={false}
+                      />
                     </motion.div>
                   );
                 })}
@@ -1387,7 +1400,7 @@ export default function StudentDashboard({
             </div>
 
             {teachers.length === 0 ? (
-              <div className="text-center py-12 bg-white border border-ink-soft/10 rounded-3xl p-6">
+              <div className="text-center py-12 bg-cream border border-ink-soft/10 rounded-3xl p-6">
                 <GraduationCap className="h-10 w-10 text-ink-soft/40 mx-auto mb-2" />
                 <p className="text-sm font-bold text-ink">No faculty accounts found.</p>
               </div>
@@ -1397,7 +1410,7 @@ export default function StudentDashboard({
                   <motion.div
                     key={`${t.id || t.uid || 'teacher'}-${idx}`}
                     whileHover={{ y: -2 }}
-                    className="bg-white border border-ink-soft/10 rounded-3xl p-5 shadow-sm space-y-4 flex flex-col justify-between"
+                    className="bg-cream border border-ink-soft/10 rounded-3xl p-5 shadow-xl space-y-4 flex flex-col justify-between"
                   >
                     <div className="space-y-3">
                       <div className="flex items-start justify-between gap-3">
@@ -1410,12 +1423,12 @@ export default function StudentDashboard({
                         </div>
 
                         {t.isApproved ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-teal-50 text-teal-700 border border-teal-200">
-                            <CheckCircle2 className="h-3 w-3 text-teal-500" /> Verified
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-teal-500/15 text-teal-300 border border-teal-500/30">
+                            <CheckCircle2 className="h-3 w-3 text-teal-400" /> Verified
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-50 text-amber-700 border border-amber-200">
-                            <Clock className="h-3 w-3 text-amber-500" /> Pending
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                            <Clock className="h-3 w-3 text-amber-400" /> Pending
                           </span>
                         )}
                       </div>
@@ -1501,6 +1514,7 @@ export default function StudentDashboard({
               <ClassMessenger
                 currentUser={dbUser}
                 mode="embedded"
+                initialPartnerId={messengerPartnerId}
                 theme={theme}
                 themeMode={themeMode}
               />
@@ -1539,7 +1553,7 @@ export default function StudentDashboard({
               >
                 <div className="flex items-center justify-between border-b border-ink-soft/10 pb-4">
                   <div>
-                    <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-teal-50 text-teal-600 rounded-full border border-teal-200">
+                    <span className="px-2.5 py-0.5 text-[10px] font-extrabold bg-teal-500/15 text-teal-300 rounded-full border border-teal-500/30">
                       Assignment Submission
                     </span>
                     <h2 className="text-lg font-black text-ink mt-1">
@@ -1548,17 +1562,61 @@ export default function StudentDashboard({
                   </div>
                   <button
                     onClick={() => setSelectedAssignmentForSubmission(null)}
-                    className="p-1.5 text-ink-soft hover:text-ink rounded-full hover:bg-black/5 cursor-pointer"
+                    className="p-1.5 text-ink-soft hover:text-ink rounded-full hover:bg-white/10 cursor-pointer"
                   >
                     <X className="h-5 w-5" />
                   </button>
                 </div>
 
-                <div className="p-3.5 bg-white/60 border border-ink-soft/10 rounded-2xl text-xs space-y-1">
+                <div className="p-3.5 bg-slate-950/40 border border-ink-soft/15 rounded-2xl text-xs space-y-2">
                   <h4 className="font-bold text-ink">Instructions:</h4>
-                  <p className="text-ink-soft/90 leading-relaxed font-sans">
+                  <p className="text-ink-soft/90 leading-relaxed font-sans whitespace-pre-wrap">
                     {selectedAssignmentForSubmission.content}
                   </p>
+
+                  {/* Teacher's Reference Resource in Modal */}
+                  {selectedAssignmentForSubmission.attachmentDataUrl && (
+                    <div className="pt-2 border-t border-ink-soft/10">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-teal-400 mb-1.5 flex items-center gap-1">
+                        <Paperclip className="h-3 w-3" /> Teacher's Reference Material:
+                      </p>
+                      {selectedAssignmentForSubmission.attachmentDataUrl.startsWith("data:image/") ||
+                      /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(selectedAssignmentForSubmission.attachmentName || "") ? (
+                        <div className="rounded-xl overflow-hidden border border-ink-soft/20 bg-slate-900">
+                          <img
+                            src={selectedAssignmentForSubmission.attachmentDataUrl}
+                            alt="Reference"
+                            className="max-h-40 w-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => window.open(selectedAssignmentForSubmission.attachmentDataUrl, "_blank")}
+                          />
+                          <div className="p-2 flex items-center justify-between text-[11px] font-bold">
+                            <span className="truncate text-ink-soft">{selectedAssignmentForSubmission.attachmentName || "Reference Photo"}</span>
+                            <a
+                              href={selectedAssignmentForSubmission.attachmentDataUrl}
+                              download={selectedAssignmentForSubmission.attachmentName || "reference.png"}
+                              className="text-teal-400 hover:text-teal-300 underline shrink-0 ml-2 flex items-center gap-1"
+                            >
+                              <Download className="h-3 w-3" /> Download
+                            </a>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-2.5 bg-slate-900 border border-ink-soft/20 rounded-xl flex items-center justify-between">
+                          <span className="text-xs font-semibold text-ink truncate flex items-center gap-1.5">
+                            <Paperclip className="h-3.5 w-3.5 text-teal-400" />
+                            {selectedAssignmentForSubmission.attachmentName || "Reference Attachment"}
+                          </span>
+                          <a
+                            href={selectedAssignmentForSubmission.attachmentDataUrl}
+                            download={selectedAssignmentForSubmission.attachmentName || "reference-document"}
+                            className="px-2.5 py-1 text-[11px] font-bold text-teal-300 bg-teal-500/20 border border-teal-500/40 rounded-lg hover:bg-teal-500/30 transition-all shrink-0 flex items-center gap-1"
+                          >
+                            <Download className="h-3 w-3" /> Download
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {submissionSuccess && (
@@ -1577,33 +1635,111 @@ export default function StudentDashboard({
                       value={submissionText}
                       onChange={(e) => setSubmissionText(e.target.value)}
                       placeholder="Type your response or answers here..."
-                      rows={5}
+                      rows={4}
                       required
-                      className="w-full p-3 text-xs bg-white/70 border border-ink-soft/15 rounded-2xl focus:outline-none focus:border-teal-500 text-ink resize-none"
+                      className="w-full p-3 text-xs bg-slate-900/90 border border-ink-soft/20 rounded-2xl focus:outline-none focus:border-teal-400 text-ink placeholder:text-ink-soft/40 resize-none"
                     />
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <label className="text-xs font-bold text-ink-soft block">
-                      Attach File / Photo (optional):
+                      Attach Your Solution File / Photo:
                     </label>
-                    <div className="flex items-center gap-3">
-                      <label className="px-4 py-2.5 text-xs font-extrabold text-teal-300 bg-teal-950/80 border border-teal-500/40 hover:bg-teal-900/80 rounded-xl cursor-pointer transition-all flex items-center gap-1.5">
-                        <Paperclip className="h-4 w-4" />
-                        Choose File
-                        <input
-                          type="file"
-                          onChange={handleFileChange}
-                          className="hidden"
-                          accept="image/*,.pdf,.doc,.docx,.txt"
-                        />
-                      </label>
-                      <span className="text-xs font-mono text-ink-soft truncate">
-                        {attachmentName || "No file attached"}
-                      </span>
-                    </div>
+
+                    {attachmentDataUrl ? (
+                      <div className="p-3 bg-slate-900/90 border border-teal-500/40 rounded-2xl space-y-2">
+                        {attachmentDataUrl.startsWith("data:image/") || /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(attachmentName || "") ? (
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={attachmentDataUrl}
+                              alt="Upload preview"
+                              className="h-16 w-16 object-cover rounded-xl border border-ink-soft/20 cursor-pointer"
+                              onClick={() => window.open(attachmentDataUrl, "_blank")}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold text-teal-300 truncate">{attachmentName || "Attached Image"}</p>
+                              <p className="text-[10px] text-ink-soft/70">Image uploaded and optimized</p>
+                              <a
+                                href={attachmentDataUrl}
+                                download={attachmentName || "my-submission.jpg"}
+                                className="text-[11px] text-teal-400 hover:text-teal-300 underline font-bold mt-0.5 inline-block"
+                              >
+                                Preview / Download
+                              </a>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAttachmentName("");
+                                setAttachmentDataUrl("");
+                              }}
+                              className="p-1.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 rounded-xl cursor-pointer"
+                              title="Remove file"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Paperclip className="h-4 w-4 text-teal-400 shrink-0" />
+                              <span className="text-xs font-bold text-teal-300 truncate">{attachmentName || "Attached Document"}</span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <a
+                                href={attachmentDataUrl}
+                                download={attachmentName || "my-submission"}
+                                className="text-[11px] font-bold text-teal-400 hover:text-teal-300 underline"
+                              >
+                                View
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAttachmentName("");
+                                  setAttachmentDataUrl("");
+                                }}
+                                className="p-1 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 rounded-lg cursor-pointer"
+                                title="Remove file"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="pt-1 flex items-center justify-end">
+                          <label className="text-[11px] font-extrabold text-slate-300 hover:text-white cursor-pointer underline">
+                            Replace File
+                            <input
+                              type="file"
+                              onChange={handleFileChange}
+                              className="hidden"
+                              accept="image/*,.pdf,.doc,.docx,.txt"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <label className="px-4 py-2.5 text-xs font-extrabold text-teal-300 bg-teal-950/80 border border-teal-500/40 hover:bg-teal-900/80 rounded-xl cursor-pointer transition-all flex items-center gap-1.5 shadow-sm">
+                          <Paperclip className="h-4 w-4" />
+                          Choose File / Image
+                          <input
+                            type="file"
+                            onChange={handleFileChange}
+                            className="hidden"
+                            accept="image/*,.pdf,.doc,.docx,.txt"
+                          />
+                        </label>
+                        <span className="text-xs font-mono text-ink-soft/70 truncate">
+                          No file selected (optional)
+                        </span>
+                      </div>
+                    )}
+
                     {submissionFileError && (
-                      <p className="text-[11px] font-bold text-rose-500">{submissionFileError}</p>
+                      <p className="text-[11px] font-bold text-rose-400">{submissionFileError}</p>
                     )}
                   </div>
 
@@ -1611,7 +1747,7 @@ export default function StudentDashboard({
                     <button
                       type="button"
                       onClick={() => setSelectedAssignmentForSubmission(null)}
-                      className="px-4 py-2.5 text-xs font-bold text-ink-soft bg-white border border-ink-soft/15 rounded-xl hover:bg-black/5 cursor-pointer"
+                      className="px-4 py-2.5 text-xs font-bold text-slate-300 bg-slate-800/80 border border-slate-700 rounded-xl hover:bg-slate-700 cursor-pointer"
                     >
                       Cancel
                     </button>

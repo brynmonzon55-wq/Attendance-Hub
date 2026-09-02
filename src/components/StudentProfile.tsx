@@ -14,7 +14,7 @@ import {
   GraduationCap
 } from "lucide-react";
 import { User, AttendanceRecord, AttendanceStatus } from "../types";
-import { getAttendanceRecords, calculateStudentStats, formatDate } from "../lib/db";
+import { getAttendanceRecords, calculateStudentStats, formatDate, getUserPresence } from "../lib/db";
 import UserAvatar from "./UserAvatar";
 
 interface StudentProfileProps {
@@ -133,9 +133,9 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
   };
 
   const statusCellClass: Record<AttendanceStatus, string> = {
-    Present: "bg-teal-100 text-teal-700",
-    Late: "bg-coral-100 text-coral-700",
-    Absent: "bg-rose-100 text-rose-700",
+    Present: "bg-teal-500/20 text-teal-300 border border-teal-500/40",
+    Late: "bg-amber-500/20 text-amber-300 border border-amber-500/40",
+    Absent: "bg-rose-500/20 text-rose-300 border border-rose-500/40",
   };
 
   const social = student.socialAccounts || {};
@@ -145,7 +145,7 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
     <div className="space-y-6" id="student-profile">
       <button
         onClick={handleClose}
-        className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-500 hover:text-violet-700 transition-colors cursor-pointer"
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-400 hover:text-violet-300 transition-colors cursor-pointer"
         id="profile-back-btn"
       >
         <ArrowLeft className="h-3.5 w-3.5" /> Back to Roster
@@ -155,12 +155,31 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white border border-violet-100/60 rounded-3xl p-6 shadow-violet flex flex-col md:flex-row md:items-center gap-5"
+        className="bg-cream border border-ink-soft/10 rounded-3xl p-6 shadow-xl flex flex-col md:flex-row md:items-center gap-5"
       >
         <UserAvatar name={student.name} avatarUrl={student.avatarUrl} role={student.role} size="2xl" />
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-2xl font-bold text-ink font-display truncate">{student.name}</h2>
+            {(() => {
+              const presence = getUserPresence(student);
+              return (
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1.5 ${
+                    presence.isOnline
+                      ? "bg-emerald-950/80 text-emerald-300 border border-emerald-500/40"
+                      : "bg-slate-800/80 text-slate-400 border border-slate-700"
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      presence.isOnline ? "bg-emerald-400" : "bg-slate-500"
+                    }`}
+                  />
+                  {presence.isOnline ? "Online" : presence.timeAgoText}
+                </span>
+              );
+            })()}
             <span
               className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                 student.isApproved
@@ -221,13 +240,13 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar */}
-        <div className="lg:col-span-2 bg-white border border-ink-soft/10 rounded-3xl p-6 shadow-sm">
+        <div className="lg:col-span-2 bg-cream border border-ink-soft/10 rounded-3xl p-6 shadow-xl">
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-lg font-bold text-ink font-display">Attendance Calendar</h3>
             <div className="flex items-center gap-1 bg-cream-dim/60 rounded-full px-1 py-1">
               <button
                 onClick={() => setMonthOffset((m) => m - 1)}
-                className="p-1.5 rounded-full hover:bg-white transition-colors cursor-pointer"
+                className="p-1.5 rounded-full hover:bg-slate-800 transition-colors cursor-pointer"
                 id="calendar-prev-btn"
               >
                 <ChevronLeft className="h-4 w-4 text-ink-soft" />
@@ -235,7 +254,7 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
               <span className="text-xs font-bold text-ink px-2 min-w-[110px] text-center">{monthLabel}</span>
               <button
                 onClick={() => setMonthOffset((m) => m + 1)}
-                className="p-1.5 rounded-full hover:bg-white transition-colors cursor-pointer"
+                className="p-1.5 rounded-full hover:bg-slate-800 transition-colors cursor-pointer"
                 id="calendar-next-btn"
               >
                 <ChevronRight className="h-4 w-4 text-ink-soft" />
@@ -287,19 +306,19 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
         {/* Right column */}
         <div className="space-y-6">
           {/* Profile Details (Address, Email, Phone, Location) */}
-          <div className="bg-white border border-ink-soft/10 rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="bg-cream border border-ink-soft/10 rounded-3xl p-6 shadow-xl space-y-4">
             <h3 className="text-base font-bold text-ink font-display flex items-center gap-2">
-              <Home className="h-4 w-4 text-violet-500" />
+              <Home className="h-4 w-4 text-violet-400" />
               <span>Contact & Address Info</span>
             </h3>
 
             <div className="space-y-3 text-xs">
               {student.email && (
-                <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-700/50">
-                  <Mail className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 p-3 bg-slate-900/60 rounded-2xl border border-slate-700/50">
+                  <Mail className="h-4 w-4 text-teal-400 shrink-0 mt-0.5" />
                   <div className="min-w-0">
                     <p className="text-[10px] font-extrabold uppercase tracking-wider text-ink-soft/60">Email Address</p>
-                    <a href={`mailto:${student.email}`} className="font-bold text-ink dark:text-slate-200 hover:text-teal-600 truncate block">
+                    <a href={`mailto:${student.email}`} className="font-bold text-ink hover:text-teal-400 truncate block">
                       {student.email}
                     </a>
                   </div>
@@ -307,11 +326,11 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
               )}
 
               {student.phone && (
-                <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-700/50">
-                  <Phone className="h-4 w-4 text-violet-600 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 p-3 bg-slate-900/60 rounded-2xl border border-slate-700/50">
+                  <Phone className="h-4 w-4 text-violet-400 shrink-0 mt-0.5" />
                   <div className="min-w-0">
                     <p className="text-[10px] font-extrabold uppercase tracking-wider text-ink-soft/60">Phone Number</p>
-                    <a href={`tel:${student.phone}`} className="font-bold text-ink dark:text-slate-200 hover:text-violet-600 truncate block">
+                    <a href={`tel:${student.phone}`} className="font-bold text-ink hover:text-violet-400 truncate block">
                       {student.phone}
                     </a>
                   </div>
@@ -319,21 +338,21 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
               )}
 
               {student.address && (
-                <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-700/50">
-                  <Home className="h-4 w-4 text-coral-600 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 p-3 bg-slate-900/60 rounded-2xl border border-slate-700/50">
+                  <Home className="h-4 w-4 text-coral-400 shrink-0 mt-0.5" />
                   <div className="min-w-0">
                     <p className="text-[10px] font-extrabold uppercase tracking-wider text-ink-soft/60">Residential Address</p>
-                    <p className="font-bold text-ink dark:text-slate-200 leading-snug">{student.address}</p>
+                    <p className="font-bold text-ink leading-snug">{student.address}</p>
                   </div>
                 </div>
               )}
 
               {student.department && (
-                <div className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-700/50">
-                  <GraduationCap className="h-4 w-4 text-cyan-500 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 p-3 bg-slate-900/60 rounded-2xl border border-slate-700/50">
+                  <GraduationCap className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
                   <div className="min-w-0">
                     <p className="text-[10px] font-extrabold uppercase tracking-wider text-ink-soft/60">Department / Course</p>
-                    <p className="font-bold text-ink dark:text-slate-200 leading-snug">{student.department}</p>
+                    <p className="font-bold text-ink leading-snug">{student.department}</p>
                   </div>
                 </div>
               )}
@@ -345,49 +364,49 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
           </div>
 
           {/* Connected Social Media Accounts */}
-          <div className="bg-white border border-ink-soft/10 rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="bg-cream border border-ink-soft/10 rounded-3xl p-6 shadow-xl space-y-4">
             <h3 className="text-base font-bold text-ink font-display flex items-center gap-2">
-              <Share2 className="h-4 w-4 text-teal-500" />
+              <Share2 className="h-4 w-4 text-teal-400" />
               <span>Social Accounts</span>
             </h3>
 
             {hasSocials ? (
               <div className="grid grid-cols-1 gap-2 text-xs">
                 {social.facebook && (
-                  <div className="p-2.5 bg-blue-50/60 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-xl flex items-center justify-between">
-                    <span className="font-extrabold text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                  <div className="p-2.5 bg-blue-950/40 border border-blue-800/40 rounded-xl flex items-center justify-between">
+                    <span className="font-extrabold text-blue-300 flex items-center gap-2">
                       <Globe className="h-3.5 w-3.5" /> Facebook
                     </span>
                     <span className="font-semibold text-ink-soft truncate max-w-[160px]">{social.facebook}</span>
                   </div>
                 )}
                 {social.twitter && (
-                  <div className="p-2.5 bg-sky-50/60 dark:bg-sky-950/20 border border-sky-100 dark:border-sky-900/40 rounded-xl flex items-center justify-between">
-                    <span className="font-extrabold text-sky-700 dark:text-sky-300 flex items-center gap-2">
+                  <div className="p-2.5 bg-sky-950/40 border border-sky-800/40 rounded-xl flex items-center justify-between">
+                    <span className="font-extrabold text-sky-300 flex items-center gap-2">
                       <Globe className="h-3.5 w-3.5" /> Twitter / X
                     </span>
                     <span className="font-semibold text-ink-soft truncate max-w-[160px]">{social.twitter}</span>
                   </div>
                 )}
                 {social.linkedin && (
-                  <div className="p-2.5 bg-indigo-50/60 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40 rounded-xl flex items-center justify-between">
-                    <span className="font-extrabold text-indigo-700 dark:text-indigo-300 flex items-center gap-2">
+                  <div className="p-2.5 bg-indigo-950/40 border border-indigo-800/40 rounded-xl flex items-center justify-between">
+                    <span className="font-extrabold text-indigo-300 flex items-center gap-2">
                       <Globe className="h-3.5 w-3.5" /> LinkedIn
                     </span>
                     <span className="font-semibold text-ink-soft truncate max-w-[160px]">{social.linkedin}</span>
                   </div>
                 )}
                 {social.github && (
-                  <div className="p-2.5 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-between">
-                    <span className="font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                  <div className="p-2.5 bg-slate-900/60 border border-slate-700/50 rounded-xl flex items-center justify-between">
+                    <span className="font-extrabold text-slate-200 flex items-center gap-2">
                       <Globe className="h-3.5 w-3.5" /> GitHub
                     </span>
                     <span className="font-semibold text-ink-soft truncate max-w-[160px]">{social.github}</span>
                   </div>
                 )}
                 {social.instagram && (
-                  <div className="p-2.5 bg-pink-50/60 dark:bg-pink-950/20 border border-pink-100 dark:border-pink-900/40 rounded-xl flex items-center justify-between">
-                    <span className="font-extrabold text-pink-700 dark:text-pink-300 flex items-center gap-2">
+                  <div className="p-2.5 bg-pink-950/40 border border-pink-800/40 rounded-xl flex items-center justify-between">
+                    <span className="font-extrabold text-pink-300 flex items-center gap-2">
                       <Globe className="h-3.5 w-3.5" /> Instagram
                     </span>
                     <span className="font-semibold text-ink-soft truncate max-w-[160px]">{social.instagram}</span>
@@ -399,7 +418,7 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
             )}
           </div>
 
-          <div className="bg-white border border-ink-soft/10 rounded-3xl p-6 shadow-sm">
+          <div className="bg-cream border border-ink-soft/10 rounded-3xl p-6 shadow-xl">
             <h3 className="text-base font-bold text-ink font-display mb-4">Subject Absences</h3>
             {subjectBreakdown.length === 0 ? (
               <p className="text-xs text-ink-soft/50">No attendance records yet for this student.</p>
@@ -413,7 +432,7 @@ export default function StudentProfile({ student, onBack, onClose }: StudentProf
                         <span className="font-semibold text-ink">{subject}</span>
                         <span
                           className={`font-bold ${
-                            absences > 0 ? "text-rose-600" : late > 0 ? "text-coral-600" : "text-ink-soft/50"
+                            absences > 0 ? "text-rose-400" : late > 0 ? "text-coral-400" : "text-ink-soft/50"
                           }`}
                         >
                           {absences > 0 ? `${absences} Absence${absences > 1 ? "s" : ""}` : late > 0 ? `${late} Late` : "0 Absences"}

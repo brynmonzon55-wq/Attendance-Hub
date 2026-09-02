@@ -22,7 +22,7 @@ import {
   MessageSquare
 } from "lucide-react";
 import { User, ClassRoom } from "../types";
-import { getClassesForTeacher, getUsers } from "../lib/db";
+import { getClassesForTeacher, getUsers, getUserPresence } from "../lib/db";
 import { openDirectMessage } from "./ClassMessenger";
 import UserAvatar from "./UserAvatar";
 
@@ -145,6 +145,25 @@ export default function TeacherProfile({
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-2xl font-black text-white font-display truncate">{teacher.name}</h2>
+            {(() => {
+              const presence = getUserPresence(teacher);
+              return (
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${
+                    presence.isOnline
+                      ? "bg-emerald-950/90 text-emerald-300 border border-emerald-500/40"
+                      : "bg-slate-800/90 text-slate-400 border border-slate-700"
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      presence.isOnline ? "bg-emerald-400" : "bg-slate-500"
+                    }`}
+                  />
+                  {presence.isOnline ? "Online" : presence.timeAgoText}
+                </span>
+              );
+            })()}
             {teacher.isApproved ? (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-teal-950/90 text-teal-300 border border-teal-500/40">
                 <CheckCircle2 className="h-3 w-3 text-teal-400" /> Verified Faculty

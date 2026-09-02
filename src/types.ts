@@ -28,6 +28,7 @@ export interface User {
   department?: string; // Student/Faculty Department or Course (e.g. DCPE, DCS, Computer Engineering, Computer Science)
   location?: string; // Legacy location field
   socialAccounts?: SocialAccounts; // Linked social media profiles (Facebook, Twitter, LinkedIn, GitHub, Instagram)
+  lastActiveAt?: string; // ISO timestamp of when the user was last active/online
 }
 
 export interface AttendanceRecord {

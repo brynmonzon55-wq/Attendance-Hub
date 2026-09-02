@@ -484,7 +484,7 @@ export default function LandingPage({
             Choose Your Portal
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold font-display text-white">
-            Pick how you're using Attendance Hub today.
+            Pick how you're using Acadex today.
           </h2>
         </div>
 

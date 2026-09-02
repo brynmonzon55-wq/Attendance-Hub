@@ -267,8 +267,118 @@ export async function updateUserRoleByAdmin(user: User, newRole: UserRole): Prom
   notifyDbUpdated();
 }
 
-export async function logoutUser(): Promise<void> {
+export async function logoutUser(userToSignOut?: User | null): Promise<void> {
+  const current = userToSignOut || (auth.currentUser ? getUsers().find((u) => u.uid === auth.currentUser?.uid) : null);
+  if (current) {
+    updateUserActivity(current, true);
+  }
   await firebaseSignOut(auth);
+}
+
+/**
+ * Update user's active timestamp in local state and sync to Firestore.
+ * When isOffline is true, sets lastActiveAt to an older timestamp so the user is marked offline immediately.
+ */
+export function updateUserActivity(userIdOrUser: string | User, isOffline = false): void {
+  try {
+    const users = getUsers();
+    const searchId = typeof userIdOrUser === "string" ? userIdOrUser : userIdOrUser.id;
+    const targetUser = users.find(
+      (u) =>
+        u.id.toLowerCase() === searchId.toLowerCase() ||
+        (typeof userIdOrUser === "object" && !!userIdOrUser.uid && u.uid === userIdOrUser.uid)
+    );
+    if (!targetUser) return;
+
+    // Active now or set to 15 minutes ago on logout/offline
+    const nowIso = isOffline
+      ? new Date(Date.now() - 1000 * 60 * 15).toISOString()
+      : new Date().toISOString();
+
+    targetUser.lastActiveAt = nowIso;
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+
+    const docId = targetUser.uid || targetUser.id.toLowerCase();
+    setDoc(doc(db, "users", docId), { lastActiveAt: nowIso }, { merge: true }).catch(() => {});
+  } catch (err) {
+    // silent
+  }
+}
+
+/** Determines whether a user is currently online based on recent activity (within 3 minutes) */
+export function isUserOnline(userOrLastActive?: User | string | null): boolean {
+  if (!userOrLastActive) return false;
+  let lastActive: string | undefined;
+
+  if (typeof userOrLastActive === "string") {
+    if (userOrLastActive.includes("T") || userOrLastActive.includes("-")) {
+      lastActive = userOrLastActive;
+    } else {
+      const u = getUsers().find(
+        (x) =>
+          x.id.toLowerCase() === userOrLastActive.toLowerCase() ||
+          (x.uid && x.uid.toLowerCase() === userOrLastActive.toLowerCase())
+      );
+      lastActive = u?.lastActiveAt;
+    }
+  } else {
+    lastActive = userOrLastActive.lastActiveAt;
+  }
+
+  if (!lastActive) return false;
+  const time = new Date(lastActive).getTime();
+  if (isNaN(time)) return false;
+  const diffMinutes = (Date.now() - time) / (1000 * 60);
+  return diffMinutes >= 0 && diffMinutes <= 3;
+}
+
+/** Get structured readable presence status info */
+export function getUserPresence(userOrId?: User | string | null): {
+  isOnline: boolean;
+  statusText: "Online" | "Offline";
+  timeAgoText: string;
+} {
+  if (!userOrId) {
+    return { isOnline: false, statusText: "Offline", timeAgoText: "Offline" };
+  }
+
+  let user: User | undefined;
+  if (typeof userOrId === "string") {
+    user = getUsers().find(
+      (u) =>
+        u.id.toLowerCase() === userOrId.toLowerCase() ||
+        (u.uid && u.uid.toLowerCase() === userOrId.toLowerCase())
+    );
+  } else {
+    user = userOrId;
+  }
+
+  if (!user || !user.lastActiveAt) {
+    return { isOnline: false, statusText: "Offline", timeAgoText: "Offline" };
+  }
+
+  const time = new Date(user.lastActiveAt).getTime();
+  if (isNaN(time)) {
+    return { isOnline: false, statusText: "Offline", timeAgoText: "Offline" };
+  }
+
+  const diffMs = Date.now() - time;
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHours = Math.floor(diffMin / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMin <= 3) {
+    return { isOnline: true, statusText: "Online", timeAgoText: "Active now" };
+  } else if (diffMin < 60) {
+    return { isOnline: false, statusText: "Offline", timeAgoText: `Active ${Math.max(1, diffMin)}m ago` };
+  } else if (diffHours < 24) {
+    return { isOnline: false, statusText: "Offline", timeAgoText: `Active ${diffHours}h ago` };
+  } else if (diffDays === 1) {
+    return { isOnline: false, statusText: "Offline", timeAgoText: "Active yesterday" };
+  } else {
+    return { isOnline: false, statusText: "Offline", timeAgoText: `Last seen ${diffDays}d ago` };
+  }
 }
 
 /**

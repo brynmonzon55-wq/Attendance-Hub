@@ -19,6 +19,7 @@ import {
 import { openDirectMessage } from "./ClassMessenger";
 import { processFileUpload } from "../lib/fileUtils";
 import { linkifyText } from "../lib/linkify";
+import PostCommentsSection from "./PostCommentsSection";
 
 function timeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -1079,15 +1080,8 @@ function PostCard({
   onDeleted: () => void;
 }) {
   const isAssignment = post.type === "assignment";
-  const [comments, setComments] = useState<PostComment[]>(() => getCommentsForPost(post.id, currentUser.id, isTeacher));
-  const [commentCategory, setCommentCategory] = useState<"class" | "private">("class");
   const [submissions, setSubmissions] = useState<AssignmentSubmission[]>(isAssignment ? getSubmissionsForPost(post.id) : []);
-  const [commentText, setCommentText] = useState("");
-  const [privateCommentTargetStudentId, setPrivateCommentTargetStudentId] = useState<string>(
-    isTeacher ? "" : currentUser.id
-  );
   const [submitText, setSubmitText] = useState("");
-  const [showComments, setShowComments] = useState(false);
   const [showSubmissions, setShowSubmissions] = useState(false);
   const [showSubmitForm, setShowSubmitForm] = useState(false);
   const [submitAttachment, setSubmitAttachment] = useState<{ name: string; dataUrl: string } | null>(null);
@@ -1095,61 +1089,18 @@ function PostCard({
 
   const mySubmission = !isTeacher && isAssignment ? getSubmissionForStudent(post.id, currentUser.id) : undefined;
 
-  const refreshComments = () => {
-    setComments(getCommentsForPost(post.id, currentUser.id, isTeacher));
-  };
-
   useEffect(() => {
-    refreshComments();
+    if (isAssignment) {
+      setSubmissions(getSubmissionsForPost(post.id));
+    }
     const handleUpdate = () => {
-      refreshComments();
       if (isAssignment) {
         setSubmissions(getSubmissionsForPost(post.id));
       }
     };
     window.addEventListener("db_updated", handleUpdate);
     return () => window.removeEventListener("db_updated", handleUpdate);
-  }, [post.id, currentUser.id, isTeacher, isAssignment]);
-
-  const classComments = comments.filter((c) => c.commentType !== "private");
-  const privateComments = comments.filter((c) => {
-    if (c.commentType !== "private") return false;
-    if (isTeacher) {
-      if (!privateCommentTargetStudentId) return true;
-      return (
-        c.targetStudentId?.toLowerCase() === privateCommentTargetStudentId.toLowerCase() ||
-        c.authorId.toLowerCase() === privateCommentTargetStudentId.toLowerCase()
-      );
-    }
-    return (
-      c.authorId.toLowerCase() === currentUser.id.toLowerCase() ||
-      c.targetStudentId?.toLowerCase() === currentUser.id.toLowerCase()
-    );
-  });
-
-  const handleComment = () => {
-    if (!commentText.trim()) return;
-
-    const isPrivate = commentCategory === "private";
-    const targetStudentId = isPrivate
-      ? isTeacher
-        ? privateCommentTargetStudentId || (submissions[0]?.studentId || "")
-        : currentUser.id
-      : undefined;
-
-    addComment({
-      postId: post.id,
-      classId: post.classId,
-      authorId: currentUser.id,
-      authorName: currentUser.name,
-      content: commentText.trim(),
-      commentType: isPrivate ? "private" : "class",
-      targetStudentId,
-    });
-
-    setCommentText("");
-    refreshComments();
-  };
+  }, [post.id, isAssignment]);
 
   const handleFile = async (file: File | undefined) => {
     setFileError("");
@@ -1249,15 +1200,6 @@ function PostCard({
               <span className="text-emerald-300 font-bold flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-emerald-400" /> Turned in on {formatDate(new Date(mySubmission.submittedAt))}
               </span>
-              <button
-                onClick={() => {
-                  setCommentCategory("private");
-                  setShowComments(true);
-                }}
-                className="text-[11px] font-bold text-cyan-300 hover:underline flex items-center gap-1"
-              >
-                <Lock className="h-3 w-3" /> Private teacher comments
-              </button>
             </div>
           ) : (
             <div>
@@ -1334,16 +1276,6 @@ function PostCard({
                         </a>
                       )}
                       <button
-                        onClick={() => {
-                          setPrivateCommentTargetStudentId(s.studentId);
-                          setCommentCategory("private");
-                          setShowComments(true);
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 text-[10px] font-bold border border-violet-500/30 flex items-center gap-1"
-                      >
-                        <Lock className="h-3 w-3" /> Private Thread
-                      </button>
-                      <button
                         onClick={() => openDirectMessage(s.studentId)}
                         className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-cyan-300 hover:text-cyan-200 border border-slate-800"
                         title="Send Direct Message to Student"
@@ -1359,130 +1291,12 @@ function PostCard({
         </div>
       )}
 
-      {/* Google Classroom Comments Section (Class Comments vs Private Comments) */}
-      <div className="pt-3 border-t border-slate-800 space-y-3">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                setCommentCategory("class");
-                setShowComments(true);
-              }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                showComments && commentCategory === "class"
-                  ? "bg-violet-600 text-white shadow-md shadow-violet-600/30"
-                  : "bg-slate-950 text-slate-400 hover:text-white border border-slate-800"
-              }`}
-            >
-              <Globe className="h-3.5 w-3.5 text-violet-400" />
-              <span>{classComments.length} Class Comments</span>
-            </button>
-
-            <button
-              onClick={() => {
-                setCommentCategory("private");
-                setShowComments(true);
-              }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                showComments && commentCategory === "private"
-                  ? "bg-fuchsia-600 text-white shadow-md shadow-fuchsia-600/30"
-                  : "bg-slate-950 text-slate-400 hover:text-white border border-slate-800"
-              }`}
-            >
-              <Lock className="h-3.5 w-3.5 text-fuchsia-400" />
-              <span>{privateComments.length} Private Comments</span>
-            </button>
-          </div>
-
-          <button
-            onClick={() => setShowComments((v) => !v)}
-            className="text-[11px] font-bold text-slate-400 hover:text-white cursor-pointer"
-          >
-            {showComments ? "Hide Comments ▲" : "Show Comments ▼"}
-          </button>
-        </div>
-
-        {showComments && (
-          <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 space-y-3">
-            {/* Context Badge for Comment Type */}
-            <div className="flex items-center justify-between text-[11px] pb-1 border-b border-slate-800/60">
-              {commentCategory === "class" ? (
-                <span className="text-violet-300 font-bold flex items-center gap-1">
-                  <Globe className="h-3 w-3 text-violet-400" /> Visible to everyone in this course section
-                </span>
-              ) : (
-                <span className="text-fuchsia-300 font-bold flex items-center gap-1">
-                  <Lock className="h-3 w-3 text-fuchsia-400" /> Private 1-on-1 thread between teacher & student
-                </span>
-              )}
-
-              {commentCategory === "private" && isTeacher && (
-                <span className="text-slate-400">
-                  {privateCommentTargetStudentId ? `Target: ${privateCommentTargetStudentId}` : "All student private notes"}
-                </span>
-              )}
-            </div>
-
-            {/* List of comments */}
-            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-              {(commentCategory === "class" ? classComments : privateComments).length === 0 ? (
-                <p className="text-[11px] text-slate-500 py-2 text-center">
-                  {commentCategory === "class"
-                    ? "No public class comments yet. Ask a question or share a thought!"
-                    : "No private comments yet. Share direct notes with the teacher."}
-                </p>
-              ) : (
-                (commentCategory === "class" ? classComments : privateComments).map((c) => (
-                  <div
-                    key={c.id}
-                    className={`p-2.5 rounded-xl border text-xs space-y-1 ${
-                      c.commentType === "private"
-                        ? "bg-fuchsia-950/20 border-fuchsia-900/40 text-slate-200"
-                        : "bg-slate-900/90 border-slate-800 text-slate-200"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-violet-300 flex items-center gap-1.5">
-                        {c.commentType === "private" && <Lock className="h-2.5 w-2.5 text-fuchsia-400" />}
-                        {c.authorName}
-                      </span>
-                      <span className="text-[10px] text-slate-500">{timeAgo(c.createdAt)}</span>
-                    </div>
-                    <p className="text-slate-300 leading-relaxed">{linkifyText(c.content)}</p>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Comment Composer */}
-            <div className="flex gap-2 pt-1">
-              <input
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleComment()}
-                placeholder={
-                  commentCategory === "class"
-                    ? "Add a class comment..."
-                    : isTeacher
-                    ? "Add private comment to student..."
-                    : "Add private comment to teacher..."
-                }
-                className="flex-1 px-3.5 py-2 text-xs font-medium rounded-xl bg-slate-900 border border-slate-800 text-white focus:outline-none focus:border-violet-500"
-              />
-              <button
-                onClick={handleComment}
-                className={`px-4 py-2 rounded-xl text-white font-bold text-xs cursor-pointer shadow-md transition-colors ${
-                  commentCategory === "private"
-                    ? "bg-fuchsia-600 hover:bg-fuchsia-500 shadow-fuchsia-600/20"
-                    : "bg-violet-600 hover:bg-violet-500 shadow-violet-600/20"
-                }`}
-              >
-                Send
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Google Classroom Comments Section (Class Comments on Left vs Private Comments on Right) */}
+      <PostCommentsSection
+        post={post}
+        currentUser={currentUser}
+        isTeacher={isTeacher}
+      />
     </div>
   );
 }
@@ -1524,6 +1338,7 @@ function Classmates({ cls, isTeacher }: { cls: ClassRoom; isTeacher: boolean }) 
   const [rows, setRows] = useState(getClassmatesWithStats(cls.id));
   const [addId, setAddId] = useState("");
   const [addError, setAddError] = useState("");
+  const [studentToRemove, setStudentToRemove] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     const refresh = () => setRows(getClassmatesWithStats(cls.id));
@@ -1544,6 +1359,13 @@ function Classmates({ cls, isTeacher }: { cls: ClassRoom; isTeacher: boolean }) 
     setRows(getClassmatesWithStats(cls.id));
     setAddId("");
     setAddError("");
+  };
+
+  const handleConfirmRemove = () => {
+    if (!studentToRemove) return;
+    removeStudentFromClass(cls.id, studentToRemove.id);
+    setRows(getClassmatesWithStats(cls.id));
+    setStudentToRemove(null);
   };
 
   return (
@@ -1612,9 +1434,9 @@ function Classmates({ cls, isTeacher }: { cls: ClassRoom; isTeacher: boolean }) 
 
                 {isTeacher && (
                   <button
-                    onClick={() => { removeStudentFromClass(cls.id, student.id); setRows(getClassmatesWithStats(cls.id)); }}
-                    className="p-2 rounded-xl bg-slate-900 hover:bg-rose-950 text-slate-500 hover:text-rose-400 border border-slate-800 cursor-pointer"
-                    title="Remove student from section"
+                    onClick={() => setStudentToRemove({ id: student.id, name: student.name })}
+                    className="p-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 cursor-pointer transition-colors"
+                    title={`Remove ${student.name} from ${cls.name}`}
                   >
                     <UserMinus className="h-4 w-4" />
                   </button>
@@ -1624,6 +1446,59 @@ function Classmates({ cls, isTeacher }: { cls: ClassRoom; isTeacher: boolean }) 
           ))}
         </div>
       )}
+
+      {/* Remove from class confirmation modal */}
+      <AnimatePresence>
+        {studentToRemove && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
+          >
+            <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-white">
+              <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2 text-amber-400">
+                  <UserMinus className="h-5 w-5" />
+                  <h3 className="font-extrabold text-base">Remove Student from Section</h3>
+                </div>
+                <button onClick={() => setStudentToRemove(null)} className="cursor-pointer">
+                  <X className="h-5 w-5 text-slate-400 hover:text-white" />
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs text-slate-200 leading-relaxed">
+                  Are you sure you want to remove{" "}
+                  <strong className="text-white">{studentToRemove.name}</strong> ({studentToRemove.id}) from{" "}
+                  <strong className="text-amber-300">{cls.name}</strong>?
+                </p>
+                <p className="text-[11px] text-slate-400 leading-relaxed bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                  The student will be removed from this section roster. Their user account will remain active.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setStudentToRemove(null)}
+                  className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white bg-slate-800 rounded-xl border border-slate-700 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmRemove}
+                  className="px-5 py-2 text-xs font-extrabold text-white bg-amber-600 hover:bg-amber-500 rounded-xl shadow-lg shadow-amber-600/30 cursor-pointer flex items-center gap-1.5"
+                >
+                  <UserMinus className="h-4 w-4" />
+                  <span>Remove from Section</span>
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
